@@ -49,9 +49,9 @@ func New() *Console {
 }
 
 // Run starts the logger consuming on the returned channed
-func (c *Console) Run() chan<- *log.Entry {
+func (c *Console) Run() chan<- log.Entry {
 
-	ch := make(chan *log.Entry)
+	ch := make(chan log.Entry)
 
 	// in a big high traffic app, spin up more consumers?
 	for i := 0; i < int(c.Consumers); i++ {
@@ -62,9 +62,9 @@ func (c *Console) Run() chan<- *log.Entry {
 }
 
 // handleLog consumes and logs any Entry's passed to the channel
-func (c *Console) handleLog(entries <-chan *log.Entry) {
+func (c *Console) handleLog(entries <-chan log.Entry) {
 
-	var e *log.Entry
+	var e log.Entry
 	var color int
 	buff := new(bytes.Buffer)
 	// var buff bytes.Buffer

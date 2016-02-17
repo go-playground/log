@@ -7,13 +7,17 @@ import (
 	"time"
 )
 
-// LevelHandlers is a group of Handlers mapped by Level
-type LevelHandlers map[Level][]Handler
+// HandlerChannels is an array of handler channels
+type HandlerChannels []chan<- Entry
+
+// LevelHandlerChannels is a group of Handler channels mapped by Level
+type LevelHandlerChannels map[Level]HandlerChannels
 
 type logger struct {
 	fieldPool *sync.Pool
 	entryPool *sync.Pool
 	tracePool *sync.Pool
+	channels  LevelHandlerChannels
 }
 
 // Logger is the default instance of the log package
@@ -27,6 +31,7 @@ var Logger = &logger{
 	tracePool: &sync.Pool{New: func() interface{} {
 		return new(TraceEntry)
 	}},
+	channels: make(LevelHandlerChannels),
 }
 
 // // StdLogger interface for being able to replace already built in log instance easily
@@ -105,9 +110,7 @@ func Fatal(v ...interface{}) {
 
 // Fatalln level formatted message, followed by an exit.
 func Fatalln(v ...interface{}) {
-	e := newEntry(FatalLevel, fmt.Sprintln(v...), nil)
-	Logger.HandleEntry(e)
-	os.Exit(1)
+	Logger.Fatal(v...)
 }
 
 // Debugf level formatted message.
@@ -146,10 +149,7 @@ func Panic(v ...interface{}) {
 // it is here to let this log package be a near drop in replacement
 // for the standard logger
 func Panicln(v ...interface{}) {
-	s := fmt.Sprintln(v...)
-	e := newEntry(ErrorLevel, s, nil)
-	Logger.HandleEntry(e)
-	panic(s)
+	Logger.Panic(v...)
 }
 
 // Panicf logs an Error level formatted message and then panics
@@ -166,8 +166,7 @@ func Print(v ...interface{}) {
 
 // Println logs an Info level formatted message
 func Println(v ...interface{}) {
-	e := newEntry(InfoLevel, fmt.Sprintln(v...), nil)
-	Logger.HandleEntry(e)
+	Logger.Info(v...)
 }
 
 // Printf logs an Info level formatted message
@@ -183,6 +182,17 @@ func Trace(v ...interface{}) Traceable {
 // Tracef starts a trace & returns Traceable object to End + log
 func Tracef(msg string, v ...interface{}) Traceable {
 	return Logger.Tracef(msg, v...)
+}
+
+// WithFields returns a log Entry with fields set
+func WithFields(fields ...Field) LeveledLogger {
+	return Logger.WithFields(fields...)
+}
+
+// RegisterHandler adds a new Log Handler and specifies what log levels
+// the handler will be passed log entries for
+func RegisterHandler(handler Handler, levels ...Level) {
+	Logger.RegisterHandler(handler, levels...)
 }
 
 // Debug level formatted message.
@@ -289,10 +299,43 @@ func (l *logger) WithFields(fields ...Field) LeveledLogger {
 
 func (l *logger) HandleEntry(e *Entry) {
 
+	// need to dereference as e is put back into the pool
+	// and could be reused before the log has been written
+	entry := *e
+
+	channels, ok := l.channels[e.Level]
+	if !ok {
+		fmt.Printf("*********** WARNING no log entry for level %s/n", e.Level)
+		goto END
+	}
+
+	for _, ch := range channels {
+		ch <- entry
+	}
+
+END:
 	// reclaim entry + fields
 	for _, f := range e.Fields {
 		l.fieldPool.Put(f)
 	}
 
 	l.entryPool.Put(e)
+}
+
+// RegisterHandler adds a new Log Handler and specifies what log levels
+// the handler will be passed log entries for
+func (l *logger) RegisterHandler(handler Handler, levels ...Level) {
+
+	ch := handler.Run()
+
+	for _, level := range levels {
+
+		channels, ok := l.channels[level]
+		if !ok {
+			channels = make(HandlerChannels, 0)
+		}
+
+		l.channels[level] = append(channels, ch)
+	}
+
 }
