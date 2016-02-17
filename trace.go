@@ -23,9 +23,9 @@ func (t *TraceEntry) End() {
 	}
 
 	t.entry.Fields = append(t.entry.Fields,
-		F("trace_start", t.start),
-		F("trace_end", t.end),
-		F("trace_duration_ns", t.end.Sub(t.start).Nanoseconds()),
+		F("duration", Logger.durationFunc(t.end.Sub(t.start))),
+		F("start", t.start.Format(Logger.timeFormat)),
+		F("end", t.end.Format(Logger.timeFormat)),
 	)
 
 	Logger.HandleEntry(t.entry)

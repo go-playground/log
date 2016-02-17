@@ -13,11 +13,16 @@ type HandlerChannels []chan<- Entry
 // LevelHandlerChannels is a group of Handler channels mapped by Level
 type LevelHandlerChannels map[Level]HandlerChannels
 
+// DurationFormatFunc is the function called for parsing Trace Duration
+type DurationFormatFunc func(time.Duration) string
+
 type logger struct {
-	fieldPool *sync.Pool
-	entryPool *sync.Pool
-	tracePool *sync.Pool
-	channels  LevelHandlerChannels
+	fieldPool    *sync.Pool
+	entryPool    *sync.Pool
+	tracePool    *sync.Pool
+	channels     LevelHandlerChannels
+	durationFunc DurationFormatFunc
+	timeFormat   string
 }
 
 // Logger is the default instance of the log package
@@ -31,21 +36,10 @@ var Logger = &logger{
 	tracePool: &sync.Pool{New: func() interface{} {
 		return new(TraceEntry)
 	}},
-	channels: make(LevelHandlerChannels),
+	channels:     make(LevelHandlerChannels),
+	durationFunc: func(d time.Duration) string { return d.String() },
+	timeFormat:   time.RFC3339Nano,
 }
-
-// // StdLogger interface for being able to replace already built in log instance easily
-// type StdLogger interface {
-// 	Fatal(v ...interface{})
-// 	Fatalf(format string, v ...interface{})
-// 	Fatalln(v ...interface{})
-// 	Panic(v ...interface{})
-// 	Panicf(format string, v ...interface{})
-// 	Panicln(v ...interface{})
-// 	Print(v ...interface{})
-// 	Printf(format string, v ...interface{})
-// 	Println(v ...interface{})
-// }
 
 // LeveledLogger interface for logging by level
 type LeveledLogger interface {
@@ -72,128 +66,6 @@ type FieldLeveledLogger interface {
 }
 
 var _ FieldLeveledLogger = Logger
-
-// F creates a new field key + value entry
-func F(key string, value interface{}) Field {
-
-	fld := Logger.fieldPool.Get().(Field)
-	fld.Key = key
-	fld.Value = value
-
-	return fld
-}
-
-// Debug level formatted message.
-func Debug(v ...interface{}) {
-	Logger.Debug(v...)
-}
-
-// Info level formatted message.
-func Info(v ...interface{}) {
-	Logger.Info(v...)
-}
-
-// Warn level formatted message.
-func Warn(v ...interface{}) {
-	Logger.Warn(v...)
-}
-
-// Error level formatted message.
-func Error(v ...interface{}) {
-	Logger.Error(v...)
-}
-
-// Fatal level formatted message, followed by an exit.
-func Fatal(v ...interface{}) {
-	Logger.Fatal(v...)
-}
-
-// Fatalln level formatted message, followed by an exit.
-func Fatalln(v ...interface{}) {
-	Logger.Fatal(v...)
-}
-
-// Debugf level formatted message.
-func Debugf(msg string, v ...interface{}) {
-	Logger.Debugf(msg, v...)
-}
-
-// Infof level formatted message.
-func Infof(msg string, v ...interface{}) {
-	Logger.Infof(msg, v...)
-}
-
-// Warnf level formatted message.
-func Warnf(msg string, v ...interface{}) {
-	Logger.Warnf(msg, v...)
-}
-
-// Errorf level formatted message.
-func Errorf(msg string, v ...interface{}) {
-	Logger.Errorf(msg, v...)
-}
-
-// Fatalf level formatted message, followed by an exit.
-func Fatalf(msg string, v ...interface{}) {
-	Logger.Fatalf(msg, v...)
-}
-
-// Panic logs an Error level formatted message and then panics
-// it is here to let this log package be a drop in replacement
-// for the standard logger
-func Panic(v ...interface{}) {
-	Logger.Panic(v...)
-}
-
-// Panicln logs an Error level formatted message and then panics
-// it is here to let this log package be a near drop in replacement
-// for the standard logger
-func Panicln(v ...interface{}) {
-	Logger.Panic(v...)
-}
-
-// Panicf logs an Error level formatted message and then panics
-// it is here to let this log package be a near drop in replacement
-// for the standard logger
-func Panicf(msg string, v ...interface{}) {
-	Logger.Panicf(msg, v...)
-}
-
-// Print logs an Info level formatted message
-func Print(v ...interface{}) {
-	Logger.Info(v...)
-}
-
-// Println logs an Info level formatted message
-func Println(v ...interface{}) {
-	Logger.Info(v...)
-}
-
-// Printf logs an Info level formatted message
-func Printf(msg string, v ...interface{}) {
-	Logger.Infof(msg, v...)
-}
-
-// Trace starts a trace & returns Traceable object to End + log
-func Trace(v ...interface{}) Traceable {
-	return Logger.Trace(v...)
-}
-
-// Tracef starts a trace & returns Traceable object to End + log
-func Tracef(msg string, v ...interface{}) Traceable {
-	return Logger.Tracef(msg, v...)
-}
-
-// WithFields returns a log Entry with fields set
-func WithFields(fields ...Field) LeveledLogger {
-	return Logger.WithFields(fields...)
-}
-
-// RegisterHandler adds a new Log Handler and specifies what log levels
-// the handler will be passed log entries for
-func RegisterHandler(handler Handler, levels ...Level) {
-	Logger.RegisterHandler(handler, levels...)
-}
 
 // Debug level formatted message.
 func (l *logger) Debug(v ...interface{}) {
@@ -223,6 +95,7 @@ func (l *logger) Error(v ...interface{}) {
 func (l *logger) Fatal(v ...interface{}) {
 	e := newEntry(FatalLevel, fmt.Sprint(v...), nil)
 	l.HandleEntry(e)
+	os.Exit(1)
 }
 
 // Debugf level formatted message.
@@ -292,6 +165,16 @@ func (l *logger) Tracef(msg string, v ...interface{}) Traceable {
 	return t
 }
 
+// F creates a new field key + value entry
+func (l *logger) F(key string, value interface{}) Field {
+
+	fld := Logger.fieldPool.Get().(Field)
+	fld.Key = key
+	fld.Value = value
+
+	return fld
+}
+
 // WithFields returns a log Entry with fields set
 func (l *logger) WithFields(fields ...Field) LeveledLogger {
 	return newEntry(InfoLevel, "", fields)
@@ -305,7 +188,7 @@ func (l *logger) HandleEntry(e *Entry) {
 
 	channels, ok := l.channels[e.Level]
 	if !ok {
-		fmt.Printf("*********** WARNING no log entry for level %s/n", e.Level)
+		// fmt.Printf("*********** WARNING no log entry for level %s/n", e.Level)
 		goto END
 	}
 
@@ -338,4 +221,14 @@ func (l *logger) RegisterHandler(handler Handler, levels ...Level) {
 		l.channels[level] = append(channels, ch)
 	}
 
+}
+
+// RegisterDurationFunc registers a custom duration function for Trace events
+func (l *logger) RegisterDurationFunc(fn DurationFormatFunc) {
+	l.durationFunc = fn
+}
+
+// SetTimeFormat sets the time format used for Trace events
+func (l *logger) SetTimeFormat(format string) {
+	l.timeFormat = format
 }
