@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/go-playground/log"
@@ -30,7 +29,6 @@ type Console struct {
 	timestampFormat string
 	displayColor    bool
 	start           time.Time
-	mu              sync.Mutex
 }
 
 // Colors mapping.
@@ -117,7 +115,6 @@ func (c *Console) handleLog(entries <-chan log.Entry) {
 	var color int
 
 	for e = range entries {
-		c.mu.Lock()
 
 		color = c.colors[e.Level]
 
@@ -132,8 +129,6 @@ func (c *Console) handleLog(entries <-chan log.Entry) {
 		}
 
 		fmt.Fprintln(c.writer)
-
-		c.mu.Unlock()
 	}
 }
 
@@ -144,7 +139,6 @@ func (c *Console) handleLogNoColor(entries <-chan log.Entry) {
 	var e log.Entry
 
 	for e = range entries {
-		c.mu.Lock()
 
 		if c.miniTimestamp {
 			fmt.Fprintf(c.writer, "%6s\033[%04d] %-25s", e.Level, c.parseMiniTimestamp(), e.Message)
@@ -157,7 +151,5 @@ func (c *Console) handleLogNoColor(entries <-chan log.Entry) {
 		}
 
 		fmt.Fprintln(c.writer)
-
-		c.mu.Unlock()
 	}
 }
