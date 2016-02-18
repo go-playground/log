@@ -4,7 +4,7 @@
 [![GoDoc](https://godoc.org/github.com/go-playground/log?status.svg)](https://godoc.org/github.com/go-playground/log)
 ![License](https://img.shields.io/dub/l/vibe-d.svg)
 
-Log is highly configurable, Structured Logging that is a near drop in replacement for the std library log
+Log is a simple,highly configurable, Structured Logging that is a near drop in replacement for the std library log
 
 Why another logging library?
 ----------------------------
