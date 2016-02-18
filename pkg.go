@@ -111,6 +111,11 @@ func WithFields(fields ...Field) LeveledLogger {
 	return Logger.WithFields(fields...)
 }
 
+// HandleEntry send the logs entry out to all the registered handlers
+func HandleEntry(e *Entry) {
+	Logger.HandleEntry(e)
+}
+
 // RegisterHandler adds a new Log Handler and specifies what log levels
 // the handler will be passed log entries for
 func RegisterHandler(handler Handler, levels ...Level) {

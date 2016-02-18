@@ -184,6 +184,7 @@ func (l *logger) WithFields(fields ...Field) LeveledLogger {
 	return newEntry(InfoLevel, "", fields)
 }
 
+// HandleEntry send the logs entry out to all the registered handlers
 func (l *logger) HandleEntry(e *Entry) {
 
 	// need to dereference as e is put back into the pool
