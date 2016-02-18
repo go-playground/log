@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 	"testing"
 	"time"
 
@@ -209,4 +210,24 @@ func TestSettings(t *testing.T) {
 	})
 
 	SetTimeFormat(time.RFC1123)
+}
+
+func TestEntry(t *testing.T) {
+
+	SetApplicationID("app-log")
+
+	// Resetting pool to ensure no Entries exist before setting the Application ID
+	Logger.entryPool = &sync.Pool{New: func() interface{} {
+		return &Entry{
+			WG:            new(sync.WaitGroup),
+			ApplicationID: Logger.getApplicationID(),
+		}
+	}}
+
+	e := Logger.entryPool.Get().(*Entry)
+	Equal(t, e.ApplicationID, "app-log")
+	NotEqual(t, e.WG, nil)
+
+	e = newEntry(InfoLevel, "test", []Field{F("key", "value")})
+	HandleEntry(e)
 }

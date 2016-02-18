@@ -23,27 +23,38 @@ type logger struct {
 	channels     LevelHandlerChannels
 	durationFunc DurationFormatFunc
 	timeFormat   string
+	appID        string
 }
 
 // Logger is the default instance of the log package
 var (
-	Logger = &logger{
-		fieldPool: &sync.Pool{New: func() interface{} {
-			return Field{}
-		}},
-		entryPool: &sync.Pool{New: func() interface{} {
-			return new(Entry)
-		}},
-		tracePool: &sync.Pool{New: func() interface{} {
-			return new(TraceEntry)
-		}},
-		channels:     make(LevelHandlerChannels),
-		durationFunc: func(d time.Duration) string { return d.String() },
-		timeFormat:   time.RFC3339Nano,
-	}
-
+	once     sync.Once
+	Logger   *logger
 	exitFunc = os.Exit
 )
+
+func init() {
+	once.Do(func() {
+		Logger = &logger{
+			fieldPool: &sync.Pool{New: func() interface{} {
+				return Field{}
+			}},
+			tracePool: &sync.Pool{New: func() interface{} {
+				return new(TraceEntry)
+			}},
+			channels:     make(LevelHandlerChannels),
+			durationFunc: func(d time.Duration) string { return d.String() },
+			timeFormat:   time.RFC3339Nano,
+		}
+
+		Logger.entryPool = &sync.Pool{New: func() interface{} {
+			return &Entry{
+				WG:            new(sync.WaitGroup),
+				ApplicationID: Logger.getApplicationID(),
+			}
+		}}
+	})
+}
 
 // LeveledLogger interface for logging by level
 type LeveledLogger interface {
@@ -240,4 +251,17 @@ func (l *logger) RegisterDurationFunc(fn DurationFormatFunc) {
 // SetTimeFormat sets the time format used for Trace events
 func (l *logger) SetTimeFormat(format string) {
 	l.timeFormat = format
+}
+
+// SetApplicationKey tells the logger to set a constant application key
+// that will be set on all log Entry objects. log does not care what it is,
+// the application name, app name + hostname.... that's up to you
+// it is needed by many logging platforms for separating logs by application
+// and even by application server in a distributed app.
+func (l *logger) SetApplicationID(id string) {
+	l.appID = id
+}
+
+func (l *logger) getApplicationID() string {
+	return l.appID
 }

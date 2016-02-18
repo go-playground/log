@@ -131,3 +131,12 @@ func RegisterDurationFunc(fn DurationFormatFunc) {
 func SetTimeFormat(format string) {
 	Logger.SetTimeFormat(format)
 }
+
+// SetApplicationKey tells the logger to set a constant application key
+// that will be set on all log Entry objects. log does not care what it is,
+// the application name, app name + hostname.... that's up to you
+// it is needed by many logging platforms for separating logs by application
+// and even by application server in a distributed app.
+func SetApplicationID(id string) {
+	Logger.SetApplicationID(id)
+}

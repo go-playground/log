@@ -12,23 +12,21 @@ const (
 
 // Entry represents a single log entry.
 type Entry struct {
-	WG        *sync.WaitGroup `json:"-"`
-	Level     Level           `json:"level"`
-	Timestamp time.Time       `json:"timestamp"`
-	Message   string          `json:"message"`
-	Fields    []Field         `json:"fields"`
+	WG            *sync.WaitGroup `json:"-"`
+	ApplicationID string          `json:"appId"`
+	Level         Level           `json:"level"`
+	Timestamp     time.Time       `json:"timestamp"`
+	Message       string          `json:"message"`
+	Fields        []Field         `json:"fields"`
 }
 
 func newEntry(level Level, message string, fields []Field) *Entry {
+
 	entry := Logger.entryPool.Get().(*Entry)
 	entry.Level = level
 	entry.Message = message
 	entry.Fields = fields
 	entry.Timestamp = time.Now().UTC()
-
-	if entry.WG == nil {
-		entry.WG = new(sync.WaitGroup)
-	}
 
 	return entry
 }
