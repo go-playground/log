@@ -15,14 +15,44 @@ type Formatter func(e *log.Entry) string
 
 // Syslog is an instance of the syslog logger
 type Syslog struct {
-	buffer    uint
-	writer    *syslog.Writer
-	formatter Formatter
+	buffer             uint
+	colors             [9]int
+	displayColor       bool
+	writer             *syslog.Writer
+	hasCustomFormatter bool
+	formatter          Formatter
+	timestampFormat    string
 }
 
-var syslogBuffPool = &sync.Pool{New: func() interface{} {
-	return new(bytes.Buffer)
-}}
+// colors.
+const (
+	none     = 0
+	red      = 31
+	green    = 32
+	yellow   = 33
+	blue     = 34
+	darkGray = 36
+	gray     = 37
+)
+
+// Colors mapping.
+var (
+	defaultColors = [...]int{
+		log.DebugLevel:  green,
+		log.TraceLevel:  darkGray,
+		log.InfoLevel:   blue,
+		log.NoticeLevel: blue,
+		log.WarnLevel:   yellow,
+		log.ErrorLevel:  red,
+		log.PanicLevel:  red,
+		log.AlertLevel:  red,
+		log.FatalLevel:  red,
+	}
+
+	syslogBuffPool = &sync.Pool{New: func() interface{} {
+		return new(bytes.Buffer)
+	}}
+)
 
 // New returns a new instance of the syslog logger
 // example: syslog.New("udp", "localhost:514", syslog.LOG_DEBUG, "")
@@ -31,9 +61,14 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	var err error
 
 	s := &Syslog{
-		buffer:    0,
-		formatter: defaultFormatEntry,
+		buffer:             0,
+		colors:             defaultColors,
+		displayColor:       false,
+		timestampFormat:    time.RFC3339Nano,
+		hasCustomFormatter: false,
 	}
+
+	s.formatter = s.defaultFormatEntry
 
 	if s.writer, err = syslog.Dial(network, raddr, priority, tag); err != nil {
 		return nil, err
@@ -42,10 +77,31 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	return s, nil
 }
 
+// DisplayColor tells Console to output in color or not
+// Default is : true
+func (s *Syslog) DisplayColor(color bool) {
+	s.displayColor = color
+
+	if !s.hasCustomFormatter {
+		if color {
+			s.formatter = s.defaultFormatEntryColor
+		} else {
+			s.formatter = s.defaultFormatEntry
+		}
+	}
+}
+
+// SetTimestampFormat sets Console's timestamp output format
+// Default is : time.RFC3339Nano
+func (s *Syslog) SetTimestampFormat(format string) {
+	s.timestampFormat = format
+}
+
 // SetFormatter sets the  Syslog entry formatter
 // Default is : defaultFormatEntry
 func (s *Syslog) SetFormatter(f Formatter) {
 	s.formatter = f
+	s.hasCustomFormatter = true
 }
 
 // SetChannelBuffer tells Syslog what the channel buffer size should be
@@ -96,19 +152,42 @@ func (s *Syslog) handleLog(entries <-chan log.Entry) {
 	}
 }
 
-func defaultFormatEntry(e *log.Entry) string {
+func (s *Syslog) defaultFormatEntry(e *log.Entry) string {
 
 	buff := syslogBuffPool.Get().(*bytes.Buffer)
 	buff.Reset()
 
-	fmt.Fprintf(buff, "%6s[%s] %s", e.Level, e.Timestamp.Format(time.RFC3339Nano), e.Message)
+	fmt.Fprintf(buff, "%6s[%s] %s", e.Level, e.Timestamp.Format(s.timestampFormat), e.Message)
 
 	for _, f := range e.Fields {
 		fmt.Fprintf(buff, " %s=%v", f.Key, f.Value)
 	}
 
-	s := buff.String()
+	str := buff.String()
 	syslogBuffPool.Put(buff)
 
-	return s
+	return str
+}
+
+func (s *Syslog) defaultFormatEntryColor(e *log.Entry) string {
+
+	color := s.colors[e.Level]
+	l := len(e.Fields)
+	buff := syslogBuffPool.Get().(*bytes.Buffer)
+	buff.Reset()
+
+	if l == 0 {
+		fmt.Fprintf(buff, "\033[%dm%6s\033[0m[%s] %s", color, e.Level, e.Timestamp.Format(s.timestampFormat), e.Message)
+	} else {
+		fmt.Fprintf(buff, "\033[%dm%6s\033[0m[%s] %-25s", color, e.Level, e.Timestamp.Format(s.timestampFormat), e.Message)
+	}
+
+	for _, f := range e.Fields {
+		fmt.Fprintf(buff, " \033[%dm%s\033[0m=%v", color, f.Key, f.Value)
+	}
+
+	str := buff.String()
+	syslogBuffPool.Put(buff)
+
+	return str
 }
