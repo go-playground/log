@@ -59,19 +59,23 @@ func init() {
 // LeveledLogger interface for logging by level
 type LeveledLogger interface {
 	Debug(v ...interface{})
+	Trace(v ...interface{}) Traceable
 	Info(v ...interface{})
+	Notice(v ...interface{})
 	Warn(v ...interface{})
 	Error(v ...interface{})
 	Panic(v ...interface{})
+	Alert(v ...interface{})
 	Fatal(v ...interface{})
-	Trace(v ...interface{}) Traceable
 	Debugf(msg string, v ...interface{})
+	Tracef(msg string, v ...interface{}) Traceable
 	Infof(msg string, v ...interface{})
+	Noticef(msg string, v ...interface{})
 	Warnf(msg string, v ...interface{})
 	Errorf(msg string, v ...interface{})
 	Panicf(msg string, v ...interface{})
+	Alertf(msg string, v ...interface{})
 	Fatalf(msg string, v ...interface{})
-	Tracef(msg string, v ...interface{}) Traceable
 }
 
 // FieldLeveledLogger interface for logging by level and WithFields
@@ -88,9 +92,25 @@ func (l *logger) Debug(v ...interface{}) {
 	l.HandleEntry(e)
 }
 
+// Trace starts a trace & returns Traceable object to End + log
+func (l *logger) Trace(v ...interface{}) Traceable {
+
+	t := l.tracePool.Get().(*TraceEntry)
+	t.entry = newEntry(TraceLevel, fmt.Sprint(v...), make([]Field, 0))
+	t.start = time.Now().UTC()
+
+	return t
+}
+
 // Info level formatted message.
 func (l *logger) Info(v ...interface{}) {
 	e := newEntry(InfoLevel, fmt.Sprint(v...), nil)
+	l.HandleEntry(e)
+}
+
+// Notice level formatted message.
+func (l *logger) Notice(v ...interface{}) {
+	e := newEntry(NoticeLevel, fmt.Sprint(v...), nil)
 	l.HandleEntry(e)
 }
 
@@ -103,6 +123,21 @@ func (l *logger) Warn(v ...interface{}) {
 // Error level formatted message.
 func (l *logger) Error(v ...interface{}) {
 	e := newEntry(ErrorLevel, fmt.Sprint(v...), nil)
+	l.HandleEntry(e)
+}
+
+// Panic logs an Panic level formatted message and then panics
+func (l *logger) Panic(v ...interface{}) {
+	s := fmt.Sprint(v...)
+	e := newEntry(PanicLevel, s, nil)
+	l.HandleEntry(e)
+	panic(s)
+}
+
+// Alert logs an Alert level formatted message and then panics
+func (l *logger) Alert(v ...interface{}) {
+	s := fmt.Sprint(v...)
+	e := newEntry(AlertLevel, s, nil)
 	l.HandleEntry(e)
 }
 
@@ -119,9 +154,25 @@ func (l *logger) Debugf(msg string, v ...interface{}) {
 	l.HandleEntry(e)
 }
 
+// Tracef starts a trace & returns Traceable object to End + log
+func (l *logger) Tracef(msg string, v ...interface{}) Traceable {
+
+	t := l.tracePool.Get().(*TraceEntry)
+	t.entry = newEntry(TraceLevel, fmt.Sprintf(msg, v...), make([]Field, 0))
+	t.start = time.Now().UTC()
+
+	return t
+}
+
 // Infof level formatted message.
 func (l *logger) Infof(msg string, v ...interface{}) {
 	e := newEntry(InfoLevel, fmt.Sprintf(msg, v...), nil)
+	l.HandleEntry(e)
+}
+
+// Noticef level formatted message.
+func (l *logger) Noticef(msg string, v ...interface{}) {
+	e := newEntry(NoticeLevel, fmt.Sprintf(msg, v...), nil)
 	l.HandleEntry(e)
 }
 
@@ -137,47 +188,26 @@ func (l *logger) Errorf(msg string, v ...interface{}) {
 	l.HandleEntry(e)
 }
 
+// Panicf logs an Panic level formatted message and then panics
+func (l *logger) Panicf(msg string, v ...interface{}) {
+	s := fmt.Sprintf(msg, v...)
+	e := newEntry(PanicLevel, s, nil)
+	l.HandleEntry(e)
+	panic(s)
+}
+
+// Alertf logs an Alert level formatted message and then panics
+func (l *logger) Alertf(msg string, v ...interface{}) {
+	s := fmt.Sprintf(msg, v...)
+	e := newEntry(AlertLevel, s, nil)
+	l.HandleEntry(e)
+}
+
 // Fatalf level formatted message, followed by an exit.
 func (l *logger) Fatalf(msg string, v ...interface{}) {
 	e := newEntry(FatalLevel, fmt.Sprintf(msg, v...), nil)
 	l.HandleEntry(e)
 	exitFunc(1)
-}
-
-// Panic logs an Error level formatted message and then panics
-func (l *logger) Panic(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	e := newEntry(ErrorLevel, s, nil)
-	l.HandleEntry(e)
-	panic(s)
-}
-
-// Panicf logs an Error level formatted message and then panics
-func (l *logger) Panicf(msg string, v ...interface{}) {
-	s := fmt.Sprintf(msg, v...)
-	e := newEntry(ErrorLevel, s, nil)
-	l.HandleEntry(e)
-	panic(s)
-}
-
-// Trace starts a trace & returns Traceable object to End + log
-func (l *logger) Trace(v ...interface{}) Traceable {
-
-	t := l.tracePool.Get().(*TraceEntry)
-	t.entry = newEntry(TraceLevel, fmt.Sprint(v...), make([]Field, 0))
-	t.start = time.Now().UTC()
-
-	return t
-}
-
-// Tracef starts a trace & returns Traceable object to End + log
-func (l *logger) Tracef(msg string, v ...interface{}) Traceable {
-
-	t := l.tracePool.Get().(*TraceEntry)
-	t.entry = newEntry(TraceLevel, fmt.Sprintf(msg, v...), make([]Field, 0))
-	t.start = time.Now().UTC()
-
-	return t
 }
 
 // F creates a new field key + value entry

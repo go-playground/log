@@ -23,7 +23,7 @@ const (
 // Console is an instance of the console logger
 type Console struct {
 	buffer          uint
-	colors          [6]int
+	colors          [9]int
 	writer          io.Writer
 	miniTimestamp   bool
 	timestampFormat string
@@ -33,12 +33,15 @@ type Console struct {
 
 // Colors mapping.
 var defaultColors = [...]int{
-	log.DebugLevel: green,
-	log.TraceLevel: darkGray,
-	log.InfoLevel:  blue,
-	log.WarnLevel:  yellow,
-	log.ErrorLevel: red,
-	log.FatalLevel: red,
+	log.DebugLevel:  green,
+	log.TraceLevel:  darkGray,
+	log.InfoLevel:   blue,
+	log.NoticeLevel: blue,
+	log.WarnLevel:   yellow,
+	log.ErrorLevel:  red,
+	log.PanicLevel:  red,
+	log.AlertLevel:  red,
+	log.FatalLevel:  red,
 }
 
 // New returns a new instance of the console logger

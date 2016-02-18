@@ -40,9 +40,29 @@ func (e *Entry) Debug(v ...interface{}) {
 	Logger.HandleEntry(e)
 }
 
+// Trace starts a trace & returns Traceable object to End + log
+func (e *Entry) Trace(v ...interface{}) Traceable {
+
+	e.Level = TraceLevel
+	e.Message = fmt.Sprint(v...)
+
+	t := Logger.tracePool.Get().(*TraceEntry)
+	t.entry = e
+	t.start = time.Now().UTC()
+
+	return t
+}
+
 // Info level message.
 func (e *Entry) Info(v ...interface{}) {
 	e.Level = InfoLevel
+	e.Message = fmt.Sprint(v...)
+	Logger.HandleEntry(e)
+}
+
+// Notice level formatted message.
+func (e *Entry) Notice(v ...interface{}) {
+	e.Level = NoticeLevel
 	e.Message = fmt.Sprint(v...)
 	Logger.HandleEntry(e)
 }
@@ -57,6 +77,27 @@ func (e *Entry) Warn(v ...interface{}) {
 // Error level message.
 func (e *Entry) Error(v ...interface{}) {
 	e.Level = ErrorLevel
+	e.Message = fmt.Sprint(v...)
+	Logger.HandleEntry(e)
+}
+
+// Panic logs an Error level formatted message and then panics
+func (e *Entry) Panic(v ...interface{}) {
+	s := fmt.Sprint(v...)
+	e.Level = ErrorLevel
+	e.Message = s
+	Logger.HandleEntry(e)
+
+	for _, f := range e.Fields {
+		s += fmt.Sprintf(keyVal, f.Key, f.Value)
+	}
+
+	panic(s)
+}
+
+// Alert level message.
+func (e *Entry) Alert(v ...interface{}) {
+	e.Level = AlertLevel
 	e.Message = fmt.Sprint(v...)
 	Logger.HandleEntry(e)
 }
@@ -76,9 +117,29 @@ func (e *Entry) Debugf(msg string, v ...interface{}) {
 	Logger.HandleEntry(e)
 }
 
+// Tracef starts a trace & returns Traceable object to End + log
+func (e *Entry) Tracef(msg string, v ...interface{}) Traceable {
+
+	e.Level = TraceLevel
+	e.Message = fmt.Sprintf(msg, v...)
+
+	t := Logger.tracePool.Get().(*TraceEntry)
+	t.entry = e
+	t.start = time.Now().UTC()
+
+	return t
+}
+
 // Infof level formatted message.
 func (e *Entry) Infof(msg string, v ...interface{}) {
 	e.Level = InfoLevel
+	e.Message = fmt.Sprintf(msg, v...)
+	Logger.HandleEntry(e)
+}
+
+// Noticef level formatted message.
+func (e *Entry) Noticef(msg string, v ...interface{}) {
+	e.Level = NoticeLevel
 	e.Message = fmt.Sprintf(msg, v...)
 	Logger.HandleEntry(e)
 }
@@ -97,27 +158,6 @@ func (e *Entry) Errorf(msg string, v ...interface{}) {
 	Logger.HandleEntry(e)
 }
 
-// Fatalf level formatted message, followed by an exit.
-func (e *Entry) Fatalf(msg string, v ...interface{}) {
-	e.Level = FatalLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-}
-
-// Panic logs an Error level formatted message and then panics
-func (e *Entry) Panic(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	e.Level = ErrorLevel
-	e.Message = s
-	Logger.HandleEntry(e)
-
-	for _, f := range e.Fields {
-		s += fmt.Sprintf(keyVal, f.Key, f.Value)
-	}
-
-	panic(s)
-}
-
 // Panicf logs an Error level formatted message and then panics
 func (e *Entry) Panicf(msg string, v ...interface{}) {
 	s := fmt.Sprintf(msg, v...)
@@ -132,28 +172,17 @@ func (e *Entry) Panicf(msg string, v ...interface{}) {
 	panic(s)
 }
 
-// Trace starts a trace & returns Traceable object to End + log
-func (e *Entry) Trace(v ...interface{}) Traceable {
-
-	e.Level = TraceLevel
-	e.Message = fmt.Sprint(v...)
-
-	t := Logger.tracePool.Get().(*TraceEntry)
-	t.entry = e
-	t.start = time.Now().UTC()
-
-	return t
+// Alertf level formatted message.
+func (e *Entry) Alertf(msg string, v ...interface{}) {
+	e.Level = AlertLevel
+	e.Message = fmt.Sprintf(msg, v...)
+	Logger.HandleEntry(e)
 }
 
-// Tracef starts a trace & returns Traceable object to End + log
-func (e *Entry) Tracef(msg string, v ...interface{}) Traceable {
-
-	e.Level = TraceLevel
+// Fatalf level formatted message, followed by an exit.
+func (e *Entry) Fatalf(msg string, v ...interface{}) {
+	e.Level = FatalLevel
 	e.Message = fmt.Sprintf(msg, v...)
-
-	t := Logger.tracePool.Get().(*TraceEntry)
-	t.entry = e
-	t.start = time.Now().UTC()
-
-	return t
+	Logger.HandleEntry(e)
+	exitFunc(1)
 }

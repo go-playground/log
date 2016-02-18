@@ -62,6 +62,14 @@ func TestConsoleLogger(t *testing.T) {
 
 	RegisterHandler(th, AllLevels...)
 
+	Debug("debug")
+	Equal(t, buff.String(), "debug")
+	buff.Reset()
+
+	Debugf("%s", "debugf")
+	Equal(t, buff.String(), "debugf")
+	buff.Reset()
+
 	Info("info")
 	Equal(t, buff.String(), "info")
 	buff.Reset()
@@ -70,12 +78,12 @@ func TestConsoleLogger(t *testing.T) {
 	Equal(t, buff.String(), "infof")
 	buff.Reset()
 
-	Debug("debug")
-	Equal(t, buff.String(), "debug")
+	Notice("notice")
+	Equal(t, buff.String(), "notice")
 	buff.Reset()
 
-	Debugf("%s", "debugf")
-	Equal(t, buff.String(), "debugf")
+	Noticef("%s", "noticef")
+	Equal(t, buff.String(), "noticef")
 	buff.Reset()
 
 	Warn("warn")
@@ -92,6 +100,14 @@ func TestConsoleLogger(t *testing.T) {
 
 	Errorf("%s", "errorf")
 	Equal(t, buff.String(), "errorf")
+	buff.Reset()
+
+	Alert("alert")
+	Equal(t, buff.String(), "alert")
+	buff.Reset()
+
+	Alertf("%s", "alertf")
+	Equal(t, buff.String(), "alertf")
 	buff.Reset()
 
 	Print("print")
@@ -127,6 +143,14 @@ func TestConsoleLogger(t *testing.T) {
 	Equal(t, buff.String(), "infof key=value")
 	buff.Reset()
 
+	WithFields(F("key", "value")).Notice("notice")
+	Equal(t, buff.String(), "notice key=value")
+	buff.Reset()
+
+	WithFields(F("key", "value")).Noticef("%s", "noticef")
+	Equal(t, buff.String(), "noticef key=value")
+	buff.Reset()
+
 	WithFields(F("key", "value")).Debug("debug")
 	Equal(t, buff.String(), "debug key=value")
 	buff.Reset()
@@ -149,6 +173,14 @@ func TestConsoleLogger(t *testing.T) {
 
 	WithFields(F("key", "value")).Errorf("%s", "errorf")
 	Equal(t, buff.String(), "errorf key=value")
+	buff.Reset()
+
+	WithFields(F("key", "value")).Alert("alert")
+	Equal(t, buff.String(), "alert key=value")
+	buff.Reset()
+
+	WithFields(F("key", "value")).Alertf("%s", "alertf")
+	Equal(t, buff.String(), "alertf key=value")
 	buff.Reset()
 
 	PanicMatches(t, func() { WithFields(F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
@@ -199,8 +231,11 @@ func TestLevel(t *testing.T) {
 	Equal(t, DebugLevel.String(), "DEBUG")
 	Equal(t, TraceLevel.String(), "TRACE")
 	Equal(t, InfoLevel.String(), "INFO")
+	Equal(t, NoticeLevel.String(), "NOTICE")
 	Equal(t, WarnLevel.String(), "WARN")
 	Equal(t, ErrorLevel.String(), "ERROR")
+	Equal(t, PanicLevel.String(), "PANIC")
+	Equal(t, AlertLevel.String(), "ALERT")
 	Equal(t, FatalLevel.String(), "FATAL")
 }
 

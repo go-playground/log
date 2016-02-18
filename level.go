@@ -5,8 +5,11 @@ var AllLevels = []Level{
 	DebugLevel,
 	TraceLevel,
 	InfoLevel,
+	NoticeLevel,
 	WarnLevel,
 	ErrorLevel,
+	PanicLevel,
+	AlertLevel,
 	FatalLevel,
 }
 
@@ -18,9 +21,12 @@ const (
 	DebugLevel Level = iota
 	TraceLevel
 	InfoLevel
+	NoticeLevel
 	WarnLevel
 	ErrorLevel
-	FatalLevel
+	PanicLevel
+	AlertLevel
+	FatalLevel // same as syslog CRITICAL
 )
 
 func (l Level) String() string {
@@ -31,10 +37,16 @@ func (l Level) String() string {
 		return "TRACE"
 	case InfoLevel:
 		return "INFO"
+	case NoticeLevel:
+		return "NOTICE"
 	case WarnLevel:
 		return "WARN"
 	case ErrorLevel:
 		return "ERROR"
+	case PanicLevel:
+		return "PANIC"
+	case AlertLevel:
+		return "ALERT"
 	case FatalLevel:
 		return "FATAL"
 	default:
