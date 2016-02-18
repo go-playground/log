@@ -26,20 +26,24 @@ type logger struct {
 }
 
 // Logger is the default instance of the log package
-var Logger = &logger{
-	fieldPool: &sync.Pool{New: func() interface{} {
-		return Field{}
-	}},
-	entryPool: &sync.Pool{New: func() interface{} {
-		return new(Entry)
-	}},
-	tracePool: &sync.Pool{New: func() interface{} {
-		return new(TraceEntry)
-	}},
-	channels:     make(LevelHandlerChannels),
-	durationFunc: func(d time.Duration) string { return d.String() },
-	timeFormat:   time.RFC3339Nano,
-}
+var (
+	Logger = &logger{
+		fieldPool: &sync.Pool{New: func() interface{} {
+			return Field{}
+		}},
+		entryPool: &sync.Pool{New: func() interface{} {
+			return new(Entry)
+		}},
+		tracePool: &sync.Pool{New: func() interface{} {
+			return new(TraceEntry)
+		}},
+		channels:     make(LevelHandlerChannels),
+		durationFunc: func(d time.Duration) string { return d.String() },
+		timeFormat:   time.RFC3339Nano,
+	}
+
+	exitFunc = os.Exit
+)
 
 // LeveledLogger interface for logging by level
 type LeveledLogger interface {
@@ -95,7 +99,7 @@ func (l *logger) Error(v ...interface{}) {
 func (l *logger) Fatal(v ...interface{}) {
 	e := newEntry(FatalLevel, fmt.Sprint(v...), nil)
 	l.HandleEntry(e)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // Debugf level formatted message.
@@ -126,7 +130,7 @@ func (l *logger) Errorf(msg string, v ...interface{}) {
 func (l *logger) Fatalf(msg string, v ...interface{}) {
 	e := newEntry(FatalLevel, fmt.Sprintf(msg, v...), nil)
 	l.HandleEntry(e)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // Panic logs an Error level formatted message and then panics
@@ -184,19 +188,23 @@ func (l *logger) HandleEntry(e *Entry) {
 
 	// need to dereference as e is put back into the pool
 	// and could be reused before the log has been written
-	entry := *e
 
 	channels, ok := l.channels[e.Level]
-	if !ok {
+	if ok {
 		// fmt.Printf("*********** WARNING no log entry for level %s/n", e.Level)
-		goto END
-	}
+		// 	goto END
+		// }
 
-	for _, ch := range channels {
-		ch <- entry
-	}
+		e.WG.Add(len(channels))
+		entry := *e
 
-END:
+		for _, ch := range channels {
+			ch <- entry
+		}
+
+		e.WG.Wait()
+	}
+	// END:
 	// reclaim entry + fields
 	for _, f := range e.Fields {
 		l.fieldPool.Put(f)

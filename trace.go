@@ -18,10 +18,6 @@ type TraceEntry struct {
 func (t *TraceEntry) End() {
 	t.end = time.Now().UTC()
 
-	if t.entry.Fields == nil {
-		t.entry.Fields = make([]Field, 0)
-	}
-
 	t.entry.Fields = append(t.entry.Fields,
 		F("duration", Logger.durationFunc(t.end.Sub(t.start))),
 		F("start", t.start.Format(Logger.timeFormat)),

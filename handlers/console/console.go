@@ -113,15 +113,25 @@ func (c *Console) handleLog(entries <-chan log.Entry) {
 
 	var e log.Entry
 	var color int
+	var l int
 
 	for e = range entries {
 
+		l = len(e.Fields)
 		color = c.colors[e.Level]
 
 		if c.miniTimestamp {
-			fmt.Fprintf(c.writer, "\033[%dm%6s\033[0m[%04d] %-25s", color, e.Level, c.parseMiniTimestamp(), e.Message)
+			if l == 0 {
+				fmt.Fprintf(c.writer, "\033[%dm%6s\033[0m[%04d] %s", color, e.Level, c.parseMiniTimestamp(), e.Message)
+			} else {
+				fmt.Fprintf(c.writer, "\033[%dm%6s\033[0m[%04d] %-25s", color, e.Level, c.parseMiniTimestamp(), e.Message)
+			}
 		} else {
-			fmt.Fprintf(c.writer, "\033[%dm%6s\033[0m[%s] %-25s", color, e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
+			if l == 0 {
+				fmt.Fprintf(c.writer, "\033[%dm%6s\033[0m[%s] %s", color, e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
+			} else {
+				fmt.Fprintf(c.writer, "\033[%dm%6s\033[0m[%s] %-25s", color, e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
+			}
 		}
 
 		for _, f := range e.Fields {
@@ -129,6 +139,8 @@ func (c *Console) handleLog(entries <-chan log.Entry) {
 		}
 
 		fmt.Fprintln(c.writer)
+
+		e.WG.Done()
 	}
 }
 
@@ -137,13 +149,24 @@ func (c *Console) handleLog(entries <-chan log.Entry) {
 func (c *Console) handleLogNoColor(entries <-chan log.Entry) {
 
 	var e log.Entry
+	var l int
 
 	for e = range entries {
 
+		l = len(e.Fields)
+
 		if c.miniTimestamp {
-			fmt.Fprintf(c.writer, "%6s\033[%04d] %-25s", e.Level, c.parseMiniTimestamp(), e.Message)
+			if l == 0 {
+				fmt.Fprintf(c.writer, "%6s[%04d] %s", e.Level, c.parseMiniTimestamp(), e.Message)
+			} else {
+				fmt.Fprintf(c.writer, "%6s[%04d] %-25s", e.Level, c.parseMiniTimestamp(), e.Message)
+			}
 		} else {
-			fmt.Fprintf(c.writer, "%6s\033[%s] %-25s", e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
+			if l == 0 {
+				fmt.Fprintf(c.writer, "%6s[%s] %s", e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
+			} else {
+				fmt.Fprintf(c.writer, "%6s[%s] %-25s", e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
+			}
 		}
 
 		for _, f := range e.Fields {
@@ -151,5 +174,7 @@ func (c *Console) handleLogNoColor(entries <-chan log.Entry) {
 		}
 
 		fmt.Fprintln(c.writer)
+
+		e.WG.Done()
 	}
 }

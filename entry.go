@@ -2,16 +2,21 @@ package log
 
 import (
 	"fmt"
-	"os"
+	"sync"
 	"time"
+)
+
+const (
+	keyVal = " %s=%v"
 )
 
 // Entry represents a single log entry.
 type Entry struct {
-	Level     Level     `json:"level"`
-	Timestamp time.Time `json:"timestamp"`
-	Message   string    `json:"message"`
-	Fields    []Field   `json:"fields"`
+	WG        *sync.WaitGroup `json:"-"`
+	Level     Level           `json:"level"`
+	Timestamp time.Time       `json:"timestamp"`
+	Message   string          `json:"message"`
+	Fields    []Field         `json:"fields"`
 }
 
 func newEntry(level Level, message string, fields []Field) *Entry {
@@ -20,6 +25,10 @@ func newEntry(level Level, message string, fields []Field) *Entry {
 	entry.Message = message
 	entry.Fields = fields
 	entry.Timestamp = time.Now().UTC()
+
+	if entry.WG == nil {
+		entry.WG = new(sync.WaitGroup)
+	}
 
 	return entry
 }
@@ -59,7 +68,7 @@ func (e *Entry) Fatal(v ...interface{}) {
 	e.Level = FatalLevel
 	e.Message = fmt.Sprint(v...)
 	Logger.HandleEntry(e)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // Debugf level formatted message.
@@ -103,6 +112,11 @@ func (e *Entry) Panic(v ...interface{}) {
 	e.Level = ErrorLevel
 	e.Message = s
 	Logger.HandleEntry(e)
+
+	for _, f := range e.Fields {
+		s += fmt.Sprintf(keyVal, f.Key, f.Value)
+	}
+
 	panic(s)
 }
 
@@ -112,6 +126,11 @@ func (e *Entry) Panicf(msg string, v ...interface{}) {
 	e.Level = ErrorLevel
 	e.Message = s
 	Logger.HandleEntry(e)
+
+	for _, f := range e.Fields {
+		s += fmt.Sprintf(keyVal, f.Key, f.Value)
+	}
+
 	panic(s)
 }
 
