@@ -241,7 +241,7 @@ func TestLevel(t *testing.T) {
 
 func TestSettings(t *testing.T) {
 	RegisterDurationFunc(func(d time.Duration) string {
-		return fmt.Sprintf("%ss", d.Seconds())
+		return fmt.Sprintf("%ds", d.Seconds())
 	})
 
 	SetTimeFormat(time.RFC1123)
