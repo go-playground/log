@@ -29,6 +29,7 @@ func TestConsoleLogger(t *testing.T) {
 	cLog.SetChannelBuffer(3)
 	cLog.SetTimestampFormat(time.RFC3339)
 	cLog.UseMiniTimestamp(true)
+	cLog.SetANSIReset(log.Reset)
 
 	log.RegisterHandler(cLog, log.AllLevels...)
 
@@ -154,11 +155,11 @@ func TestConsoleLogger(t *testing.T) {
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), " ERROR[0000] panicf                    key=value\n")
+	Equal(t, buff.String(), " PANIC[0000] panicf                    key=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), " ERROR[0000] panic                     key=value\n")
+	Equal(t, buff.String(), " PANIC[0000] panic                     key=value\n")
 	buff.Reset()
 
 	func() {
@@ -232,35 +233,35 @@ func TestConsoleLoggerColor(t *testing.T) {
 	buff.Reset()
 
 	log.Notice("notice")
-	Equal(t, buff.String(), "[34mNOTICE[0m[0000] notice\n")
+	Equal(t, buff.String(), "[36;1mNOTICE[0m[0000] notice\n")
 	buff.Reset()
 
 	log.Notice("%s", "noticef")
-	Equal(t, buff.String(), "[34mNOTICE[0m[0000] %snoticef\n")
+	Equal(t, buff.String(), "[36;1mNOTICE[0m[0000] %snoticef\n")
 	buff.Reset()
 
 	log.Warn("warn")
-	Equal(t, buff.String(), "[33m  WARN[0m[0000] warn\n")
+	Equal(t, buff.String(), "[33;1m  WARN[0m[0000] warn\n")
 	buff.Reset()
 
 	log.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "[33m  WARN[0m[0000] warnf\n")
+	Equal(t, buff.String(), "[33;1m  WARN[0m[0000] warnf\n")
 	buff.Reset()
 
 	log.Error("error")
-	Equal(t, buff.String(), "[31m ERROR[0m[0000] error\n")
+	Equal(t, buff.String(), "[31;1m ERROR[0m[0000] error\n")
 	buff.Reset()
 
 	log.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "[31m ERROR[0m[0000] errorf\n")
+	Equal(t, buff.String(), "[31;1m ERROR[0m[0000] errorf\n")
 	buff.Reset()
 
 	log.Alert("alert")
-	Equal(t, buff.String(), "[31m ALERT[0m[0000] alert\n")
+	Equal(t, buff.String(), "[31m[4m ALERT[0m[0000] alert\n")
 	buff.Reset()
 
 	log.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "[31m ALERT[0m[0000] alertf\n")
+	Equal(t, buff.String(), "[31m[4m ALERT[0m[0000] alertf\n")
 	buff.Reset()
 
 	log.Print("print")
@@ -305,49 +306,49 @@ func TestConsoleLoggerColor(t *testing.T) {
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "[34mNOTICE[0m[0000] notice                    [34mkey[0m=value\n")
+	Equal(t, buff.String(), "[36;1mNOTICE[0m[0000] notice                    [36;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "[34mNOTICE[0m[0000] noticef                   [34mkey[0m=value\n")
+	Equal(t, buff.String(), "[36;1mNOTICE[0m[0000] noticef                   [36;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "[33m  WARN[0m[0000] warn                      [33mkey[0m=value\n")
+	Equal(t, buff.String(), "[33;1m  WARN[0m[0000] warn                      [33;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "[33m  WARN[0m[0000] warnf                     [33mkey[0m=value\n")
+	Equal(t, buff.String(), "[33;1m  WARN[0m[0000] warnf                     [33;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "[31m ERROR[0m[0000] error                     [31mkey[0m=value\n")
+	Equal(t, buff.String(), "[31;1m ERROR[0m[0000] error                     [31;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "[31m ERROR[0m[0000] errorf                    [31mkey[0m=value\n")
+	Equal(t, buff.String(), "[31;1m ERROR[0m[0000] errorf                    [31;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "[31m ALERT[0m[0000] alert                     [31mkey[0m=value\n")
+	Equal(t, buff.String(), "[31m[4m ALERT[0m[0000] alert                     [31m[4mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "[31m ALERT[0m[0000] alertf                    [31mkey[0m=value\n")
+	Equal(t, buff.String(), "[31m[4m ALERT[0m[0000] alertf                    [31m[4mkey[0m=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "[31m ERROR[0m[0000] panicf                    [31mkey[0m=value\n")
+	Equal(t, buff.String(), "[31m PANIC[0m[0000] panicf                    [31mkey[0m=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "[31m ERROR[0m[0000] panic                     [31mkey[0m=value\n")
+	Equal(t, buff.String(), "[31m PANIC[0m[0000] panic                     [31mkey[0m=value\n")
 	buff.Reset()
 
-	cLog.SetLevelColor(log.DebugLevel, 37)
+	cLog.SetLevelColor(log.DebugLevel, log.LightGreen)
 
 	log.Debug("debug")
-	Equal(t, buff.String(), "[37m DEBUG[0m[0000] debug\n")
+	Equal(t, buff.String(), "[32;1m DEBUG[0m[0000] debug\n")
 	buff.Reset()
 
 	year := time.Now().Format("2006")

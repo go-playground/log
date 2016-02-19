@@ -16,7 +16,8 @@ type Formatter func(e *log.Entry) string
 // Syslog is an instance of the syslog logger
 type Syslog struct {
 	buffer             uint
-	colors             [9]int
+	colors             [9]log.ANSIEscSeq
+	ansiReset          log.ANSIEscSeq
 	displayColor       bool
 	writer             *syslog.Writer
 	hasCustomFormatter bool
@@ -24,29 +25,18 @@ type Syslog struct {
 	timestampFormat    string
 }
 
-// colors.
-const (
-	none     = 0
-	red      = 31
-	green    = 32
-	yellow   = 33
-	blue     = 34
-	darkGray = 36
-	gray     = 37
-)
-
-// Colors mapping.
 var (
-	defaultColors = [...]int{
-		log.DebugLevel:  green,
-		log.TraceLevel:  darkGray,
-		log.InfoLevel:   blue,
-		log.NoticeLevel: blue,
-		log.WarnLevel:   yellow,
-		log.ErrorLevel:  red,
-		log.PanicLevel:  red,
-		log.AlertLevel:  red,
-		log.FatalLevel:  red,
+	// Colors mapping.
+	defaultColors = [...]log.ANSIEscSeq{
+		log.DebugLevel:  log.Green,
+		log.TraceLevel:  log.White,
+		log.InfoLevel:   log.Blue,
+		log.NoticeLevel: log.LightCyan,
+		log.WarnLevel:   log.Yellow,
+		log.ErrorLevel:  log.LightRed,
+		log.PanicLevel:  log.Red,
+		log.AlertLevel:  log.Red + log.Underscore,
+		log.FatalLevel:  log.Red + log.Underscore + log.Blink,
 	}
 
 	syslogBuffPool = &sync.Pool{New: func() interface{} {
@@ -63,6 +53,7 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	s := &Syslog{
 		buffer:             0,
 		colors:             defaultColors,
+		ansiReset:          log.Reset,
 		displayColor:       false,
 		timestampFormat:    time.RFC3339Nano,
 		hasCustomFormatter: false,
@@ -75,6 +66,16 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	}
 
 	return s, nil
+}
+
+// SetLevelColor updates Console's level color values
+func (s *Syslog) SetLevelColor(l log.Level, color log.ANSIEscSeq) {
+	s.colors[l] = color
+}
+
+// SetANSIReset sets the ANSI Reset sequence
+func (s *Syslog) SetANSIReset(code log.ANSIEscSeq) {
+	s.ansiReset = code
 }
 
 // DisplayColor tells Console to output in color or not
@@ -177,13 +178,13 @@ func (s *Syslog) defaultFormatEntryColor(e *log.Entry) string {
 	buff.Reset()
 
 	if l == 0 {
-		fmt.Fprintf(buff, "\033[%dm%6s\033[0m[%s] %s", color, e.Level, e.Timestamp.Format(s.timestampFormat), e.Message)
+		fmt.Fprintf(buff, "%s%6s%s[%s] %s", color, e.Level, s.ansiReset, e.Timestamp.Format(s.timestampFormat), e.Message)
 	} else {
-		fmt.Fprintf(buff, "\033[%dm%6s\033[0m[%s] %-25s", color, e.Level, e.Timestamp.Format(s.timestampFormat), e.Message)
+		fmt.Fprintf(buff, "%s%6s%s[%s] %-25s", color, e.Level, s.ansiReset, e.Timestamp.Format(s.timestampFormat), e.Message)
 	}
 
 	for _, f := range e.Fields {
-		fmt.Fprintf(buff, " \033[%dm%s\033[0m=%v", color, f.Key, f.Value)
+		fmt.Fprintf(buff, " %s%s%s=%v", color, f.Key, s.ansiReset, f.Value)
 	}
 
 	str := buff.String()

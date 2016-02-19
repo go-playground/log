@@ -84,7 +84,7 @@ func (e *Entry) Error(v ...interface{}) {
 // Panic logs an Error level formatted message and then panics
 func (e *Entry) Panic(v ...interface{}) {
 	s := fmt.Sprint(v...)
-	e.Level = ErrorLevel
+	e.Level = PanicLevel
 	e.Message = s
 	Logger.HandleEntry(e)
 
@@ -161,7 +161,7 @@ func (e *Entry) Errorf(msg string, v ...interface{}) {
 // Panicf logs an Error level formatted message and then panics
 func (e *Entry) Panicf(msg string, v ...interface{}) {
 	s := fmt.Sprintf(msg, v...)
-	e.Level = ErrorLevel
+	e.Level = PanicLevel
 	e.Message = s
 	Logger.HandleEntry(e)
 

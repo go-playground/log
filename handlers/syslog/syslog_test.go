@@ -35,7 +35,6 @@ func read(conn *net.UDPConn) (string, error) {
 
 func hasString(conn *net.UDPConn, s string) bool {
 	read, _ := read(conn)
-
 	return strings.Contains(read, s)
 }
 
@@ -56,6 +55,7 @@ func TestSyslogLogger(t *testing.T) {
 	sLog.DisplayColor(false)
 	sLog.SetChannelBuffer(3)
 	sLog.SetTimestampFormat("2006")
+	sLog.SetANSIReset(log.Reset)
 
 	log.RegisterHandler(sLog, log.AllLevels...)
 
@@ -151,10 +151,10 @@ func TestSyslogLogger(t *testing.T) {
 	Equal(t, hasString(conn, "ALERT["+year+"] alertf key=value"), true)
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, hasString(conn, "ERROR["+year+"] panicf key=value"), true)
+	Equal(t, hasString(conn, "PANIC["+year+"] panicf key=value"), true)
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, hasString(conn, "ERROR["+year+"] panic key=value"), true)
+	Equal(t, hasString(conn, "PANIC["+year+"] panic key=value"), true)
 
 	func() {
 		defer log.Trace("trace").End()
@@ -233,28 +233,28 @@ func TestSyslogLoggerColor(t *testing.T) {
 	Equal(t, hasString(conn, "[34m  INFO[0m["+year+"] info"), true)
 
 	log.Notice("notice")
-	Equal(t, hasString(conn, "[34mNOTICE[0m["+year+"] notice"), true)
+	Equal(t, hasString(conn, "[36;1mNOTICE[0m["+year+"] notice"), true)
 
 	log.Noticef("%s", "noticef")
-	Equal(t, hasString(conn, "[34mNOTICE[0m["+year+"] noticef"), true)
+	Equal(t, hasString(conn, "[36;1mNOTICE[0m["+year+"] noticef"), true)
 
 	log.Warn("warn")
-	Equal(t, hasString(conn, "[33m  WARN[0m["+year+"] warn"), true)
+	Equal(t, hasString(conn, "[33;1m  WARN[0m["+year+"] warn"), true)
 
 	log.Warnf("%s", "warnf")
-	Equal(t, hasString(conn, "[33m  WARN[0m["+year+"] warnf"), true)
+	Equal(t, hasString(conn, "[33;1m  WARN[0m["+year+"] warnf"), true)
 
 	log.Error("error")
-	Equal(t, hasString(conn, "[31m ERROR[0m["+year+"] error"), true)
+	Equal(t, hasString(conn, "[31;1m ERROR[0m["+year+"] error"), true)
 
 	log.Errorf("%s", "errorf")
-	Equal(t, hasString(conn, "[31m ERROR[0m["+year+"] errorf"), true)
+	Equal(t, hasString(conn, "[31;1m ERROR[0m["+year+"] errorf"), true)
 
 	log.Alert("alert")
-	Equal(t, hasString(conn, "[31m ALERT[0m["+year+"] alert"), true)
+	Equal(t, hasString(conn, "[31m[4m ALERT[0m["+year+"] alert"), true)
 
 	log.Alertf("%s", "alertf")
-	Equal(t, hasString(conn, "[31m ALERT[0m["+year+"] alertf"), true)
+	Equal(t, hasString(conn, "[31m[4m ALERT[0m["+year+"] alertf"), true)
 
 	log.Print("print")
 	Equal(t, hasString(conn, "[34m  INFO[0m["+year+"] print"), true)
@@ -288,58 +288,58 @@ func TestSyslogLoggerColor(t *testing.T) {
 	Equal(t, hasString(conn, "[34m  INFO[0m["+year+"] infof                     [34mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, hasString(conn, "[34mNOTICE[0m["+year+"] notice                    [34mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[36;1mNOTICE[0m["+year+"] notice                    [36;1mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, hasString(conn, "[34mNOTICE[0m["+year+"] noticef                   [34mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[36;1mNOTICE[0m["+year+"] noticef                   [36;1mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, hasString(conn, "[33m  WARN[0m["+year+"] warn                      [33mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[33;1m  WARN[0m["+year+"] warn                      [33;1mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, hasString(conn, "[33m  WARN[0m["+year+"] warnf                     [33mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[33;1m  WARN[0m["+year+"] warnf                     [33;1mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, hasString(conn, "[31m ERROR[0m["+year+"] error                     [31mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[31;1m ERROR[0m["+year+"] error                     [31;1mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, hasString(conn, "[31m ERROR[0m["+year+"] errorf                    [31mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[31;1m ERROR[0m["+year+"] errorf                    [31;1mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, hasString(conn, "[31m ALERT[0m["+year+"] alert                     [31mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[31m[4m ALERT[0m["+year+"] alert                     [31m[4mkey[0m=value"), true)
 
 	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, hasString(conn, "[31m ALERT[0m["+year+"] alertf                    [31mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[31m[4m ALERT[0m["+year+"] alertf                    [31m[4mkey[0m=value"), true)
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, hasString(conn, "[31m ERROR[0m["+year+"] panicf                    [31mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[31m PANIC[0m["+year+"] panicf                    [31mkey[0m=value"), true)
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, hasString(conn, "[31m ERROR[0m["+year+"] panic                     [31mkey[0m=value"), true)
+	Equal(t, hasString(conn, "[31m PANIC[0m["+year+"] panic                     [31mkey[0m=value"), true)
 
 	func() {
 		defer log.Trace("trace").End()
 	}()
 
-	Equal(t, hasString(conn, "[36m TRACE[0m["+year+"] trace"), true)
+	Equal(t, hasString(conn, "[37;1m TRACE[0m["+year+"] trace"), true)
 
 	func() {
 		defer log.Tracef("tracef").End()
 	}()
 
-	Equal(t, hasString(conn, "[36m TRACE[0m["+year+"] tracef"), true)
+	Equal(t, hasString(conn, "[37;1m TRACE[0m["+year+"] tracef"), true)
 
 	func() {
 		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
 	}()
 
-	Equal(t, hasString(conn, "[36m TRACE[0m["+year+"] trace"), true)
+	Equal(t, hasString(conn, "[37;1m TRACE[0m["+year+"] trace"), true)
 
 	func() {
 		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
 	}()
 
-	Equal(t, hasString(conn, "[36m TRACE[0m["+year+"] tracef"), true)
+	Equal(t, hasString(conn, "[37;1m TRACE[0m["+year+"] tracef"), true)
 
 	e := &log.Entry{
 		WG:        new(sync.WaitGroup),
@@ -350,7 +350,13 @@ func TestSyslogLoggerColor(t *testing.T) {
 
 	log.HandleEntry(e)
 
-	Equal(t, hasString(conn, "[31m FATAL[0m["+year+"] fatal"), true)
+	Equal(t, hasString(conn, "[31m[4m[5m FATAL[0m["+year+"] fatal"), true)
+
+	// test changing level color
+	sLog.SetLevelColor(log.DebugLevel, log.Red)
+
+	log.Debug("debug")
+	Equal(t, hasString(conn, "[31m DEBUG[0m[2016] debug"), true)
 }
 
 func TestBadAddress(t *testing.T) {
