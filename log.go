@@ -233,9 +233,6 @@ func (l *logger) HandleEntry(e *Entry) {
 
 	channels, ok := l.channels[e.Level]
 	if ok {
-		// fmt.Printf("*********** WARNING no log entry for level %s/n", e.Level)
-		// 	goto END
-		// }
 
 		e.WG.Add(len(channels))
 		entry := *e
@@ -246,7 +243,7 @@ func (l *logger) HandleEntry(e *Entry) {
 
 		e.WG.Wait()
 	}
-	// END:
+
 	// reclaim entry + fields
 	for _, f := range e.Fields {
 		l.fieldPool.Put(f)

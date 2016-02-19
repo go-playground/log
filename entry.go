@@ -2,12 +2,14 @@ package log
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
 
 const (
 	keyVal = " %s=%v"
+	cutset = "\r\n\t "
 )
 
 // Entry represents a single log entry.
@@ -24,7 +26,7 @@ func newEntry(level Level, message string, fields []Field) *Entry {
 
 	entry := Logger.entryPool.Get().(*Entry)
 	entry.Level = level
-	entry.Message = message
+	entry.Message = strings.TrimRight(message, cutset) // need to trim for adding fields later in handlers + why send uneeded whitespace
 	entry.Fields = fields
 	entry.Timestamp = time.Now().UTC()
 
