@@ -112,10 +112,10 @@ func (s *Syslog) SetChannelBuffer(i uint) {
 }
 
 // Run starts the logger consuming on the returned channed
-func (s *Syslog) Run() chan<- log.Entry {
+func (s *Syslog) Run() chan<- *log.Entry {
 
 	// in a big high traffic app, set a higher buffer
-	ch := make(chan log.Entry, s.buffer)
+	ch := make(chan *log.Entry, s.buffer)
 
 	go s.handleLog(ch)
 
@@ -123,14 +123,14 @@ func (s *Syslog) Run() chan<- log.Entry {
 }
 
 // handleLog consumes and logs any Entry's passed to the channel
-func (s *Syslog) handleLog(entries <-chan log.Entry) {
+func (s *Syslog) handleLog(entries <-chan *log.Entry) {
 
-	var e log.Entry
+	var e *log.Entry
 	var line string
 
 	for e = range entries {
 
-		line = s.formatter(&e)
+		line = s.formatter(e)
 
 		switch e.Level {
 		case log.DebugLevel:

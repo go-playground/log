@@ -27,17 +27,17 @@ type testHandler struct {
 }
 
 // Run runs handler
-func (th *testHandler) Run() chan<- Entry {
-	ch := make(chan Entry, 0)
+func (th *testHandler) Run() chan<- *Entry {
+	ch := make(chan *Entry, 0)
 
 	go th.handleLogEntry(ch)
 
 	return ch
 }
 
-func (th *testHandler) handleLogEntry(entries <-chan Entry) {
+func (th *testHandler) handleLogEntry(entries <-chan *Entry) {
 
-	var e Entry
+	var e *Entry
 
 	for e = range entries {
 		s := e.Message

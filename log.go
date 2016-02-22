@@ -8,7 +8,7 @@ import (
 )
 
 // HandlerChannels is an array of handler channels
-type HandlerChannels []chan<- Entry
+type HandlerChannels []chan<- *Entry
 
 // LevelHandlerChannels is a group of Handler channels mapped by Level
 type LevelHandlerChannels map[Level]HandlerChannels
@@ -235,10 +235,10 @@ func (l *logger) HandleEntry(e *Entry) {
 	if ok {
 
 		e.WG.Add(len(channels))
-		entry := *e
+		// entry := *e
 
 		for _, ch := range channels {
-			ch <- entry
+			ch <- e
 		}
 
 		e.WG.Wait()

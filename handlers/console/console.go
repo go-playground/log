@@ -89,10 +89,10 @@ func (c *Console) SetChannelBuffer(i uint) {
 }
 
 // Run starts the logger consuming on the returned channed
-func (c *Console) Run() chan<- log.Entry {
+func (c *Console) Run() chan<- *log.Entry {
 
 	// in a big high traffic app, set a higher buffer
-	ch := make(chan log.Entry, c.buffer)
+	ch := make(chan *log.Entry, c.buffer)
 
 	if c.displayColor {
 		go c.handleLog(ch)
@@ -108,9 +108,9 @@ func (c *Console) parseMiniTimestamp() int {
 }
 
 // handleLog consumes and logs any Entry's passed to the channel
-func (c *Console) handleLog(entries <-chan log.Entry) {
+func (c *Console) handleLog(entries <-chan *log.Entry) {
 
-	var e log.Entry
+	var e *log.Entry
 	var color log.ANSIEscSeq
 	var l int
 
@@ -145,9 +145,9 @@ func (c *Console) handleLog(entries <-chan log.Entry) {
 
 // handleLogNoColor consumes and logs any Entry's passed to the channel and
 // print with no color
-func (c *Console) handleLogNoColor(entries <-chan log.Entry) {
+func (c *Console) handleLogNoColor(entries <-chan *log.Entry) {
 
-	var e log.Entry
+	var e *log.Entry
 	var l int
 
 	for e = range entries {
