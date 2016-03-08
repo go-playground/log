@@ -228,14 +228,23 @@ func (l *logger) WithFields(fields ...Field) LeveledLogger {
 // HandleEntry send the logs entry out to all the registered handlers
 func (l *logger) HandleEntry(e *Entry) {
 
-	// need to dereference as e is put back into the pool
-	// and could be reused before the log has been written
+	//																											  ---------
+	//																								|----------> | console |
+	// Addding this check for when you are doing centralized logging                                |             ---------
+	// i.e. -----------------               -----------------                                 -------------       --------
+	//     | app log handler | -- json --> | central log app | -- unmarshal json to Entry -> | log handler | --> | syslog |
+	//      -----------------               -----------------                                 -------------       --------
+	//      																						|             ---------
+	//      																						|----------> | DataDog |
+	//      																									  ---------
+	if e.WG == nil {
+		e.WG = new(sync.WaitGroup)
+	}
 
 	channels, ok := l.channels[e.Level]
 	if ok {
 
 		e.WG.Add(len(channels))
-		// entry := *e
 
 		for _, ch := range channels {
 			ch <- e

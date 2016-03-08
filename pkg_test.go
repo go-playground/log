@@ -222,6 +222,17 @@ func TestConsoleLogger(t *testing.T) {
 	// TODO: finish up regex
 	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
 	buff.Reset()
+
+	// Test Custom Entry ( most common case is Unmarshalled from JSON when using centralized logging)
+	entry := new(Entry)
+	entry.ApplicationID = "APP"
+	entry.Level = InfoLevel
+	entry.Timestamp = time.Now().UTC()
+	entry.Message = "Test Message"
+	entry.Fields = make([]Field, 0)
+	Logger.HandleEntry(entry)
+	Equal(t, buff.String(), "Test Message")
+	buff.Reset()
 }
 
 func TestLevel(t *testing.T) {
