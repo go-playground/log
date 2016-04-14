@@ -46,7 +46,9 @@ func (th *testHandler) handleLogEntry(entries <-chan *Entry) {
 			s += fmt.Sprintf(" %s=%v", f.Key, f.Value)
 		}
 
-		th.writer.Write([]byte(s))
+		if _, err := th.writer.Write([]byte(s)); err != nil {
+			panic(err)
+		}
 
 		e.WG.Done()
 	}
