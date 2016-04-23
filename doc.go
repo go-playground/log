@@ -132,11 +132,12 @@ Log Level Definitions
     PanicLevel - A "panic" condition usually affecting multiple apps/servers/sites. At this
                  level it would usually notify all tech staff on call.
 
-    AlertLevel - Action must be taken immediately. Should be corrected immediately, therefore
-                 notify staff who can fix the problem. An example would be the loss of a
-                 primary ISP connection.
+    AlertLevel - Action must be taken immediately. Should be corrected immediately,
+                 therefore notify staff who can fix the problem. An example would be the
+                 loss of a primary ISP connection.
 
-    FatalLevel - Should be corrected immediately, but indicates failure in a primary system,
-                 an example is a loss of a backup ISP connection. ( same as SYSLOG CRITICAL )
+    FatalLevel - Should be corrected immediately, but indicates failure in a primary
+                 system, an example is a loss of a backup ISP connection.
+                 ( same as SYSLOG CRITICAL )
 */
 package log
