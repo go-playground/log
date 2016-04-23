@@ -25,15 +25,15 @@ func (c *CustomHandler) Run() chan<- *log.Entry {
 
 		// below prints to os.Stderr but could marshal to JSON
 		// and send to central logging server
-		//																											  ---------
-		//																								|----------> | console |
-		// Addding this check for when you are doing centralized logging                                |             ---------
-		// i.e. -----------------               -----------------                                 -------------       --------
-		//     | app log handler | -- json --> | central log app | -- unmarshal json to Entry -> | log handler | --> | syslog |
-		//      -----------------               -----------------                                 -------------       --------
-		//      																						|             ---------
-		//      																						|----------> | DataDog |
-		//      																									  ---------
+		//																						       ---------
+		// 				                                                                 |----------> | console |
+		//                                                                               |             ---------
+		// i.e. -----------------               -----------------     Unmarshal    -------------       --------
+		//     | app log handler | -- json --> | central log app | --    to    -> | log handler | --> | syslog |
+		//      -----------------               -----------------       Entry      -------------       --------
+		//      																         |             ---------
+		//                                  									         |----------> | DataDog |
+		//          																	        	   ---------
 		var e *log.Entry
 		b := new(bytes.Buffer)
 

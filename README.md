@@ -105,15 +105,15 @@ func (c *CustomHandler) Run() chan<- *log.Entry {
 
 		// below prints to os.Stderr but could marshal to JSON
 		// and send to central logging server
-		//																											  ---------
-		//																								|----------> | console |
-		// Addding this check for when you are doing centralized logging                                |             ---------
-		// i.e. -----------------               -----------------                                 -------------       --------
-		//     | app log handler | -- json --> | central log app | -- unmarshal json to Entry -> | log handler | --> | syslog |
-		//      -----------------               -----------------                                 -------------       --------
-		//      																						|             ---------
-		//      																						|----------> | DataDog |
-		//      																									  ---------
+		//																						       ---------
+		// 				                                                                 |----------> | console |
+		//                                                                               |             ---------
+		// i.e. -----------------               -----------------     Unmarshal    -------------       --------
+		//     | app log handler | -- json --> | central log app | --    to    -> | log handler | --> | syslog |
+		//      -----------------               -----------------       Entry      -------------       --------
+		//      																         |             ---------
+		//                                  									         |----------> | DataDog |
+		//          																	        	   ---------
 		var e *log.Entry
 		b := new(bytes.Buffer)
 
@@ -180,6 +180,10 @@ Log Level Definitions
 **AlertLevel** - Action must be taken immediately. Should be corrected immediately, therefore notify staff who can fix the problem. An example would be the loss of a primary ISP connection.
 
 **FatalLevel** - Should be corrected immediately, but indicates failure in a primary system, an example is a loss of a backup ISP connection. ( same as SYSLOG CRITICAL )
+
+More Handlers
+-------------
+Pull requests for new handlers are welcome, please provide test coverage is all I ask.
 
 Special Thanks
 --------------
