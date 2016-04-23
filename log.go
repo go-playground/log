@@ -92,7 +92,8 @@ func (l *logger) Debug(v ...interface{}) {
 	l.HandleEntry(e)
 }
 
-// Trace starts a trace & returns Traceable object to End + log
+// Trace starts a trace & returns Traceable object to End + log.
+// Example defer log.Trace(...).End()
 func (l *logger) Trace(v ...interface{}) Traceable {
 
 	t := l.tracePool.Get().(*TraceEntry)

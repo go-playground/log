@@ -10,7 +10,8 @@ func Debug(v ...interface{}) {
 	Logger.Debug(v...)
 }
 
-// Trace starts a trace & returns Traceable object to End + log
+// Trace starts a trace & returns Traceable object to End + log.
+// Example defer log.Trace(...).End()
 func Trace(v ...interface{}) Traceable {
 	return Logger.Trace(v...)
 }
