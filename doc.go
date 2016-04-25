@@ -1,5 +1,5 @@
 /*
-is a simple, highly configurable, structured logging that is a near drop in replacement for the std library log.
+Package log is a simple, highly configurable, structured logging that is a near drop in replacement for the std library log.
 
 
 Usage
