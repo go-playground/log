@@ -50,7 +50,7 @@ func (th *testHandler) handleLogEntry(entries <-chan *Entry) {
 			panic(err)
 		}
 
-		e.WG.Done()
+		e.Consumed()
 	}
 }
 
@@ -267,15 +267,15 @@ func TestEntry(t *testing.T) {
 	// Resetting pool to ensure no Entries exist before setting the Application ID
 	Logger.entryPool = &sync.Pool{New: func() interface{} {
 		return &Entry{
-			WG:            new(sync.WaitGroup),
+			wg:            new(sync.WaitGroup),
 			ApplicationID: Logger.getApplicationID(),
 		}
 	}}
 
 	e := Logger.entryPool.Get().(*Entry)
 	Equal(t, e.ApplicationID, "app-log")
-	NotEqual(t, e.WG, nil)
+	NotEqual(t, e.wg, nil)
 
-	e = newEntry(InfoLevel, "test", []Field{F("key", "value")})
+	e = newEntry(InfoLevel, "test", []Field{F("key", "value")}, 0)
 	HandleEntry(e)
 }

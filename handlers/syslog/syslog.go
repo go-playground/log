@@ -11,15 +11,11 @@ import (
 )
 
 const (
-	colorFields           = "%s %s%6s%s %-25s"
 	colorNoFields         = "%s %s%6s%s %s"
 	colorKeyValue         = " %s%s%s=%v"
-	colorFieldsCaller     = "%s %s%6s%s %s:%d %-25s"
 	colorNoFieldsCaller   = "%s %s%6s%s %s:%d %s"
-	noColorFields         = "%s %6s %-25s"
 	noColorNoFields       = "%s %6s %s"
 	noColorKeyValue       = " %s=%v"
-	noColorFieldsCaller   = "%s %6s %s:%d %-25s"
 	noColorNoFieldsCaller = "%s %6s %s:%d %s"
 )
 
@@ -37,7 +33,6 @@ type Syslog struct {
 	formatter          Formatter
 	timestampFormat    string
 	format             string
-	formatFields       string
 	formatKeyValue     string
 }
 
@@ -131,24 +126,20 @@ func (s *Syslog) Run() chan<- *log.Entry {
 		if log.GetCallerInfo() {
 			if s.displayColor {
 				s.format = colorNoFieldsCaller
-				s.formatFields = colorFieldsCaller
 				s.formatKeyValue = colorKeyValue
 				s.formatter = s.defaultFormatEntryColorCaller
 			} else {
 				s.format = noColorNoFieldsCaller
-				s.formatFields = noColorFieldsCaller
 				s.formatKeyValue = noColorKeyValue
 				s.formatter = s.defaultFormatEntryCaller
 			}
 		} else {
 			if s.displayColor {
 				s.format = colorNoFields
-				s.formatFields = colorFields
 				s.formatKeyValue = colorKeyValue
 				s.formatter = s.defaultFormatEntryColor
 			} else {
 				s.format = noColorNoFields
-				s.formatFields = noColorFields
 				s.formatKeyValue = noColorKeyValue
 				s.formatter = s.defaultFormatEntry
 			}
@@ -196,11 +187,7 @@ func (s *Syslog) defaultFormatEntry(e *log.Entry) string {
 	buff := syslogBuffPool.Get().(*bytes.Buffer)
 	buff.Reset()
 
-	if len(e.Fields) == 0 {
-		fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
-	} else {
-		fmt.Fprintf(buff, s.formatFields, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
-	}
+	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
 
 	for _, f := range e.Fields {
 		fmt.Fprintf(buff, s.formatKeyValue, f.Key, f.Value)
@@ -218,11 +205,7 @@ func (s *Syslog) defaultFormatEntryColor(e *log.Entry) string {
 	buff := syslogBuffPool.Get().(*bytes.Buffer)
 	buff.Reset()
 
-	if len(e.Fields) == 0 {
-		fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, e.Message)
-	} else {
-		fmt.Fprintf(buff, s.formatFields, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, e.Message)
-	}
+	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, e.Message)
 
 	for _, f := range e.Fields {
 		fmt.Fprintf(buff, s.formatKeyValue, color, f.Key, s.ansiReset, f.Value)
@@ -247,11 +230,7 @@ func (s *Syslog) defaultFormatEntryCaller(e *log.Entry) string {
 		}
 	}
 
-	if len(e.Fields) == 0 {
-		fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
-	} else {
-		fmt.Fprintf(buff, s.formatFields, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
-	}
+	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
 
 	for _, f := range e.Fields {
 		fmt.Fprintf(buff, s.formatKeyValue, f.Key, f.Value)
@@ -277,11 +256,7 @@ func (s *Syslog) defaultFormatEntryColorCaller(e *log.Entry) string {
 		}
 	}
 
-	if len(e.Fields) == 0 {
-		fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, file, e.Line, e.Message)
-	} else {
-		fmt.Fprintf(buff, s.formatFields, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, file, e.Line, e.Message)
-	}
+	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, file, e.Line, e.Message)
 
 	for _, f := range e.Fields {
 		fmt.Fprintf(buff, s.formatKeyValue, color, f.Key, s.ansiReset, f.Value)
