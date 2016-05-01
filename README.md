@@ -185,6 +185,15 @@ More Handlers
 -------------
 Pull requests for new handlers are welcome, please provide test coverage is all I ask.
 
+Package Versioning
+----------
+I'm jumping on the vendoring bandwagon, you should vendor this package as I will not
+be creating different version with gopkg.in like allot of my other libraries.
+
+Why? because my time is spread pretty thin maintaining all of the libraries I have + LIFE,
+it is so freeing not to worry about it and will help me keep pouring out bigger and better
+things for you the community.
+
 Special Thanks
 --------------
 Special thanks to the following libraries that inspired
