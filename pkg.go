@@ -1,5 +1,10 @@
 package log
 
+import (
+	"fmt"
+	"time"
+)
+
 // F creates a new field key + value entry
 func F(key string, value interface{}) Field {
 	return Logger.F(key, value)
@@ -7,134 +12,174 @@ func F(key string, value interface{}) Field {
 
 // Debug level formatted message.
 func Debug(v ...interface{}) {
-	Logger.Debug(v...)
+	e := newEntry(DebugLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Trace starts a trace & returns Traceable object to End + log.
 // Example defer log.Trace(...).End()
 func Trace(v ...interface{}) Traceable {
-	return Logger.Trace(v...)
+	t := Logger.tracePool.Get().(*TraceEntry)
+	t.entry = newEntry(TraceLevel, fmt.Sprint(v...), make([]Field, 0), 1)
+	t.start = time.Now().UTC()
+
+	return t
 }
 
 // Info level formatted message.
 func Info(v ...interface{}) {
-	Logger.Info(v...)
+	e := newEntry(InfoLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Notice level formatted message.
 func Notice(v ...interface{}) {
-	Logger.Notice(v...)
+	e := newEntry(NoticeLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Warn level formatted message.
 func Warn(v ...interface{}) {
-	Logger.Warn(v...)
+	e := newEntry(WarnLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Error level formatted message.
 func Error(v ...interface{}) {
-	Logger.Error(v...)
+	e := newEntry(ErrorLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Panic logs an Panic level formatted message and then panics
 // it is here to let this log package be a drop in replacement
 // for the standard logger
 func Panic(v ...interface{}) {
-	Logger.Panic(v...)
+	s := fmt.Sprint(v...)
+	e := newEntry(PanicLevel, s, nil, 2)
+	Logger.handleEntry(e)
+	panic(s)
 }
 
 // Alert level formatted message.
 func Alert(v ...interface{}) {
-	Logger.Alert(v...)
+	s := fmt.Sprint(v...)
+	e := newEntry(AlertLevel, s, nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Fatal level formatted message, followed by an exit.
 func Fatal(v ...interface{}) {
-	Logger.Fatal(v...)
+	e := newEntry(FatalLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
+	exitFunc(1)
 }
 
 // Fatalln level formatted message, followed by an exit.
 func Fatalln(v ...interface{}) {
-	Logger.Fatal(v...)
+	e := newEntry(FatalLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
+	exitFunc(1)
 }
 
 // Debugf level formatted message.
 func Debugf(msg string, v ...interface{}) {
-	Logger.Debugf(msg, v...)
+	e := newEntry(DebugLevel, fmt.Sprintf(msg, v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Tracef starts a trace & returns Traceable object to End + log
 func Tracef(msg string, v ...interface{}) Traceable {
-	return Logger.Tracef(msg, v...)
+	t := Logger.tracePool.Get().(*TraceEntry)
+	t.entry = newEntry(TraceLevel, fmt.Sprintf(msg, v...), make([]Field, 0), 1)
+	t.start = time.Now().UTC()
+
+	return t
 }
 
 // Infof level formatted message.
 func Infof(msg string, v ...interface{}) {
-	Logger.Infof(msg, v...)
+	e := newEntry(InfoLevel, fmt.Sprintf(msg, v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Noticef level formatted message.
 func Noticef(msg string, v ...interface{}) {
-	Logger.Noticef(msg, v...)
+	e := newEntry(NoticeLevel, fmt.Sprintf(msg, v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Warnf level formatted message.
 func Warnf(msg string, v ...interface{}) {
-	Logger.Warnf(msg, v...)
+	e := newEntry(WarnLevel, fmt.Sprintf(msg, v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Errorf level formatted message.
 func Errorf(msg string, v ...interface{}) {
-	Logger.Errorf(msg, v...)
+	e := newEntry(ErrorLevel, fmt.Sprintf(msg, v...), nil, 2)
+	Logger.HandleEntry(e)
 }
 
 // Panicf logs an Panic level formatted message and then panics
 // it is here to let this log package be a near drop in replacement
 // for the standard logger
 func Panicf(msg string, v ...interface{}) {
-	Logger.Panicf(msg, v...)
+	s := fmt.Sprintf(msg, v...)
+	e := newEntry(PanicLevel, s, nil, 2)
+	Logger.handleEntry(e)
+	panic(s)
 }
 
 // Alertf level formatted message.
 func Alertf(msg string, v ...interface{}) {
-	Logger.Alertf(msg, v...)
+	s := fmt.Sprintf(msg, v...)
+	e := newEntry(AlertLevel, s, nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Fatalf level formatted message, followed by an exit.
 func Fatalf(msg string, v ...interface{}) {
-	Logger.Fatalf(msg, v...)
+	e := newEntry(FatalLevel, fmt.Sprintf(msg, v...), nil, 2)
+	Logger.handleEntry(e)
+	exitFunc(1)
 }
 
 // Panicln logs an Panic level formatted message and then panics
 // it is here to let this log package be a near drop in replacement
 // for the standard logger
 func Panicln(v ...interface{}) {
-	Logger.Panic(v...)
+	s := fmt.Sprint(v...)
+	e := newEntry(PanicLevel, s, nil, 2)
+	Logger.handleEntry(e)
+	panic(s)
 }
 
 // Print logs an Info level formatted message
 func Print(v ...interface{}) {
-	Logger.Info(v...)
+	e := newEntry(InfoLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Println logs an Info level formatted message
 func Println(v ...interface{}) {
-	Logger.Info(v...)
+	e := newEntry(InfoLevel, fmt.Sprint(v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // Printf logs an Info level formatted message
 func Printf(msg string, v ...interface{}) {
-	Logger.Infof(msg, v...)
+	e := newEntry(InfoLevel, fmt.Sprintf(msg, v...), nil, 2)
+	Logger.handleEntry(e)
 }
 
 // WithFields returns a log Entry with fields set
 func WithFields(fields ...Field) LeveledLogger {
-	return Logger.WithFields(fields...)
+	return newEntry(InfoLevel, "", fields, 2)
 }
 
 // HandleEntry send the logs entry out to all the registered handlers
 func HandleEntry(e *Entry) {
-	Logger.HandleEntry(e)
+	Logger.handleEntry(e)
 }
 
 // RegisterHandler adds a new Log Handler and specifies what log levels
@@ -151,6 +196,18 @@ func RegisterDurationFunc(fn DurationFormatFunc) {
 // SetTimeFormat sets the time format used for Trace events
 func SetTimeFormat(format string) {
 	Logger.SetTimeFormat(format)
+}
+
+// SetCallerInfo tells the logger to gather and set file and line number
+// information on the Entry object.
+func SetCallerInfo(info bool) {
+	Logger.SetCallerInfo(info)
+}
+
+// GetCallerInfo returns if the Logger instance is gathering file and
+// line number information
+func GetCallerInfo() bool {
+	return Logger.GetCallerInfo()
 }
 
 // SetApplicationID tells the logger to set a constant application key

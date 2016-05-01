@@ -1,8 +1,11 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	. "gopkg.in/go-playground/assert.v1"
 )
@@ -18,6 +21,387 @@ import (
 // go test -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
 //
 
+func TestConsoleLogger(t *testing.T) {
+
+	buff := new(bytes.Buffer)
+
+	th := &testHandler{
+		writer: buff,
+	}
+
+	Logger.RegisterHandler(th, AllLevels...)
+
+	Logger.Debug("debug")
+	Equal(t, buff.String(), "debug")
+	buff.Reset()
+
+	Logger.Debugf("%s", "debugf")
+	Equal(t, buff.String(), "debugf")
+	buff.Reset()
+
+	Logger.Info("info")
+	Equal(t, buff.String(), "info")
+	buff.Reset()
+
+	Logger.Infof("%s", "infof")
+	Equal(t, buff.String(), "infof")
+	buff.Reset()
+
+	Logger.Notice("notice")
+	Equal(t, buff.String(), "notice")
+	buff.Reset()
+
+	Logger.Noticef("%s", "noticef")
+	Equal(t, buff.String(), "noticef")
+	buff.Reset()
+
+	Logger.Warn("warn")
+	Equal(t, buff.String(), "warn")
+	buff.Reset()
+
+	Logger.Warnf("%s", "warnf")
+	Equal(t, buff.String(), "warnf")
+	buff.Reset()
+
+	Logger.Error("error")
+	Equal(t, buff.String(), "error")
+	buff.Reset()
+
+	Logger.Errorf("%s", "errorf")
+	Equal(t, buff.String(), "errorf")
+	buff.Reset()
+
+	Logger.Alert("alert")
+	Equal(t, buff.String(), "alert")
+	buff.Reset()
+
+	Logger.Alertf("%s", "alertf")
+	Equal(t, buff.String(), "alertf")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.Panic("panic") }, "panic")
+	Equal(t, buff.String(), "panic")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.Panicf("%s", "panicf") }, "panicf")
+	Equal(t, buff.String(), "panicf")
+	buff.Reset()
+
+	// WithFields
+	Logger.WithFields(F("key", "value")).Info("info")
+	Equal(t, buff.String(), "info key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Infof("%s", "infof")
+	Equal(t, buff.String(), "infof key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Notice("notice")
+	Equal(t, buff.String(), "notice key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Noticef("%s", "noticef")
+	Equal(t, buff.String(), "noticef key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Debug("debug")
+	Equal(t, buff.String(), "debug key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Debugf("%s", "debugf")
+	Equal(t, buff.String(), "debugf key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Warn("warn")
+	Equal(t, buff.String(), "warn key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Warnf("%s", "warnf")
+	Equal(t, buff.String(), "warnf key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Error("error")
+	Equal(t, buff.String(), "error key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Errorf("%s", "errorf")
+	Equal(t, buff.String(), "errorf key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Alert("alert")
+	Equal(t, buff.String(), "alert key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Alertf("%s", "alertf")
+	Equal(t, buff.String(), "alertf key=value")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
+	Equal(t, buff.String(), "panicf key=value")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panic("panic") }, "panic key=value")
+	Equal(t, buff.String(), "panic key=value")
+	buff.Reset()
+
+	func() {
+		defer Logger.Trace("trace").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
+	buff.Reset()
+
+	func() {
+		defer Logger.Tracef("tracef").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
+	buff.Reset()
+
+	func() {
+		defer Logger.WithFields(F("key", "value")).Trace("trace").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
+	buff.Reset()
+
+	func() {
+		defer Logger.WithFields(F("key", "value")).Tracef("tracef").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
+	buff.Reset()
+
+	// Test Custom Entry ( most common case is Unmarshalled from JSON when using centralized logging)
+	entry := new(Entry)
+	entry.ApplicationID = "APP"
+	entry.Level = InfoLevel
+	entry.Timestamp = time.Now().UTC()
+	entry.Message = "Test Message"
+	entry.Fields = make([]Field, 0)
+	Logger.HandleEntry(entry)
+	Equal(t, buff.String(), "Test Message")
+	buff.Reset()
+}
+
+func TestConsoleLoggerCaller(t *testing.T) {
+
+	buff := new(bytes.Buffer)
+
+	Logger.SetCallerInfo(true)
+
+	th := &testHandler{
+		writer: buff,
+	}
+
+	Logger.RegisterHandler(th, AllLevels...)
+
+	Equal(t, Logger.GetCallerInfo(), true)
+
+	Logger.Debug("debug")
+	Equal(t, buff.String(), "debug")
+	buff.Reset()
+
+	Logger.Debugf("%s", "debugf")
+	Equal(t, buff.String(), "debugf")
+	buff.Reset()
+
+	Logger.Info("info")
+	Equal(t, buff.String(), "info")
+	buff.Reset()
+
+	Logger.Infof("%s", "infof")
+	Equal(t, buff.String(), "infof")
+	buff.Reset()
+
+	Logger.Notice("notice")
+	Equal(t, buff.String(), "notice")
+	buff.Reset()
+
+	Logger.Noticef("%s", "noticef")
+	Equal(t, buff.String(), "noticef")
+	buff.Reset()
+
+	Logger.Warn("warn")
+	Equal(t, buff.String(), "warn")
+	buff.Reset()
+
+	Logger.Warnf("%s", "warnf")
+	Equal(t, buff.String(), "warnf")
+	buff.Reset()
+
+	Logger.Error("error")
+	Equal(t, buff.String(), "error")
+	buff.Reset()
+
+	Logger.Errorf("%s", "errorf")
+	Equal(t, buff.String(), "errorf")
+	buff.Reset()
+
+	Logger.Alert("alert")
+	Equal(t, buff.String(), "alert")
+	buff.Reset()
+
+	Logger.Alertf("%s", "alertf")
+	Equal(t, buff.String(), "alertf")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.Panic("panic") }, "panic")
+	Equal(t, buff.String(), "panic")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.Panicf("%s", "panicf") }, "panicf")
+	Equal(t, buff.String(), "panicf")
+	buff.Reset()
+
+	// WithFields
+	Logger.WithFields(F("key", "value")).Info("info")
+	Equal(t, buff.String(), "info key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Infof("%s", "infof")
+	Equal(t, buff.String(), "infof key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Notice("notice")
+	Equal(t, buff.String(), "notice key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Noticef("%s", "noticef")
+	Equal(t, buff.String(), "noticef key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Debug("debug")
+	Equal(t, buff.String(), "debug key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Debugf("%s", "debugf")
+	Equal(t, buff.String(), "debugf key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Warn("warn")
+	Equal(t, buff.String(), "warn key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Warnf("%s", "warnf")
+	Equal(t, buff.String(), "warnf key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Error("error")
+	Equal(t, buff.String(), "error key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Errorf("%s", "errorf")
+	Equal(t, buff.String(), "errorf key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Alert("alert")
+	Equal(t, buff.String(), "alert key=value")
+	buff.Reset()
+
+	Logger.WithFields(F("key", "value")).Alertf("%s", "alertf")
+	Equal(t, buff.String(), "alertf key=value")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
+	Equal(t, buff.String(), "panicf key=value")
+	buff.Reset()
+
+	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panic("panic") }, "panic key=value")
+	Equal(t, buff.String(), "panic key=value")
+	buff.Reset()
+
+	func() {
+		defer Logger.Trace("trace").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
+	buff.Reset()
+
+	func() {
+		defer Logger.Tracef("tracef").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
+	buff.Reset()
+
+	func() {
+		defer Logger.WithFields(F("key", "value")).Trace("trace").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
+	buff.Reset()
+
+	func() {
+		defer Logger.WithFields(F("key", "value")).Tracef("tracef").End()
+	}()
+
+	// TODO: finish up regex
+	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
+	buff.Reset()
+
+	// Test Custom Entry ( most common case is Unmarshalled from JSON when using centralized logging)
+	entry := new(Entry)
+	entry.ApplicationID = "APP"
+	entry.Level = InfoLevel
+	entry.Timestamp = time.Now().UTC()
+	entry.Message = "Test Message"
+	entry.Fields = make([]Field, 0)
+	Logger.HandleEntry(entry)
+	Equal(t, buff.String(), "Test Message")
+	buff.Reset()
+}
+
+func TestLevel(t *testing.T) {
+	l := Level(9999)
+	Equal(t, l.String(), "Unknow Level")
+
+	Equal(t, DebugLevel.String(), "DEBUG")
+	Equal(t, TraceLevel.String(), "TRACE")
+	Equal(t, InfoLevel.String(), "INFO")
+	Equal(t, NoticeLevel.String(), "NOTICE")
+	Equal(t, WarnLevel.String(), "WARN")
+	Equal(t, ErrorLevel.String(), "ERROR")
+	Equal(t, PanicLevel.String(), "PANIC")
+	Equal(t, AlertLevel.String(), "ALERT")
+	Equal(t, FatalLevel.String(), "FATAL")
+}
+
+func TestSettings(t *testing.T) {
+	Logger.RegisterDurationFunc(func(d time.Duration) string {
+		return fmt.Sprintf("%gs", d.Seconds())
+	})
+
+	Logger.SetTimeFormat(time.RFC1123)
+}
+
+func TestEntry(t *testing.T) {
+
+	Logger.SetApplicationID("app-log")
+
+	// Resetting pool to ensure no Entries exist before setting the Application ID
+	Logger.entryPool = &sync.Pool{New: func() interface{} {
+		return &Entry{
+			wg:            new(sync.WaitGroup),
+			ApplicationID: Logger.getApplicationID(),
+		}
+	}}
+
+	e := Logger.entryPool.Get().(*Entry)
+	Equal(t, e.ApplicationID, "app-log")
+	NotEqual(t, e.wg, nil)
+
+	e = newEntry(InfoLevel, "test", []Field{F("key", "value")}, 0)
+	Logger.HandleEntry(e)
+}
+
 func TestFatal(t *testing.T) {
 	var i int
 
@@ -25,19 +409,16 @@ func TestFatal(t *testing.T) {
 		i = code
 	}
 
-	Fatal("fatal")
+	Logger.Fatal("fatal")
 	Equal(t, i, 1)
 
-	Fatalf("fatalf")
+	Logger.Fatalf("fatalf")
 	Equal(t, i, 1)
 
-	Fatalln("fatalln")
+	Logger.WithFields(F("key", "value")).Fatal("fatal")
 	Equal(t, i, 1)
 
-	WithFields(F("key", "value")).Fatal("fatal")
-	Equal(t, i, 1)
-
-	WithFields(F("key", "value")).Fatalf("fatalf")
+	Logger.WithFields(F("key", "value")).Fatalf("fatalf")
 	Equal(t, i, 1)
 }
 

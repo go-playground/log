@@ -1,6 +1,9 @@
 package log
 
-import "time"
+import (
+	"runtime"
+	"time"
+)
 
 // Traceable interface for a traceable object
 type Traceable interface {
@@ -24,6 +27,10 @@ func (t *TraceEntry) End() {
 		F("end", t.end.Format(Logger.timeFormat)),
 	)
 
-	Logger.HandleEntry(t.entry)
+	if Logger.logCallerInfo {
+		_, t.entry.File, t.entry.Line, _ = runtime.Caller(t.entry.calldepth)
+	}
+
+	Logger.handleEntry(t.entry)
 	Logger.tracePool.Put(t)
 }
