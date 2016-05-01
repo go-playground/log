@@ -9,6 +9,19 @@ import (
 	"github.com/go-playground/log"
 )
 
+const (
+	colorFields           = "%s %s%6s%s %-25s"
+	colorNoFields         = "%s %s%6s%s %s"
+	colorKeyValue         = " %s%s%s=%v"
+	colorFieldsCaller     = "%s %s%6s%s %s:%d %-25s"
+	colorNoFieldsCaller   = "%s %s%6s%s %s:%d %s"
+	noColorFields         = "%s %6s %-25s"
+	noColorNoFields       = "%s %6s %s"
+	noColorKeyValue       = " %s=%v"
+	noColorFieldsCaller   = "%s %6s %s:%d %-25s"
+	noColorNoFieldsCaller = "%s %6s %s:%d %s"
+)
+
 // Console is an instance of the console logger
 type Console struct {
 	buffer          uint
@@ -19,6 +32,10 @@ type Console struct {
 	timestampFormat string
 	displayColor    bool
 	start           time.Time
+	format          string
+	formatFields    string
+	formatKeyValue  string
+	formatTs        func(e *log.Entry) string
 }
 
 // Colors mapping.
@@ -56,7 +73,9 @@ func (c *Console) DisplayColor(color bool) {
 
 // SetTimestampFormat sets Console's timestamp output format
 // Default is : time.RFC3339Nano
+// automatically calls UseMiniTimestamp(false)
 func (c *Console) SetTimestampFormat(format string) {
+	c.UseMiniTimestamp(false)
 	c.timestampFormat = format
 }
 
@@ -94,17 +113,48 @@ func (c *Console) Run() chan<- *log.Entry {
 	// in a big high traffic app, set a higher buffer
 	ch := make(chan *log.Entry, c.buffer)
 
-	if c.displayColor {
-		go c.handleLog(ch)
+	if c.miniTimestamp {
+		c.formatTs = func(e *log.Entry) string {
+			return fmt.Sprintf("%04d", int(time.Since(c.start)/time.Second))
+		}
 	} else {
-		go c.handleLogNoColor(ch)
+		c.formatTs = func(e *log.Entry) string {
+			return e.Timestamp.Format(c.timestampFormat)
+		}
+	}
+
+	// GetCallerInfo may want to add logic to not solely rely upon this
+	if log.GetCallerInfo() {
+		if c.displayColor {
+			c.format = colorNoFieldsCaller
+			c.formatFields = colorFieldsCaller
+			c.formatKeyValue = colorKeyValue
+
+			go c.handleLogCaller(ch)
+		} else {
+			c.format = noColorNoFieldsCaller
+			c.formatFields = noColorFieldsCaller
+			c.formatKeyValue = noColorKeyValue
+
+			go c.handleLogNoColorCaller(ch)
+		}
+	} else {
+		if c.displayColor {
+			c.format = colorNoFields
+			c.formatFields = colorFields
+			c.formatKeyValue = colorKeyValue
+
+			go c.handleLog(ch)
+		} else {
+			c.format = noColorNoFields
+			c.formatFields = noColorFields
+			c.formatKeyValue = noColorKeyValue
+
+			go c.handleLogNoColor(ch)
+		}
 	}
 
 	return ch
-}
-
-func (c *Console) parseMiniTimestamp() int {
-	return int(time.Since(c.start) / time.Second)
 }
 
 // handleLog consumes and logs any Entry's passed to the channel
@@ -112,68 +162,114 @@ func (c *Console) handleLog(entries <-chan *log.Entry) {
 
 	var e *log.Entry
 	var color log.ANSIEscSeq
-	var l int
 
 	for e = range entries {
 
-		l = len(e.Fields)
 		color = c.colors[e.Level]
 
-		if c.miniTimestamp {
-			if l == 0 {
-				fmt.Fprintf(c.writer, "%s%6s%s[%04d] %s", color, e.Level, c.ansiReset, c.parseMiniTimestamp(), e.Message)
-			} else {
-				fmt.Fprintf(c.writer, "%s%6s%s[%04d] %-25s", color, e.Level, c.ansiReset, c.parseMiniTimestamp(), e.Message)
-			}
+		if len(e.Fields) == 0 {
+			fmt.Fprintf(c.writer, c.format, c.formatTs(e), color, e.Level, c.ansiReset, e.Message)
 		} else {
-			if l == 0 {
-				fmt.Fprintf(c.writer, "%s%6s%s[%s] %s", color, e.Level, c.ansiReset, e.Timestamp.Format(c.timestampFormat), e.Message)
-			} else {
-				fmt.Fprintf(c.writer, "%s%6s%s[%s] %-25s", color, e.Level, c.ansiReset, e.Timestamp.Format(c.timestampFormat), e.Message)
-			}
+			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), color, e.Level, c.ansiReset, e.Message)
 		}
 
 		for _, f := range e.Fields {
-			fmt.Fprintf(c.writer, " %s%s%s=%v", color, f.Key, c.ansiReset, f.Value)
+			fmt.Fprintf(c.writer, c.formatKeyValue, color, f.Key, c.ansiReset, f.Value)
 		}
 
 		fmt.Fprintln(c.writer)
 
-		e.WG.Done()
+		e.Consumed()
 	}
 }
 
-// handleLogNoColor consumes and logs any Entry's passed to the channel and
-// print with no color
-func (c *Console) handleLogNoColor(entries <-chan *log.Entry) {
+// handleLog consumes and logs any Entry's passed to the channel
+func (c *Console) handleLogCaller(entries <-chan *log.Entry) {
 
 	var e *log.Entry
-	var l int
+	var color log.ANSIEscSeq
+	var file string
 
 	for e = range entries {
 
-		l = len(e.Fields)
+		color = c.colors[e.Level]
 
-		if c.miniTimestamp {
-			if l == 0 {
-				fmt.Fprintf(c.writer, "%6s[%04d] %s", e.Level, c.parseMiniTimestamp(), e.Message)
-			} else {
-				fmt.Fprintf(c.writer, "%6s[%04d] %-25s", e.Level, c.parseMiniTimestamp(), e.Message)
-			}
-		} else {
-			if l == 0 {
-				fmt.Fprintf(c.writer, "%6s[%s] %s", e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
-			} else {
-				fmt.Fprintf(c.writer, "%6s[%s] %-25s", e.Level, e.Timestamp.Format(c.timestampFormat), e.Message)
+		file = e.File
+		for i := len(file) - 1; i > 0; i-- {
+			if file[i] == '/' {
+				file = file[i+1:]
+				break
 			}
 		}
 
+		if len(e.Fields) == 0 {
+			fmt.Fprintf(c.writer, c.format, c.formatTs(e), color, e.Level, c.ansiReset, file, e.Line, e.Message)
+		} else {
+			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), color, e.Level, c.ansiReset, file, e.Line, e.Message)
+		}
+
 		for _, f := range e.Fields {
-			fmt.Fprintf(c.writer, " %s=%v", f.Key, f.Value)
+			fmt.Fprintf(c.writer, c.formatKeyValue, color, f.Key, c.ansiReset, f.Value)
 		}
 
 		fmt.Fprintln(c.writer)
 
-		e.WG.Done()
+		e.Consumed()
+	}
+}
+
+// handleLogNoColor consumes and logs any Entry's passed to the channel, with no color
+func (c *Console) handleLogNoColor(entries <-chan *log.Entry) {
+
+	var e *log.Entry
+
+	for e = range entries {
+
+		if len(e.Fields) == 0 {
+			fmt.Fprintf(c.writer, c.format, c.formatTs(e), e.Level, e.Message)
+		} else {
+			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), e.Level, e.Message)
+		}
+
+		for _, f := range e.Fields {
+			fmt.Fprintf(c.writer, c.formatKeyValue, f.Key, f.Value)
+		}
+
+		fmt.Fprintln(c.writer)
+
+		e.Consumed()
+	}
+}
+
+// handleLogNoColorCaller consumes and logs any Entry's passed to the channel,
+// with no color, file and line info
+func (c *Console) handleLogNoColorCaller(entries <-chan *log.Entry) {
+
+	var e *log.Entry
+	var file string
+
+	for e = range entries {
+
+		file = e.File
+		for i := len(file) - 1; i > 0; i-- {
+			if file[i] == '/' {
+				file = file[i+1:]
+				break
+			}
+		}
+
+		if len(e.Fields) == 0 {
+			fmt.Fprintf(c.writer, c.format, c.formatTs(e), e.Level, file, e.Line, e.Message)
+		} else {
+			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), e.Level, file, e.Line, e.Message)
+		}
+
+		for _, f := range e.Fields {
+			fmt.Fprintf(c.writer, c.formatKeyValue, f.Key, f.Value)
+		}
+
+		fmt.Fprintln(c.writer)
+
+		e.Consumed()
 	}
 }
