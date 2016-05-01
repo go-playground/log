@@ -27,13 +27,13 @@ type Syslog struct {
 	buffer             uint
 	colors             [9]log.ANSIEscSeq
 	ansiReset          log.ANSIEscSeq
-	displayColor       bool
 	writer             *syslog.Writer
-	hasCustomFormatter bool
 	formatter          Formatter
 	timestampFormat    string
 	format             string
 	formatKeyValue     string
+	displayColor       bool
+	hasCustomFormatter bool
 }
 
 var (
@@ -230,7 +230,7 @@ func (s *Syslog) defaultFormatEntryCaller(e *log.Entry) string {
 		}
 	}
 
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
+	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)
 
 	for _, f := range e.Fields {
 		fmt.Fprintf(buff, s.formatKeyValue, f.Key, f.Value)

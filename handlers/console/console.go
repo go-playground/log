@@ -28,14 +28,14 @@ type Console struct {
 	colors          [9]log.ANSIEscSeq
 	ansiReset       log.ANSIEscSeq
 	writer          io.Writer
-	miniTimestamp   bool
 	timestampFormat string
-	displayColor    bool
 	start           time.Time
 	format          string
 	formatFields    string
 	formatKeyValue  string
 	formatTs        func(e *log.Entry) string
+	displayColor    bool
+	miniTimestamp   bool
 }
 
 // Colors mapping.
