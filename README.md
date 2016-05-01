@@ -127,7 +127,7 @@ func (c *CustomHandler) Run() chan<- *log.Entry {
 			}
 
 			fmt.Println(b.String())
-			e.WG.Done() // done writing the entry
+			e.Consumed() // done writing the entry
 		}
 
 	}(ch)
