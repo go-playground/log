@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	redisclient "github.com/garyburd/redigo/redis"
 	"github.com/go-playground/log"
 	redislogger "github.com/go-playground/log/handlers/redis"
 	msgpack "gopkg.in/vmihailenco/msgpack.v2"
@@ -53,12 +52,10 @@ func main() {
 		for _, f := range e.Fields {
 			dat[f.Key] = f.Value
 		}
-		b, err := msgpack.Marshal(dat)
+		msg, err := json.Marshal(dat)
 		if err != nil {
-			panic(err)
+			fmt.Printf("[ERROR] Could not encoding to JSON: %v\n", err)
 		}
-		fmt.Printf("MsgPack would have been: %v\n", b)
-		msg, _ := json.Marshal(dat)
 		return string(msg)
 	})
 
@@ -81,6 +78,7 @@ func main() {
 		dat["event_time"] = e.Timestamp.Format(time.RFC3339)
 		dat["log_level"] = e.Level.String()
 		dat["message"] = e.Message
+		dat["encoding"] = "json"
 		for _, f := range e.Fields {
 			dat[f.Key] = f.Value
 		}
