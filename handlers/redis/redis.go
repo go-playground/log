@@ -20,6 +20,7 @@ type Redis struct {
 	encoding           string
 	hasCustomFormatter bool
 	redisList          string
+	numWorkers         int
 }
 
 // New Redis client
@@ -31,11 +32,10 @@ func New(bufferSize uint, redisHosts []string) (*Redis, error) {
 		encoding:           "",
 		hasCustomFormatter: false,
 		redisList:          "logs",
+		numWorkers:         1,
 	}
 
-	if bufferSize >= 1 {
-		r.buffer = bufferSize
-	}
+	r.buffer = bufferSize
 
 	r.redisHosts = redisHosts
 
@@ -68,10 +68,18 @@ func (r *Redis) SetFormatter(f Formatter) {
 	r.hasCustomFormatter = true
 }
 
+func (r *Redis) SetNumWorkers(num uint) {
+	if num >= 1 {
+		r.numWorkers = num
+	}
+}
+
 // Run starts the logger consuming on the returned channed
 func (r *Redis) Run() chan<- *log.Entry {
 	ch := make(chan *log.Entry, r.buffer)
-	go r.handleLog(ch)
+	for i := 0; i <= int(r.numWorkers); i++ {
+		go r.handleLog(ch)
+	}
 	return ch
 }
 
@@ -88,7 +96,7 @@ ItterateOverItems:
 		rand.Seed(int64(time.Now().Nanosecond()))
 		c, err := redisclient.DialTimeout("tcp", r.redisHosts[rand.Intn(len(r.redisHosts))], 0, 1*time.Second, 1*time.Second)
 		if err != nil {
-			fmt.Sprintf("[ERROR] Could not connect to Redis: %s\n", err.Error())
+			log.Info(fmt.Sprintf("[ERROR] Could not connect to Redis: %s\n", err.Error()))
 			goto ItterateOverItems
 		}
 		defer c.Close()
@@ -96,12 +104,12 @@ ItterateOverItems:
 		_, err = c.Do("SELECT", "0")
 		if err != nil {
 			c.Close()
-			fmt.Sprintf("[ERROR] Could not select Redis DB: %s\n", err.Error())
+			log.Info(fmt.Sprintf("[ERROR] Could not select Redis DB: %s\n", err.Error()))
 		}
 		// Issue the command to push the entry onto the designated list
 		_, err = c.Do("RPUSH", r.redisList, payload)
 		if err != nil {
-			fmt.Sprintf("[ERROR] Could not select Redis DB: %s\n", err.Error())
+			log.Info(fmt.Sprintf("[ERROR] Could not select Redis DB: %s\n", err.Error()))
 		}
 		e.WG.Done()
 	}

@@ -28,6 +28,7 @@ func main() {
 	hLog.SetFormatter(func(e *log.Entry) string {
 		return fmt.Sprintf("[%s] %s : %s", e.Timestamp.Format(time.RFC3339), strings.ToUpper(e.Level.String()), e.Message)
 	})
+	hLog.SetNumWorkers(4)
 
 	e := &log.Entry{
 		WG:        new(sync.WaitGroup),
@@ -36,7 +37,9 @@ func main() {
 		Timestamp: time.Now(),
 	}
 
-	log.HandleEntry(e)
+	for i := 0; i < 30; i++ {
+		log.HandleEntry(e)
+	}
 
 	/*********************************************************************
 	  Set formater for json encoded entry that could be sent to Logstash

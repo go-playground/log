@@ -19,22 +19,26 @@ type HTTP struct {
 	hasCustomFormatter bool
 	contentEncoding    string
 	httpClient         httpclient.Client
+	numWorkers         uint
+}
+
+func init() {
+
 }
 
 func New(bufferSize uint, remoteHost string) (*HTTP, error) {
 
 	h := &HTTP{
 		buffer:             0,
-		remoteHost:         "http://localhost:80/",
+		remoteHost:         "http://localhost:8888/",
 		contentEncoding:    "application/x-www-form-urlencoded",
 		hasCustomFormatter: false,
+		numWorkers:         1,
 	}
 
 	h.httpClient = httpclient.Client{}
 
-	if bufferSize >= 1 {
-		h.buffer = bufferSize
-	}
+	h.buffer = bufferSize
 
 	if _, err := url.Parse(remoteHost); err != nil {
 		return nil, err
@@ -54,7 +58,7 @@ func (h *HTTP) SetContentEncoding(encoding string) {
 
 func (h *HTTP) SetRemoteHost(host string) {
 	if _, err := url.Parse(host); err != nil {
-		h.remoteHost = "http://localhost:80/"
+		h.remoteHost = "http://localhost:8888/"
 	} else {
 		h.remoteHost = host
 	}
@@ -65,10 +69,18 @@ func (h *HTTP) SetFormatter(f Formatter) {
 	h.hasCustomFormatter = true
 }
 
+func (h *HTTP) SetNumWorkers(num uint) {
+	if num >= 1 {
+		h.numWorkers = num
+	}
+}
+
 // Run starts the logger consuming on the returned channed
 func (h *HTTP) Run() chan<- *log.Entry {
 	ch := make(chan *log.Entry, h.buffer)
-	go h.handleLog(ch)
+	for i := 0; i <= int(h.numWorkers); i++ {
+		go h.handleLog(ch)
+	}
 	return ch
 }
 
@@ -84,15 +96,15 @@ func (h *HTTP) handleLog(entries <-chan *log.Entry) {
 		// Issue POST request to send off data
 		req, err := httpclient.NewRequest("POST", h.remoteHost, b)
 		if err != nil {
-			fmt.Printf("[Error] Could not initialize new request: %v\n", err)
+			log.Info(fmt.Sprintf("[Error] Could not initialize new request: %v\n", err))
 		}
 		req.Header.Add("Content-Type", h.contentEncoding)
 		resp, err := h.httpClient.Do(req)
 		if err != nil {
-			fmt.Printf("[Error] Could not post data to %s: %v\n", h.remoteHost, err)
+			log.Info(fmt.Sprintf("[Error] Could not post data to %s: %v\n", h.remoteHost, err))
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 299 {
-			fmt.Printf("[Error] Received HTTP %d during POST request to %s\n", resp.StatusCode, h.remoteHost)
+			log.Info(fmt.Sprintf("[Error] Received HTTP %d during POST request to %s\n", resp.StatusCode, h.remoteHost))
 		}
 		e.WG.Done()
 	}
