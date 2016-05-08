@@ -29,9 +29,11 @@ type logger struct {
 
 // Logger is the default instance of the log package
 var (
-	once     sync.Once
-	Logger   *logger
-	exitFunc = os.Exit
+	once       sync.Once
+	Logger     *logger
+	exitFunc   = os.Exit
+	skipLevel1 = 1
+	skipLevel2 = 2
 )
 
 func init() {
@@ -89,7 +91,7 @@ var _ FieldLeveledLogger = Logger
 
 // Debug level formatted message.
 func (l *logger) Debug(v ...interface{}) {
-	e := newEntry(DebugLevel, fmt.Sprint(v...), nil, 2)
+	e := newEntry(DebugLevel, fmt.Sprint(v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
@@ -98,7 +100,7 @@ func (l *logger) Debug(v ...interface{}) {
 func (l *logger) Trace(v ...interface{}) Traceable {
 
 	t := l.tracePool.Get().(*TraceEntry)
-	t.entry = newEntry(TraceLevel, fmt.Sprint(v...), make([]Field, 0), 1)
+	t.entry = newEntry(TraceLevel, fmt.Sprint(v...), make([]Field, 0), skipLevel1)
 	t.start = time.Now().UTC()
 
 	return t
@@ -106,32 +108,32 @@ func (l *logger) Trace(v ...interface{}) Traceable {
 
 // Info level formatted message.
 func (l *logger) Info(v ...interface{}) {
-	e := newEntry(InfoLevel, fmt.Sprint(v...), nil, 2)
+	e := newEntry(InfoLevel, fmt.Sprint(v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Notice level formatted message.
 func (l *logger) Notice(v ...interface{}) {
-	e := newEntry(NoticeLevel, fmt.Sprint(v...), nil, 2)
+	e := newEntry(NoticeLevel, fmt.Sprint(v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Warn level formatted message.
 func (l *logger) Warn(v ...interface{}) {
-	e := newEntry(WarnLevel, fmt.Sprint(v...), nil, 2)
+	e := newEntry(WarnLevel, fmt.Sprint(v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Error level formatted message.
 func (l *logger) Error(v ...interface{}) {
-	e := newEntry(ErrorLevel, fmt.Sprint(v...), nil, 2)
+	e := newEntry(ErrorLevel, fmt.Sprint(v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Panic logs an Panic level formatted message and then panics
 func (l *logger) Panic(v ...interface{}) {
 	s := fmt.Sprint(v...)
-	e := newEntry(PanicLevel, s, nil, 2)
+	e := newEntry(PanicLevel, s, nil, skipLevel2)
 	l.handleEntry(e)
 	panic(s)
 }
@@ -139,20 +141,20 @@ func (l *logger) Panic(v ...interface{}) {
 // Alert logs an Alert level formatted message and then panics
 func (l *logger) Alert(v ...interface{}) {
 	s := fmt.Sprint(v...)
-	e := newEntry(AlertLevel, s, nil, 2)
+	e := newEntry(AlertLevel, s, nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Fatal level formatted message, followed by an exit.
 func (l *logger) Fatal(v ...interface{}) {
-	e := newEntry(FatalLevel, fmt.Sprint(v...), nil, 2)
+	e := newEntry(FatalLevel, fmt.Sprint(v...), nil, skipLevel2)
 	l.handleEntry(e)
 	exitFunc(1)
 }
 
 // Debugf level formatted message.
 func (l *logger) Debugf(msg string, v ...interface{}) {
-	e := newEntry(DebugLevel, fmt.Sprintf(msg, v...), nil, 2)
+	e := newEntry(DebugLevel, fmt.Sprintf(msg, v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
@@ -160,7 +162,7 @@ func (l *logger) Debugf(msg string, v ...interface{}) {
 func (l *logger) Tracef(msg string, v ...interface{}) Traceable {
 
 	t := l.tracePool.Get().(*TraceEntry)
-	t.entry = newEntry(TraceLevel, fmt.Sprintf(msg, v...), make([]Field, 0), 1)
+	t.entry = newEntry(TraceLevel, fmt.Sprintf(msg, v...), make([]Field, 0), skipLevel1)
 	t.start = time.Now().UTC()
 
 	return t
@@ -168,32 +170,32 @@ func (l *logger) Tracef(msg string, v ...interface{}) Traceable {
 
 // Infof level formatted message.
 func (l *logger) Infof(msg string, v ...interface{}) {
-	e := newEntry(InfoLevel, fmt.Sprintf(msg, v...), nil, 2)
+	e := newEntry(InfoLevel, fmt.Sprintf(msg, v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Noticef level formatted message.
 func (l *logger) Noticef(msg string, v ...interface{}) {
-	e := newEntry(NoticeLevel, fmt.Sprintf(msg, v...), nil, 2)
+	e := newEntry(NoticeLevel, fmt.Sprintf(msg, v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Warnf level formatted message.
 func (l *logger) Warnf(msg string, v ...interface{}) {
-	e := newEntry(WarnLevel, fmt.Sprintf(msg, v...), nil, 2)
+	e := newEntry(WarnLevel, fmt.Sprintf(msg, v...), nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Errorf level formatted message.
 func (l *logger) Errorf(msg string, v ...interface{}) {
-	e := newEntry(ErrorLevel, fmt.Sprintf(msg, v...), nil, 2)
+	e := newEntry(ErrorLevel, fmt.Sprintf(msg, v...), nil, skipLevel2)
 	l.HandleEntry(e)
 }
 
 // Panicf logs an Panic level formatted message and then panics
 func (l *logger) Panicf(msg string, v ...interface{}) {
 	s := fmt.Sprintf(msg, v...)
-	e := newEntry(PanicLevel, s, nil, 2)
+	e := newEntry(PanicLevel, s, nil, skipLevel2)
 	l.handleEntry(e)
 	panic(s)
 }
@@ -201,13 +203,13 @@ func (l *logger) Panicf(msg string, v ...interface{}) {
 // Alertf logs an Alert level formatted message and then panics
 func (l *logger) Alertf(msg string, v ...interface{}) {
 	s := fmt.Sprintf(msg, v...)
-	e := newEntry(AlertLevel, s, nil, 2)
+	e := newEntry(AlertLevel, s, nil, skipLevel2)
 	l.handleEntry(e)
 }
 
 // Fatalf level formatted message, followed by an exit.
 func (l *logger) Fatalf(msg string, v ...interface{}) {
-	e := newEntry(FatalLevel, fmt.Sprintf(msg, v...), nil, 2)
+	e := newEntry(FatalLevel, fmt.Sprintf(msg, v...), nil, skipLevel2)
 	l.handleEntry(e)
 	exitFunc(1)
 }
@@ -224,7 +226,7 @@ func (l *logger) F(key string, value interface{}) Field {
 
 // WithFields returns a log Entry with fields set
 func (l *logger) WithFields(fields ...Field) LeveledLogger {
-	return newEntry(InfoLevel, "", fields, 2)
+	return newEntry(InfoLevel, "", fields, skipLevel2)
 }
 
 // HandleEntry send the logs entry out to all the registered handlers
@@ -304,15 +306,18 @@ func (l *logger) SetApplicationID(id string) {
 }
 
 // SetCallerInfo tells the logger to gather and set file and line number
-// information on the Entry object.
+// information on all Entry objects regardless of log type.
+// By defaut only error or warning style logs gather this information by default.
 func (l *logger) SetCallerInfo(info bool) {
 	l.logCallerInfo = info
 }
 
-// GetCallerInfo returns if the Logger instance is gathering file and
-// line number information
-func (l *logger) GetCallerInfo() bool {
-	return l.logCallerInfo
+// SetCallerSkipDiff adds the provided diff to the caller SkipLevel values.
+// This is used when wrapping this library, you can set ths to increase the
+// skip values passed to Caller that retrieves the file + line number info.
+func (l *logger) SetCallerSkipDiff(diff uint8) {
+	skipLevel1 += int(diff)
+	skipLevel2 += int(diff)
 }
 
 func (l *logger) getApplicationID() string {
