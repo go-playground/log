@@ -1,116 +1,128 @@
-package http
+package redis
 
 import (
 	//"bytes"
 	"fmt"
-	redisclient "github.com/garyburd/redigo/redis"
-	"github.com/go-playground/log"
+	stdlog "log"
 	"math/rand"
 	"time"
+
+	redisclient "github.com/garyburd/redigo/redis"
+	"github.com/go-playground/log"
 )
 
+// FormatFunc is the function that the workers use to create
+// a new Formatter per worker allowing reusable go routine safe
+// variable to be used within your Formatter function.
+type FormatFunc func() Formatter
+
 // Formatter is the function used to format the Redis entry
-type Formatter func(e *log.Entry) string
+type Formatter func(e *log.Entry) []byte
 
 // Redis is an instance of the redis logger
 type Redis struct {
-	buffer             uint // channel buffer
-	redisHosts         []string
-	formatter          Formatter
-	encoding           string
-	hasCustomFormatter bool
-	redisList          string
-	numWorkers         int
+	buffer     uint // channel buffer
+	redisHosts []string
+	formatFunc FormatFunc
+	encoding   string
+	redisList  string
+	numWorkers uint
 }
 
-// New Redis client
-func New(bufferSize uint, redisHosts []string) (*Redis, error) {
+// New returns a new instance of the redis logger
+func New(redisHosts []string, list string, encoding string) (*Redis, error) {
 
 	r := &Redis{
-		buffer:             0,
-		redisHosts:         []string{"127.0.0.1:6379"},
-		encoding:           "",
-		hasCustomFormatter: false,
-		redisList:          "logs",
-		numWorkers:         1,
+		buffer:     0,
+		redisHosts: redisHosts,
+		encoding:   "",
+		formatFunc: formatFunc,
+		redisList:  "logs",
+		numWorkers: 1,
 	}
-
-	r.buffer = bufferSize
-
-	r.redisHosts = redisHosts
 
 	return r, nil
 }
 
-// SetBuffer sets the buffer for Redis client
-func (r *Redis) SetBuffer(buff uint) {
-	r.buffer = buff
-}
+// SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
+// These settings should be thought about together, hence setting both in the same function.
+func (r *Redis) SetBuffersAndWorkers(size uint, workers uint) {
+	r.buffer = size
 
-// SetEncoding sets the data encoding type (none, msgpack, etc)
-func (r *Redis) SetEncoding(encoding string) {
-	r.encoding = encoding
-}
+	if workers == 0 {
+		// just in case no log registered yet
+		stdlog.Println("Invalid number of workers specified, setting to 1")
+		log.Warn("Invalid number of workers specified, setting to 1")
 
-// SetRedisHosts sets the list of redis hosts to attempt connecting to
-func (r *Redis) SetRedisHosts(hosts []string) {
-	r.redisHosts = hosts
-}
-
-// SetRedisList sets the list in which to send the events
-func (r *Redis) SetRedisList(list string) {
-	r.redisList = list
-}
-
-// SetFormatter sets the entry formatter
-func (r *Redis) SetFormatter(f Formatter) {
-	r.formatter = f
-	r.hasCustomFormatter = true
-}
-
-func (r *Redis) SetNumWorkers(num uint) {
-	if num >= 1 {
-		r.numWorkers = num
+		workers = 1
 	}
+
+	r.numWorkers = workers
+}
+
+// SetFormatFunc sets FormatFunc each worker will call to get
+// a Formatter func
+func (r *Redis) SetFormatFunc(fn FormatFunc) {
+	r.formatFunc = fn
 }
 
 // Run starts the logger consuming on the returned channed
 func (r *Redis) Run() chan<- *log.Entry {
+
 	ch := make(chan *log.Entry, r.buffer)
+
 	for i := 0; i <= int(r.numWorkers); i++ {
 		go r.handleLog(ch)
 	}
+
 	return ch
+}
+
+func formatFunc() Formatter {
+
+	var b []byte
+
+	return func(e *log.Entry) []byte {
+		b = b[0:0]
+
+		b = append(b, "TEST"...)
+		return b
+	}
 }
 
 func (r *Redis) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
-	var payload string
+	var b []byte
+	formatter := r.formatFunc()
 
-ItterateOverItems:
 	for e = range entries {
 
-		payload = r.formatter(e)
+		defer e.Consumed()
+
+		b = formatter(e)
+
+		// TODO: look into a pool of clients, maybe autoreconnect/retry as well.
 
 		// Connect to the redis instance
-		rand.Seed(int64(time.Now().Nanosecond()))
 		c, err := redisclient.DialTimeout("tcp", r.redisHosts[rand.Intn(len(r.redisHosts))], 0, 1*time.Second, 1*time.Second)
 		if err != nil {
 			log.Info(fmt.Sprintf("[ERROR] Could not connect to Redis: %s\n", err.Error()))
-			goto ItterateOverItems
+			continue
 		}
 		defer c.Close()
+
 		// Select the database
 		_, err = c.Do("SELECT", "0")
 		if err != nil {
-			c.Close()
 			log.Info(fmt.Sprintf("[ERROR] Could not select Redis DB: %s\n", err.Error()))
+			continue
 		}
+
 		// Issue the command to push the entry onto the designated list
-		_, err = c.Do("RPUSH", r.redisList, payload)
+		_, err = c.Do("RPUSH", r.redisList, string(b))
 		if err != nil {
 			log.Info(fmt.Sprintf("[ERROR] Could not select Redis DB: %s\n", err.Error()))
+			continue
 		}
-		e.WG.Done()
 	}
 }
