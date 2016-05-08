@@ -35,8 +35,10 @@ func newEntry(level Level, message string, fields []Field, calldepth int) *Entry
 	entry.Fields = fields
 	entry.Timestamp = time.Now().UTC()
 
-	if Logger.logCallerInfo && level != TraceLevel {
-		_, entry.File, entry.Line, _ = runtime.Caller(entry.calldepth)
+	// gather info if WarnLevel, ErrorLevel, PanicLevel, AlertLevel, FatalLevel or
+	// gathering info for all levels
+	if level > 3 || (Logger.logCallerInfo && level != TraceLevel) {
+		_, entry.File, entry.Line, _ = runtime.Caller(calldepth)
 	}
 
 	return entry
