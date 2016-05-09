@@ -7,7 +7,7 @@ import (
 	httplogger "github.com/go-playground/log/handlers/http"
 	"os"
 	"strings"
-	"sync"
+	//"sync"
 	"time"
 )
 
@@ -30,15 +30,8 @@ func main() {
 	})
 	hLog.SetNumWorkers(4)
 
-	e := &log.Entry{
-		WG:        new(sync.WaitGroup),
-		Level:     log.NoticeLevel,
-		Message:   "This is a sample message",
-		Timestamp: time.Now(),
-	}
-
 	for i := 0; i < 30; i++ {
-		log.HandleEntry(e)
+		log.Info("This is a sample message")
 	}
 
 	/*********************************************************************
@@ -58,14 +51,6 @@ func main() {
 		return string(msg)
 	})
 
-	e = &log.Entry{
-		WG:        new(sync.WaitGroup),
-		Level:     log.NoticeLevel,
-		Message:   "Sample application error message.",
-		Timestamp: time.Now(),
-		Fields:    []log.Field{log.Field{Key: "type", Value: "test-log"}, log.Field{Key: "application_id", Value: "abc123"}},
-	}
-
-	log.HandleEntry(e)
+	log.WithFields(log.F("type", "test-log"), log.F("application_id", "abc123")).Info("Sample application error message.")
 
 }

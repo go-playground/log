@@ -1,7 +1,6 @@
-package http
+package redis
 
 import (
-	//"bytes"
 	"fmt"
 	redisclient "github.com/garyburd/redigo/redis"
 	"github.com/go-playground/log"
@@ -17,10 +16,9 @@ type Redis struct {
 	buffer             uint // channel buffer
 	redisHosts         []string
 	formatter          Formatter
-	encoding           string
 	hasCustomFormatter bool
 	redisList          string
-	numWorkers         int
+	numWorkers         uint
 }
 
 // New Redis client
@@ -29,7 +27,6 @@ func New(bufferSize uint, redisHosts []string) (*Redis, error) {
 	r := &Redis{
 		buffer:             0,
 		redisHosts:         []string{"127.0.0.1:6379"},
-		encoding:           "",
 		hasCustomFormatter: false,
 		redisList:          "logs",
 		numWorkers:         1,
@@ -45,11 +42,6 @@ func New(bufferSize uint, redisHosts []string) (*Redis, error) {
 // SetBuffer sets the buffer for Redis client
 func (r *Redis) SetBuffer(buff uint) {
 	r.buffer = buff
-}
-
-// SetEncoding sets the data encoding type (none, msgpack, etc)
-func (r *Redis) SetEncoding(encoding string) {
-	r.encoding = encoding
 }
 
 // SetRedisHosts sets the list of redis hosts to attempt connecting to
@@ -68,6 +60,7 @@ func (r *Redis) SetFormatter(f Formatter) {
 	r.hasCustomFormatter = true
 }
 
+// SetNumWorkers sets the number of worker threads to be created to process the log entries
 func (r *Redis) SetNumWorkers(num uint) {
 	if num >= 1 {
 		r.numWorkers = num
