@@ -683,3 +683,23 @@ func TestBadWorkerCount(t *testing.T) {
 	Equal(t, buff.String(), year+" [32m DEBUG[0m console_test.go:682 debug\n")
 	buff.Reset()
 }
+
+func TestCustomFormatFunc(t *testing.T) {
+
+	buff := new(bytes.Buffer)
+	cLog := New()
+	cLog.SetWriter(buff)
+	cLog.SetTimestampFormat("2006")
+	cLog.SetBuffersAndWorkers(3, 2)
+	cLog.SetFormatFunc(func() Formatter {
+		return func(e *log.Entry) []byte {
+			return []byte(e.Message)
+		}
+	})
+
+	log.RegisterHandler(cLog, log.AllLevels...)
+
+	log.Debug("debug")
+	Equal(t, buff.String(), "debug\n")
+	buff.Reset()
+}

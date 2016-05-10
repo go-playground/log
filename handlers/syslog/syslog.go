@@ -17,17 +17,13 @@ type FormatFunc func() Formatter
 type Formatter func(e *log.Entry) []byte
 
 const (
-	defaultTS             = "2006-01-02T15:04:05.000000000Z07:00"
-	colorFields           = "%s %s%6s%s %-25s"
-	colorNoFields         = "%s %s%6s%s %s"
-	colorKeyValue         = " %s%s%s=%v"
-	colorFieldsCaller     = "%s %s%6s%s %s:%d %-25s"
-	colorNoFieldsCaller   = "%s %s%6s%s %s:%d %s"
-	noColorFields         = "%s %6s %-25s"
-	noColorNoFields       = "%s %6s %s"
-	noColorKeyValue       = " %s=%v"
-	noColorFieldsCaller   = "%s %6s %s:%d %-25s"
-	noColorNoFieldsCaller = "%s %6s %s:%d %s"
+	defaultTS         = "2006-01-02T15:04:05.000000000Z07:00"
+	colorFormat       = "%s %s%6s%s %s"
+	colorFormatCaller = "%s %s%6s%s %s:%d %s"
+	colorKeyValue     = " %s%s%s=%v"
+	format            = "%s %6s %s"
+	formatCaller      = "%s %6s %s:%d %s"
+	noColorKeyValue   = " %s=%v"
 )
 
 // Syslog is an instance of the syslog logger
@@ -107,6 +103,12 @@ func (s *Syslog) SetBuffersAndWorkers(size uint, workers uint) {
 	s.numWorkers = workers
 }
 
+// SetFormatFunc sets FormatFunc each worker will call to get
+// a Formatter func
+func (s *Syslog) SetFormatFunc(fn FormatFunc) {
+	s.formatFunc = fn
+}
+
 // Run starts the logger consuming on the returned channed
 func (s *Syslog) Run() chan<- *log.Entry {
 
@@ -168,11 +170,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 
 			if e.Line == 0 {
 
-				if len(e.Fields) == 0 {
-					b = append(b, fmt.Sprintf(colorNoFields, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, e.Message)...)
-				} else {
-					b = append(b, fmt.Sprintf(colorFields, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, e.Message)...)
-				}
+				b = append(b, fmt.Sprintf(colorFormat, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, e.Message)...)
 
 			} else {
 				file = e.File
@@ -183,11 +181,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 					}
 				}
 
-				if len(e.Fields) == 0 {
-					b = append(b, fmt.Sprintf(colorNoFieldsCaller, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
-				} else {
-					b = append(b, fmt.Sprintf(colorFieldsCaller, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
-				}
+				b = append(b, fmt.Sprintf(colorFormatCaller, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
 			}
 
 			for _, f := range e.Fields {
@@ -203,11 +197,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 
 		if e.Line == 0 {
 
-			if len(e.Fields) == 0 {
-				b = append(b, fmt.Sprintf(noColorNoFields, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)...)
-			} else {
-				b = append(b, fmt.Sprintf(noColorFields, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)...)
-			}
+			b = append(b, fmt.Sprintf(format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)...)
 
 		} else {
 			file = e.File
@@ -218,11 +208,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 				}
 			}
 
-			if len(e.Fields) == 0 {
-				b = append(b, fmt.Sprintf(noColorNoFieldsCaller, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)...)
-			} else {
-				b = append(b, fmt.Sprintf(noColorFieldsCaller, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)...)
-			}
+			b = append(b, fmt.Sprintf(formatCaller, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)...)
 		}
 
 		for _, f := range e.Fields {

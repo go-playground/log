@@ -105,6 +105,12 @@ func (c *Console) SetBuffersAndWorkers(size uint, workers uint) {
 	c.numWorkers = workers
 }
 
+// SetFormatFunc sets FormatFunc each worker will call to get
+// a Formatter func
+func (c *Console) SetFormatFunc(fn FormatFunc) {
+	c.formatFunc = fn
+}
+
 // Run starts the logger consuming on the returned channed
 func (c *Console) Run() chan<- *log.Entry {
 
