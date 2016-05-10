@@ -242,14 +242,13 @@ func TestConsoleLoggerCaller2(t *testing.T) {
 	buff := new(bytes.Buffer)
 
 	SetCallerInfo(true)
+	SetCallerSkipDiff(0)
 
 	th := &testHandler{
 		writer: buff,
 	}
 
 	RegisterHandler(th, AllLevels...)
-
-	Equal(t, GetCallerInfo(), true)
 
 	Debug("debug")
 	Equal(t, buff.String(), "debug")

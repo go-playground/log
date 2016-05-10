@@ -200,8 +200,6 @@ func TestConsoleLoggerCaller(t *testing.T) {
 
 	Logger.RegisterHandler(th, AllLevels...)
 
-	Equal(t, Logger.GetCallerInfo(), true)
-
 	Logger.Debug("debug")
 	Equal(t, buff.String(), "debug")
 	buff.Reset()

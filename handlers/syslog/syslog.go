@@ -1,39 +1,44 @@
 package syslog
 
 import (
-	"bytes"
 	"fmt"
+	stdlog "log"
 	"log/syslog"
-	"sync"
-	"time"
 
 	"github.com/go-playground/log"
 )
 
+// FormatFunc is the function that the workers use to create
+// a new Formatter per worker allowing reusable go routine safe
+// variable to be used within your Formatter function.
+type FormatFunc func() Formatter
+
+// Formatter is the function used to format the Redis entry
+type Formatter func(e *log.Entry) []byte
+
 const (
+	defaultTS             = "2006-01-02T15:04:05.000000000Z07:00"
+	colorFields           = "%s %s%6s%s %-25s"
 	colorNoFields         = "%s %s%6s%s %s"
 	colorKeyValue         = " %s%s%s=%v"
+	colorFieldsCaller     = "%s %s%6s%s %s:%d %-25s"
 	colorNoFieldsCaller   = "%s %s%6s%s %s:%d %s"
+	noColorFields         = "%s %6s %-25s"
 	noColorNoFields       = "%s %6s %s"
 	noColorKeyValue       = " %s=%v"
+	noColorFieldsCaller   = "%s %6s %s:%d %-25s"
 	noColorNoFieldsCaller = "%s %6s %s:%d %s"
 )
 
-// Formatter is the function used to format the syslog entry
-type Formatter func(e *log.Entry) string
-
 // Syslog is an instance of the syslog logger
 type Syslog struct {
-	buffer             uint
-	colors             [9]log.ANSIEscSeq
-	ansiReset          log.ANSIEscSeq
-	writer             *syslog.Writer
-	formatter          Formatter
-	timestampFormat    string
-	format             string
-	formatKeyValue     string
-	displayColor       bool
-	hasCustomFormatter bool
+	buffer          uint
+	numWorkers      uint
+	colors          [9]log.ANSIEscSeq
+	writer          *syslog.Writer
+	formatFunc      FormatFunc
+	timestampFormat string
+	displayColor    bool
 }
 
 var (
@@ -49,10 +54,6 @@ var (
 		log.AlertLevel:  log.Red + log.Underscore,
 		log.FatalLevel:  log.Red + log.Underscore + log.Blink,
 	}
-
-	syslogBuffPool = &sync.Pool{New: func() interface{} {
-		return new(bytes.Buffer)
-	}}
 )
 
 // New returns a new instance of the syslog logger
@@ -62,31 +63,20 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	var err error
 
 	s := &Syslog{
-		buffer:             0,
-		colors:             defaultColors,
-		ansiReset:          log.Reset,
-		displayColor:       false,
-		timestampFormat:    time.RFC3339Nano,
-		hasCustomFormatter: false,
+		buffer:          0,
+		numWorkers:      1,
+		colors:          defaultColors,
+		displayColor:    false,
+		timestampFormat: defaultTS,
 	}
 
-	s.formatter = s.defaultFormatEntry
+	s.formatFunc = s.defaultFormatFunc
 
 	if s.writer, err = syslog.Dial(network, raddr, priority, tag); err != nil {
 		return nil, err
 	}
 
 	return s, nil
-}
-
-// SetLevelColor updates Console's level color values
-func (s *Syslog) SetLevelColor(l log.Level, color log.ANSIEscSeq) {
-	s.colors[l] = color
-}
-
-// SetANSIReset sets the ANSI Reset sequence
-func (s *Syslog) SetANSIReset(code log.ANSIEscSeq) {
-	s.ansiReset = code
 }
 
 // DisplayColor tells Console to output in color or not
@@ -96,22 +86,25 @@ func (s *Syslog) DisplayColor(color bool) {
 }
 
 // SetTimestampFormat sets Console's timestamp output format
-// Default is : time.RFC3339Nano
+// Default is : 2006-01-02T15:04:05.000000000Z07:00
 func (s *Syslog) SetTimestampFormat(format string) {
 	s.timestampFormat = format
 }
 
-// SetFormatter sets the  Syslog entry formatter
-// Default is : defaultFormatEntry
-func (s *Syslog) SetFormatter(f Formatter) {
-	s.formatter = f
-	s.hasCustomFormatter = true
-}
+// SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
+// These settings should be thought about together, hence setting both in the same function.
+func (s *Syslog) SetBuffersAndWorkers(size uint, workers uint) {
+	s.buffer = size
 
-// SetChannelBuffer tells Syslog what the channel buffer size should be
-// Default is : 0
-func (s *Syslog) SetChannelBuffer(i uint) {
-	s.buffer = i
+	if workers == 0 {
+		// just in case no log registered yet
+		stdlog.Println("Invalid number of workers specified, setting to 1")
+		log.Warn("Invalid number of workers specified, setting to 1")
+
+		workers = 1
+	}
+
+	s.numWorkers = workers
 }
 
 // Run starts the logger consuming on the returned channed
@@ -120,33 +113,9 @@ func (s *Syslog) Run() chan<- *log.Entry {
 	// in a big high traffic app, set a higher buffer
 	ch := make(chan *log.Entry, s.buffer)
 
-	if !s.hasCustomFormatter {
-
-		// GetCallerInfo may want to add logic to not solely rely upon this
-		if log.GetCallerInfo() {
-			if s.displayColor {
-				s.format = colorNoFieldsCaller
-				s.formatKeyValue = colorKeyValue
-				s.formatter = s.defaultFormatEntryColorCaller
-			} else {
-				s.format = noColorNoFieldsCaller
-				s.formatKeyValue = noColorKeyValue
-				s.formatter = s.defaultFormatEntryCaller
-			}
-		} else {
-			if s.displayColor {
-				s.format = colorNoFields
-				s.formatKeyValue = colorKeyValue
-				s.formatter = s.defaultFormatEntryColor
-			} else {
-				s.format = noColorNoFields
-				s.formatKeyValue = noColorKeyValue
-				s.formatter = s.defaultFormatEntry
-			}
-		}
+	for i := 0; i <= int(s.numWorkers); i++ {
+		go s.handleLog(ch)
 	}
-
-	go s.handleLog(ch)
 
 	return ch
 }
@@ -157,9 +126,11 @@ func (s *Syslog) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
 	var line string
 
+	formatter := s.formatFunc()
+
 	for e = range entries {
 
-		line = s.formatter(e)
+		line = string(formatter(e))
 
 		switch e.Level {
 		case log.DebugLevel:
@@ -182,88 +153,82 @@ func (s *Syslog) handleLog(entries <-chan *log.Entry) {
 	}
 }
 
-func (s *Syslog) defaultFormatEntry(e *log.Entry) string {
+func (s *Syslog) defaultFormatFunc() Formatter {
 
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
+	var b []byte
+	var file string
 
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
+	if s.displayColor {
 
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, f.Key, f.Value)
-	}
+		var color log.ANSIEscSeq
 
-	str := buff.String()
-	syslogBuffPool.Put(buff)
+		return func(e *log.Entry) []byte {
+			b = b[0:0]
+			color = s.colors[e.Level]
 
-	return str
-}
+			if e.Line == 0 {
 
-func (s *Syslog) defaultFormatEntryColor(e *log.Entry) string {
+				if len(e.Fields) == 0 {
+					b = append(b, fmt.Sprintf(colorNoFields, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, e.Message)...)
+				} else {
+					b = append(b, fmt.Sprintf(colorFields, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, e.Message)...)
+				}
 
-	color := s.colors[e.Level]
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
+			} else {
+				file = e.File
+				for i := len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						file = file[i+1:]
+						break
+					}
+				}
 
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, e.Message)
+				if len(e.Fields) == 0 {
+					b = append(b, fmt.Sprintf(colorNoFieldsCaller, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
+				} else {
+					b = append(b, fmt.Sprintf(colorFieldsCaller, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
+				}
+			}
 
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, color, f.Key, s.ansiReset, f.Value)
-	}
+			for _, f := range e.Fields {
+				b = append(b, fmt.Sprintf(colorKeyValue, color, f.Key, log.Reset, f.Value)...)
+			}
 
-	str := buff.String()
-	syslogBuffPool.Put(buff)
-
-	return str
-}
-
-func (s *Syslog) defaultFormatEntryCaller(e *log.Entry) string {
-
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
-
-	file := e.File
-	for i := len(file) - 1; i > 0; i-- {
-		if file[i] == '/' {
-			file = file[i+1:]
-			break
+			return b
 		}
 	}
 
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)
+	return func(e *log.Entry) []byte {
+		b = b[0:0]
 
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, f.Key, f.Value)
-	}
+		if e.Line == 0 {
 
-	str := buff.String()
-	syslogBuffPool.Put(buff)
+			if len(e.Fields) == 0 {
+				b = append(b, fmt.Sprintf(noColorNoFields, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)...)
+			} else {
+				b = append(b, fmt.Sprintf(noColorFields, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)...)
+			}
 
-	return str
-}
+		} else {
+			file = e.File
+			for i := len(file) - 1; i > 0; i-- {
+				if file[i] == '/' {
+					file = file[i+1:]
+					break
+				}
+			}
 
-func (s *Syslog) defaultFormatEntryColorCaller(e *log.Entry) string {
-
-	color := s.colors[e.Level]
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
-
-	file := e.File
-	for i := len(file) - 1; i > 0; i-- {
-		if file[i] == '/' {
-			file = file[i+1:]
-			break
+			if len(e.Fields) == 0 {
+				b = append(b, fmt.Sprintf(noColorNoFieldsCaller, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)...)
+			} else {
+				b = append(b, fmt.Sprintf(noColorFieldsCaller, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)...)
+			}
 		}
+
+		for _, f := range e.Fields {
+			b = append(b, fmt.Sprintf(noColorKeyValue, f.Key, f.Value)...)
+		}
+
+		return b
 	}
-
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, file, e.Line, e.Message)
-
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, color, f.Key, s.ansiReset, f.Value)
-	}
-
-	str := buff.String()
-	syslogBuffPool.Put(buff)
-
-	return str
 }

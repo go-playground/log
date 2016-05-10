@@ -26,181 +26,167 @@ func TestConsoleLogger(t *testing.T) {
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(false)
-	cLog.SetChannelBuffer(3)
-	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
-	cLog.SetANSIReset(log.Reset)
+	cLog.SetBuffersAndWorkers(3, 3)
+	cLog.SetTimestampFormat("MST")
 
 	log.RegisterHandler(cLog, log.AllLevels...)
 
 	log.Debug("debug")
-	Equal(t, buff.String(), "0000  DEBUG debug\n")
+	Equal(t, buff.String(), "UTC  DEBUG debug\n")
 	buff.Reset()
 
 	log.Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000  DEBUG debugf\n")
+	Equal(t, buff.String(), "UTC  DEBUG debugf\n")
 	buff.Reset()
 
 	log.Info("info")
-	Equal(t, buff.String(), "0000   INFO info\n")
+	Equal(t, buff.String(), "UTC   INFO info\n")
 	buff.Reset()
 
 	log.Infof("%s", "infof")
-	Equal(t, buff.String(), "0000   INFO infof\n")
+	Equal(t, buff.String(), "UTC   INFO infof\n")
 	buff.Reset()
 
 	log.Notice("notice")
-	Equal(t, buff.String(), "0000 NOTICE notice\n")
+	Equal(t, buff.String(), "UTC NOTICE notice\n")
 	buff.Reset()
 
 	log.Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 NOTICE noticef\n")
+	Equal(t, buff.String(), "UTC NOTICE noticef\n")
 	buff.Reset()
 
 	log.Warn("warn")
-	Equal(t, buff.String(), "0000   WARN warn\n")
+	Equal(t, buff.String(), "UTC   WARN console_test.go:58 warn\n")
 	buff.Reset()
 
 	log.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000   WARN warnf\n")
+	Equal(t, buff.String(), "UTC   WARN console_test.go:62 warnf\n")
 	buff.Reset()
 
 	log.Error("error")
-	Equal(t, buff.String(), "0000  ERROR error\n")
+	Equal(t, buff.String(), "UTC  ERROR console_test.go:66 error\n")
 	buff.Reset()
 
 	log.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000  ERROR errorf\n")
+	Equal(t, buff.String(), "UTC  ERROR console_test.go:70 errorf\n")
 	buff.Reset()
 
 	log.Alert("alert")
-	Equal(t, buff.String(), "0000  ALERT alert\n")
+	Equal(t, buff.String(), "UTC  ALERT console_test.go:74 alert\n")
 	buff.Reset()
 
 	log.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000  ALERT alertf\n")
+	Equal(t, buff.String(), "UTC  ALERT console_test.go:78 alertf\n")
 	buff.Reset()
 
 	log.Print("print")
-	Equal(t, buff.String(), "0000   INFO print\n")
+	Equal(t, buff.String(), "UTC   INFO print\n")
 	buff.Reset()
 
 	log.Printf("%s", "printf")
-	Equal(t, buff.String(), "0000   INFO printf\n")
+	Equal(t, buff.String(), "UTC   INFO printf\n")
 	buff.Reset()
 
 	log.Println("println")
-	Equal(t, buff.String(), "0000   INFO println\n")
+	Equal(t, buff.String(), "UTC   INFO println\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, buff.String(), "0000  PANIC panic\n")
+	Equal(t, buff.String(), "UTC  PANIC console_test.go:94 panic\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, buff.String(), "0000  PANIC panicf\n")
+	Equal(t, buff.String(), "UTC  PANIC console_test.go:98 panicf\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, buff.String(), "0000  PANIC panicln\n")
+	Equal(t, buff.String(), "UTC  PANIC console_test.go:102 panicln\n")
 	buff.Reset()
 
 	// WithFields
 	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "0000  DEBUG debug                     key=value\n")
+	Equal(t, buff.String(), "UTC  DEBUG debug                     key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000  DEBUG debugf                    key=value\n")
+	Equal(t, buff.String(), "UTC  DEBUG debugf                    key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "0000   INFO info                      key=value\n")
+	Equal(t, buff.String(), "UTC   INFO info                      key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "0000   INFO infof                     key=value\n")
+	Equal(t, buff.String(), "UTC   INFO infof                     key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "0000 NOTICE notice                    key=value\n")
+	Equal(t, buff.String(), "UTC NOTICE notice                    key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 NOTICE noticef                   key=value\n")
+	Equal(t, buff.String(), "UTC NOTICE noticef                   key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "0000   WARN warn                      key=value\n")
+	Equal(t, buff.String(), "UTC   WARN warn                      key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000   WARN warnf                     key=value\n")
+	Equal(t, buff.String(), "UTC   WARN warnf                     key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "0000  ERROR error                     key=value\n")
+	Equal(t, buff.String(), "UTC  ERROR error                     key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000  ERROR errorf                    key=value\n")
+	Equal(t, buff.String(), "UTC  ERROR errorf                    key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "0000  ALERT alert                     key=value\n")
+	Equal(t, buff.String(), "UTC  ALERT alert                     key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000  ALERT alertf                    key=value\n")
+	Equal(t, buff.String(), "UTC  ALERT alertf                    key=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "0000  PANIC panicf                    key=value\n")
+	Equal(t, buff.String(), "UTC  PANIC panicf                    key=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "0000  PANIC panic                     key=value\n")
+	Equal(t, buff.String(), "UTC  PANIC panic                     key=value\n")
 	buff.Reset()
 
 	func() {
 		defer log.Trace("trace").End()
 	}()
 
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\strace\\.*")
+	MatchRegex(t, buff.String(), "^UTC\\s\\sTRACE\\strace\\.*")
 	buff.Reset()
 
 	func() {
 		defer log.Tracef("tracef").End()
 	}()
 
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\stracef\\.*")
+	MatchRegex(t, buff.String(), "^UTC\\s\\sTRACE\\stracef\\.*")
 	buff.Reset()
 
 	func() {
 		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
 	}()
 
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\strace\\.*")
+	MatchRegex(t, buff.String(), "^UTC\\s\\sTRACE\\strace\\.*")
 	buff.Reset()
 
 	func() {
 		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
 	}()
 
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\stracef\\.*")
+	MatchRegex(t, buff.String(), "^UTC\\s\\sTRACE\\stracef\\.*")
 	buff.Reset()
-
-	// year := time.Now().Format("2006")
-	// cLog.UseMiniTimestamp(false)
-	// cLog.SetTimestampFormat("2006")
-
-	// log.Info("info")
-	// Equal(t, buff.String(), "  INFO["+year+"] info\n")
-	// buff.Reset()
 }
 
 func TestConsoleLoggerColor(t *testing.T) {
@@ -210,9 +196,9 @@ func TestConsoleLoggerColor(t *testing.T) {
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(true)
-	cLog.SetChannelBuffer(3)
+	cLog.SetBuffersAndWorkers(3, 3)
 	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
+	// cLog.UseMiniTimestamp(true)
 
 	log.RegisterHandler(cLog, log.AllLevels...)
 
@@ -345,11 +331,11 @@ func TestConsoleLoggerColor(t *testing.T) {
 	Equal(t, buff.String(), "0000 [31m PANIC[0m panic                     [31mkey[0m=value\n")
 	buff.Reset()
 
-	cLog.SetLevelColor(log.DebugLevel, log.LightGreen)
+	// cLog.SetLevelColor(log.DebugLevel, log.LightGreen)
 
-	log.Debug("debug")
-	Equal(t, buff.String(), "0000 [32;1m DEBUG[0m debug\n")
-	buff.Reset()
+	// log.Debug("debug")
+	// Equal(t, buff.String(), "0000 [32;1m DEBUG[0m debug\n")
+	// buff.Reset()
 
 	// year := time.Now().Format("2006")
 	// cLog.UseMiniTimestamp(false)
@@ -371,10 +357,10 @@ func TestConsoleLoggerCaller(t *testing.T) {
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(false)
-	cLog.SetChannelBuffer(3)
+	cLog.SetBuffersAndWorkers(3, 3)
 	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
-	cLog.SetANSIReset(log.Reset)
+	// cLog.UseMiniTimestamp(true)
+	// cLog.SetANSIReset(log.Reset)
 
 	log.SetCallerInfo(true)
 	log.RegisterHandler(cLog, log.AllLevels...)
@@ -556,9 +542,9 @@ func TestConsoleLoggerColorCaller(t *testing.T) {
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(true)
-	cLog.SetChannelBuffer(3)
+	cLog.SetBuffersAndWorkers(3, 3)
 	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
+	// cLog.UseMiniTimestamp(true)
 
 	log.SetCallerInfo(true)
 	log.RegisterHandler(cLog, log.AllLevels...)
@@ -692,11 +678,11 @@ func TestConsoleLoggerColorCaller(t *testing.T) {
 	Equal(t, buff.String(), "0000 [31m PANIC[0m console_test.go:691 panic                     [31mkey[0m=value\n")
 	buff.Reset()
 
-	cLog.SetLevelColor(log.DebugLevel, log.LightGreen)
+	// cLog.SetLevelColor(log.DebugLevel, log.LightGreen)
 
-	log.Debug("debug")
-	Equal(t, buff.String(), "0000 [32;1m DEBUG[0m console_test.go:697 debug\n")
-	buff.Reset()
+	// log.Debug("debug")
+	// Equal(t, buff.String(), "0000 [32;1m DEBUG[0m console_test.go:697 debug\n")
+	// buff.Reset()
 }
 
 func TestConsoleLoggerColorCallerTimeFormat(t *testing.T) {
@@ -707,7 +693,7 @@ func TestConsoleLoggerColorCallerTimeFormat(t *testing.T) {
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(true)
-	cLog.SetChannelBuffer(3)
+	cLog.SetBuffersAndWorkers(3, 3)
 	cLog.SetTimestampFormat("2006")
 
 	log.SetCallerInfo(true)
