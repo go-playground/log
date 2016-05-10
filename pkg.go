@@ -212,6 +212,11 @@ func SetCallerSkipDiff(diff uint8) {
 	Logger.SetCallerSkipDiff(diff)
 }
 
+// HasHandlers returns if any handlers have been registered.
+func HasHandlers() bool {
+	return Logger.HasHandlers()
+}
+
 // SetApplicationID tells the logger to set a constant application key
 // that will be set on all log Entry objects. log does not care what it is,
 // the application name, app name + hostname.... that's up to you

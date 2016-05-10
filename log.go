@@ -322,6 +322,11 @@ func (l *logger) SetCallerSkipDiff(diff uint8) {
 	skipLevel += int(diff)
 }
 
+// HasHandlers returns if any handlers have been registered.
+func (l *logger) HasHandlers() bool {
+	return len(l.channels) != 0
+}
+
 func (l *logger) getApplicationID() string {
 	return l.appID
 }

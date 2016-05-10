@@ -64,6 +64,8 @@ func TestConsoleLogger2(t *testing.T) {
 
 	RegisterHandler(th, AllLevels...)
 
+	Equal(t, HasHandlers(), true)
+
 	Debug("debug")
 	Equal(t, buff.String(), "debug")
 	buff.Reset()

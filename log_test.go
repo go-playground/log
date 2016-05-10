@@ -23,6 +23,8 @@ import (
 
 func TestConsoleLogger(t *testing.T) {
 
+	Equal(t, Logger.HasHandlers(), false)
+
 	buff := new(bytes.Buffer)
 
 	th := &testHandler{
@@ -30,6 +32,8 @@ func TestConsoleLogger(t *testing.T) {
 	}
 
 	Logger.RegisterHandler(th, AllLevels...)
+
+	Equal(t, Logger.HasHandlers(), true)
 
 	Logger.Debug("debug")
 	Equal(t, buff.String(), "debug")
