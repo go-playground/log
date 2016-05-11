@@ -44,6 +44,9 @@ func New(bufferSize uint, remoteHost string) (*HTTP, error) {
 		return nil, err
 	}
 	h.remoteHost = remoteHost
+	h.formatter = func(e *log.Entry) string {
+		return fmt.Sprintf("%s", e.Message)
+	}
 
 	return h, nil
 }

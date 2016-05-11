@@ -33,8 +33,10 @@ func New(bufferSize uint, redisHosts []string) (*Redis, error) {
 	}
 
 	r.buffer = bufferSize
-
 	r.redisHosts = redisHosts
+	r.formatter = func(e *log.Entry) string {
+		return fmt.Sprintf("%s", e.Message)
+	}
 
 	return r, nil
 }
