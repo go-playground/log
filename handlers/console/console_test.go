@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	"io"
 	"testing"
 	"time"
 
@@ -22,7 +23,6 @@ import (
 func TestConsoleLogger(t *testing.T) {
 
 	buff := new(bytes.Buffer)
-
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(false)
@@ -692,14 +692,16 @@ func TestCustomFormatFunc(t *testing.T) {
 	cLog.SetTimestampFormat("2006")
 	cLog.SetBuffersAndWorkers(3, 2)
 	cLog.SetFormatFunc(func() Formatter {
-		return func(e *log.Entry) []byte {
-			return []byte(e.Message)
+		return func(e *log.Entry) io.WriterTo {
+			b := new(bytes.Buffer)
+			b.WriteString(e.Message)
+			return b
 		}
 	})
 
 	log.RegisterHandler(cLog, log.AllLevels...)
 
 	log.Debug("debug")
-	Equal(t, buff.String(), "debug\n")
+	Equal(t, buff.String(), "debug")
 	buff.Reset()
 }

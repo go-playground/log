@@ -676,8 +676,8 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 	sLog.SetBuffersAndWorkers(3, 0)
 	sLog.SetTimestampFormat("2006")
 	sLog.SetFormatFunc(func() Formatter {
-		return func(e *log.Entry) []byte {
-			return []byte(e.Message)
+		return func(e *log.Entry) string {
+			return e.Message
 		}
 	})
 

@@ -1,6 +1,7 @@
 package console
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	stdlog "log"
@@ -15,9 +16,10 @@ import (
 type FormatFunc func() Formatter
 
 // Formatter is the function used to format the Redis entry
-type Formatter func(e *log.Entry) []byte
+type Formatter func(e *log.Entry) io.WriterTo
 
 const (
+	newLine               = "\n"
 	defaultTS             = "2006-01-02T15:04:05.000000000Z07:00"
 	colorFields           = "%s %s%6s%s %-25s"
 	colorNoFields         = "%s %s%6s%s %s"
@@ -128,14 +130,13 @@ func (c *Console) Run() chan<- *log.Entry {
 func (c *Console) handleLog(entries <-chan *log.Entry) {
 
 	var e *log.Entry
-	var b []byte
+	var b io.WriterTo
 	formatter := c.formatFunc()
 
 	for e = range entries {
 
 		b = formatter(e)
-
-		fmt.Fprintln(c.writer, string(b))
+		b.WriteTo(c.writer)
 
 		e.Consumed()
 	}
@@ -143,23 +144,23 @@ func (c *Console) handleLog(entries <-chan *log.Entry) {
 
 func (c *Console) defaultFormatFunc() Formatter {
 
-	var b []byte
+	b := new(bytes.Buffer)
 	var file string
 
 	if c.displayColor {
 
 		var color log.ANSIEscSeq
 
-		return func(e *log.Entry) []byte {
-			b = b[0:0]
+		return func(e *log.Entry) io.WriterTo {
+			b.Reset()
 			color = c.colors[e.Level]
 
 			if e.Line == 0 {
 
 				if len(e.Fields) == 0 {
-					b = append(b, fmt.Sprintf(colorNoFields, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, e.Message)...)
+					b.WriteString(fmt.Sprintf(colorNoFields, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, e.Message))
 				} else {
-					b = append(b, fmt.Sprintf(colorFields, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, e.Message)...)
+					b.WriteString(fmt.Sprintf(colorFields, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, e.Message))
 				}
 
 			} else {
@@ -172,29 +173,31 @@ func (c *Console) defaultFormatFunc() Formatter {
 				}
 
 				if len(e.Fields) == 0 {
-					b = append(b, fmt.Sprintf(colorNoFieldsCaller, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
+					b.WriteString(fmt.Sprintf(colorNoFieldsCaller, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message))
 				} else {
-					b = append(b, fmt.Sprintf(colorFieldsCaller, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
+					b.WriteString(fmt.Sprintf(colorFieldsCaller, e.Timestamp.Format(c.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message))
 				}
 			}
 
 			for _, f := range e.Fields {
-				b = append(b, fmt.Sprintf(colorKeyValue, color, f.Key, log.Reset, f.Value)...)
+				b.WriteString(fmt.Sprintf(colorKeyValue, color, f.Key, log.Reset, f.Value))
 			}
+
+			b.WriteString(newLine)
 
 			return b
 		}
 	}
 
-	return func(e *log.Entry) []byte {
-		b = b[0:0]
+	return func(e *log.Entry) io.WriterTo {
+		b.Reset()
 
 		if e.Line == 0 {
 
 			if len(e.Fields) == 0 {
-				b = append(b, fmt.Sprintf(noColorNoFields, e.Timestamp.Format(c.timestampFormat), e.Level, e.Message)...)
+				b.WriteString(fmt.Sprintf(noColorNoFields, e.Timestamp.Format(c.timestampFormat), e.Level, e.Message))
 			} else {
-				b = append(b, fmt.Sprintf(noColorFields, e.Timestamp.Format(c.timestampFormat), e.Level, e.Message)...)
+				b.WriteString(fmt.Sprintf(noColorFields, e.Timestamp.Format(c.timestampFormat), e.Level, e.Message))
 			}
 
 		} else {
@@ -207,15 +210,17 @@ func (c *Console) defaultFormatFunc() Formatter {
 			}
 
 			if len(e.Fields) == 0 {
-				b = append(b, fmt.Sprintf(noColorNoFieldsCaller, e.Timestamp.Format(c.timestampFormat), e.Level, file, e.Line, e.Message)...)
+				b.WriteString(fmt.Sprintf(noColorNoFieldsCaller, e.Timestamp.Format(c.timestampFormat), e.Level, file, e.Line, e.Message))
 			} else {
-				b = append(b, fmt.Sprintf(noColorFieldsCaller, e.Timestamp.Format(c.timestampFormat), e.Level, file, e.Line, e.Message)...)
+				b.WriteString(fmt.Sprintf(noColorFieldsCaller, e.Timestamp.Format(c.timestampFormat), e.Level, file, e.Line, e.Message))
 			}
 		}
 
 		for _, f := range e.Fields {
-			b = append(b, fmt.Sprintf(noColorKeyValue, f.Key, f.Value)...)
+			b.WriteString(fmt.Sprintf(noColorKeyValue, f.Key, f.Value))
 		}
+
+		b.WriteString(newLine)
 
 		return b
 	}

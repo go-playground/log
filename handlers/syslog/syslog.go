@@ -14,7 +14,7 @@ import (
 type FormatFunc func() Formatter
 
 // Formatter is the function used to format the Redis entry
-type Formatter func(e *log.Entry) []byte
+type Formatter func(e *log.Entry) string
 
 const (
 	defaultTS         = "2006-01-02T15:04:05.000000000Z07:00"
@@ -164,7 +164,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 
 		var color log.ANSIEscSeq
 
-		return func(e *log.Entry) []byte {
+		return func(e *log.Entry) string {
 			b = b[0:0]
 			color = s.colors[e.Level]
 
@@ -188,11 +188,11 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 				b = append(b, fmt.Sprintf(colorKeyValue, color, f.Key, log.Reset, f.Value)...)
 			}
 
-			return b
+			return string(b)
 		}
 	}
 
-	return func(e *log.Entry) []byte {
+	return func(e *log.Entry) string {
 		b = b[0:0]
 
 		if e.Line == 0 {
@@ -215,6 +215,6 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 			b = append(b, fmt.Sprintf(noColorKeyValue, f.Key, f.Value)...)
 		}
 
-		return b
+		return string(b)
 	}
 }
