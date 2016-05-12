@@ -4,8 +4,7 @@ import (
 	"fmt"
 	redisclient "github.com/garyburd/redigo/redis"
 	"github.com/go-playground/log"
-	redislogger "github.com/go-playground/log/handlers/redis"
-	assert "gopkg.in/go-playground/assert.v1"
+	. "gopkg.in/go-playground/assert.v1"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +17,7 @@ func fetchLastListItemFromRedis() (string, error) {
 		fmt.Sprintf("[ERROR] Could not connect to Redis: %s\n", err.Error())
 		return "", err
 	}
+
 	defer c.Close()
 	_, err = c.Do("SELECT", "0")
 	if err != nil {
@@ -36,14 +36,15 @@ func fetchLastListItemFromRedis() (string, error) {
 	}
 
 	return str, nil
+
 }
 
 func TestRedisLogger(t *testing.T) {
 
-	rLog, err := redislogger.New(10, []string{"127.0.0.1:6379"})
+	rLog, err := New(10, []string{"127.0.0.1:6379"})
 	rLog.SetRedisList("test-goplayground-log-redis")
 
-	assert.Equal(t, err, nil)
+	Equal(t, err, nil)
 
 	log.RegisterHandler(rLog, log.AllLevels...)
 
@@ -51,13 +52,13 @@ func TestRedisLogger(t *testing.T) {
 		return fmt.Sprintf("[%s]: %s", strings.ToUpper(e.Level.String()), e.Message)
 	})
 
-	msg := "This is a sample message"
+	expectedMsg := "[INFO]: This is a sample message sent to the redis Go log handler"
 
-	log.Info(msg)
+	log.Info(expectedMsg[8:])
 
 	val, err := fetchLastListItemFromRedis()
 
-	assert.Equal(t, err, nil)
-	assert.Equal(t, strings.Replace(val, "\n", "", -1), fmt.Sprintf("[INFO]: %s", msg))
+	Equal(t, err, nil)
+	Equal(t, val, expectedMsg)
 
 }
