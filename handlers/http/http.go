@@ -35,10 +35,12 @@ type HTTP struct {
 	contentEncoding string
 	timestampFormat string
 	httpClient      stdhttp.Client
+	header          stdhttp.Header
+	method          string
 }
 
 // New returns a new instance of the http logger
-func New(remoteHost string, contentEncoding string) (*HTTP, error) {
+func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error) {
 
 	if _, err := url.Parse(remoteHost); err != nil {
 		return nil, err
@@ -47,10 +49,11 @@ func New(remoteHost string, contentEncoding string) (*HTTP, error) {
 	h := &HTTP{
 		buffer:          0,
 		remoteHost:      remoteHost,
-		contentEncoding: contentEncoding,
 		numWorkers:      1,
 		timestampFormat: defaultTS,
 		httpClient:      stdhttp.Client{},
+		header:          header,
+		method:          method,
 	}
 
 	h.formatFunc = h.defaultFormatFunc
@@ -72,6 +75,12 @@ func (h *HTTP) SetBuffersAndWorkers(size uint, workers uint) {
 	}
 
 	h.numWorkers = workers
+}
+
+// SetTimestampFormat sets HTTP's timestamp output format
+// Default is : "2006-01-02T15:04:05.000000000Z07:00"
+func (h *HTTP) SetTimestampFormat(format string) {
+	h.timestampFormat = format
 }
 
 // SetFormatFunc sets FormatFunc each worker will call to get
@@ -134,22 +143,21 @@ func (h *HTTP) handleLog(entries <-chan *log.Entry) {
 
 		// TODO: investigate reuse of http.Request... all that changes is the paylod
 
-		// Issue POST request to send off data
-		req, err := stdhttp.NewRequest("POST", h.remoteHost, reader)
-		if err != nil {
-			log.Info(fmt.Sprintf("[Error] Could not initialize new request: %v\n", err))
-		}
+		// err not gathered as URL parsed during creationg of *HTTP
+		req, _ := stdhttp.NewRequest(h.method, h.remoteHost, reader)
 
-		req.Header.Add("Content-Type", h.contentEncoding)
+		req.Header = h.header
 		resp, err := h.httpClient.Do(req)
 		if err != nil {
-			log.Error(fmt.Sprintf("Could not post data to %s: %v\n", h.remoteHost, err))
+			fmt.Printf("**** WARNING Could not post data to %s: %v\n", h.remoteHost, err)
+			goto END
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 299 {
-			log.Error(fmt.Sprintf("Received HTTP %d during POST request to %s\n", resp.StatusCode, h.remoteHost))
+			fmt.Printf("WARNING Received HTTP %d during POST request to %s\n", resp.StatusCode, h.remoteHost)
 		}
 
+	END:
 		e.Consumed()
 	}
 }
