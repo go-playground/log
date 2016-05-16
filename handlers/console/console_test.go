@@ -2,7 +2,6 @@ package console
 
 import (
 	"bytes"
-	"io"
 	"testing"
 	"time"
 
@@ -23,6 +22,7 @@ import (
 func TestConsoleLogger(t *testing.T) {
 
 	buff := new(bytes.Buffer)
+
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(false)
@@ -105,59 +105,59 @@ func TestConsoleLogger(t *testing.T) {
 
 	// WithFields
 	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "UTC  DEBUG debug                     key=value\n")
+	Equal(t, buff.String(), "UTC  DEBUG debug key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "UTC  DEBUG debugf                    key=value\n")
+	Equal(t, buff.String(), "UTC  DEBUG debugf key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "UTC   INFO info                      key=value\n")
+	Equal(t, buff.String(), "UTC   INFO info key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "UTC   INFO infof                     key=value\n")
+	Equal(t, buff.String(), "UTC   INFO infof key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "UTC NOTICE notice                    key=value\n")
+	Equal(t, buff.String(), "UTC NOTICE notice key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "UTC NOTICE noticef                   key=value\n")
+	Equal(t, buff.String(), "UTC NOTICE noticef key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "UTC   WARN console_test.go:131 warn                      key=value\n")
+	Equal(t, buff.String(), "UTC   WARN console_test.go:131 warn key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "UTC   WARN console_test.go:135 warnf                     key=value\n")
+	Equal(t, buff.String(), "UTC   WARN console_test.go:135 warnf key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "UTC  ERROR console_test.go:139 error                     key=value\n")
+	Equal(t, buff.String(), "UTC  ERROR console_test.go:139 error key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "UTC  ERROR console_test.go:143 errorf                    key=value\n")
+	Equal(t, buff.String(), "UTC  ERROR console_test.go:143 errorf key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "UTC  ALERT console_test.go:147 alert                     key=value\n")
+	Equal(t, buff.String(), "UTC  ALERT console_test.go:147 alert key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "UTC  ALERT console_test.go:151 alertf                    key=value\n")
+	Equal(t, buff.String(), "UTC  ALERT console_test.go:151 alertf key=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "UTC  PANIC console_test.go:155 panicf                    key=value\n")
+	Equal(t, buff.String(), "UTC  PANIC console_test.go:155 panicf key=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "UTC  PANIC console_test.go:159 panic                     key=value\n")
+	Equal(t, buff.String(), "UTC  PANIC console_test.go:159 panic key=value\n")
 	buff.Reset()
 
 	func() {
@@ -275,59 +275,59 @@ func TestConsoleLoggerColor(t *testing.T) {
 
 	// WithFields
 	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "UTC [32m DEBUG[0m debug                     [32mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [32m DEBUG[0m debug [32mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "UTC [32m DEBUG[0m debugf                    [32mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [32m DEBUG[0m debugf [32mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "UTC [34m  INFO[0m info                      [34mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [34m  INFO[0m info [34mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "UTC [34m  INFO[0m infof                     [34mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [34m  INFO[0m infof [34mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m notice                    [36;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m notice [36;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m noticef                   [36;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m noticef [36;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:301 warn                      [33;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:301 warn [33;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:305 warnf                     [33;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:305 warnf [33;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:309 error                     [31;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:309 error [31;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:313 errorf                    [31;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:313 errorf [31;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:317 alert                     [31m[4mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:317 alert [31m[4mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:321 alertf                    [31m[4mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:321 alertf [31m[4mkey[0m=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:325 panicf                    [31mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:325 panicf [31mkey[0m=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:329 panic                     [31mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:329 panic [31mkey[0m=value\n")
 	buff.Reset()
 }
 
@@ -418,59 +418,59 @@ func TestConsoleLoggerCaller(t *testing.T) {
 
 	// WithFields
 	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "UTC  DEBUG console_test.go:420 debug                     key=value\n")
+	Equal(t, buff.String(), "UTC  DEBUG console_test.go:420 debug key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "UTC  DEBUG console_test.go:424 debugf                    key=value\n")
+	Equal(t, buff.String(), "UTC  DEBUG console_test.go:424 debugf key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "UTC   INFO console_test.go:428 info                      key=value\n")
+	Equal(t, buff.String(), "UTC   INFO console_test.go:428 info key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "UTC   INFO console_test.go:432 infof                     key=value\n")
+	Equal(t, buff.String(), "UTC   INFO console_test.go:432 infof key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "UTC NOTICE console_test.go:436 notice                    key=value\n")
+	Equal(t, buff.String(), "UTC NOTICE console_test.go:436 notice key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "UTC NOTICE console_test.go:440 noticef                   key=value\n")
+	Equal(t, buff.String(), "UTC NOTICE console_test.go:440 noticef key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "UTC   WARN console_test.go:444 warn                      key=value\n")
+	Equal(t, buff.String(), "UTC   WARN console_test.go:444 warn key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "UTC   WARN console_test.go:448 warnf                     key=value\n")
+	Equal(t, buff.String(), "UTC   WARN console_test.go:448 warnf key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "UTC  ERROR console_test.go:452 error                     key=value\n")
+	Equal(t, buff.String(), "UTC  ERROR console_test.go:452 error key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "UTC  ERROR console_test.go:456 errorf                    key=value\n")
+	Equal(t, buff.String(), "UTC  ERROR console_test.go:456 errorf key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "UTC  ALERT console_test.go:460 alert                     key=value\n")
+	Equal(t, buff.String(), "UTC  ALERT console_test.go:460 alert key=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "UTC  ALERT console_test.go:464 alertf                    key=value\n")
+	Equal(t, buff.String(), "UTC  ALERT console_test.go:464 alertf key=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "UTC  PANIC console_test.go:468 panicf                    key=value\n")
+	Equal(t, buff.String(), "UTC  PANIC console_test.go:468 panicf key=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "UTC  PANIC console_test.go:472 panic                     key=value\n")
+	Equal(t, buff.String(), "UTC  PANIC console_test.go:472 panic key=value\n")
 	buff.Reset()
 
 	func() {
@@ -593,59 +593,59 @@ func TestConsoleLoggerColorCaller(t *testing.T) {
 
 	// WithFields
 	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "UTC [32m DEBUG[0m console_test.go:595 debug                     [32mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [32m DEBUG[0m console_test.go:595 debug [32mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "UTC [32m DEBUG[0m console_test.go:599 debugf                    [32mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [32m DEBUG[0m console_test.go:599 debugf [32mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "UTC [34m  INFO[0m console_test.go:603 info                      [34mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [34m  INFO[0m console_test.go:603 info [34mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "UTC [34m  INFO[0m console_test.go:607 infof                     [34mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [34m  INFO[0m console_test.go:607 infof [34mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m console_test.go:611 notice                    [36;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m console_test.go:611 notice [36;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m console_test.go:615 noticef                   [36;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [36;1mNOTICE[0m console_test.go:615 noticef [36;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:619 warn                      [33;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:619 warn [33;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:623 warnf                     [33;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [33;1m  WARN[0m console_test.go:623 warnf [33;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:627 error                     [31;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:627 error [31;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:631 errorf                    [31;1mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31;1m ERROR[0m console_test.go:631 errorf [31;1mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:635 alert                     [31m[4mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:635 alert [31m[4mkey[0m=value\n")
 	buff.Reset()
 
 	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:639 alertf                    [31m[4mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m[4m ALERT[0m console_test.go:639 alertf [31m[4mkey[0m=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:643 panicf                    [31mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:643 panicf [31mkey[0m=value\n")
 	buff.Reset()
 
 	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:647 panic                     [31mkey[0m=value\n")
+	Equal(t, buff.String(), "UTC [31m PANIC[0m console_test.go:647 panic [31mkey[0m=value\n")
 	buff.Reset()
 }
 
@@ -692,9 +692,12 @@ func TestCustomFormatFunc(t *testing.T) {
 	cLog.SetTimestampFormat("2006")
 	cLog.SetBuffersAndWorkers(3, 2)
 	cLog.SetFormatFunc(func() Formatter {
-		return func(e *log.Entry) io.WriterTo {
-			b := new(bytes.Buffer)
-			b.WriteString(e.Message)
+
+		var b []byte
+
+		return func(e *log.Entry) []byte {
+			b = b[0:0]
+			b = append(b, e.Message...)
 			return b
 		}
 	})

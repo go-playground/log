@@ -53,3 +53,5 @@ func (l Level) String() string {
 		return "Unknow Level"
 	}
 }
+
+// TODO: Add a bytes method along with string
