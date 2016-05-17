@@ -1,12 +1,9 @@
 package http
 
 import (
-	"fmt"
 	"io/ioutil"
 	stdhttp "net/http"
 	"net/http/httptest"
-	"path"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -24,6 +21,8 @@ import (
 // go test -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
 
 func TestHTTPLogger(t *testing.T) {
+
+	tests := getTestHTTPLoggerTests()
 	var msg string
 
 	server := httptest.NewServer(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
@@ -54,66 +53,52 @@ func TestHTTPLogger(t *testing.T) {
 	hLog.SetTimestampFormat("MST")
 	log.RegisterHandler(hLog, log.AllLevels...)
 
-	log.Debug("debug")
-	if msg != "UTC  DEBUG debug" {
-		t.Errorf("Expected 'UTC  DEBUG' Got '%s'", msg)
-	}
+	for i, tt := range tests {
 
-	log.Info("info")
-	if msg != "UTC   INFO info" {
-		t.Errorf("Expected 'UTC   INFO info' Got '%s'", msg)
-	}
+		var l log.LeveledLogger
 
-	log.Notice("notice")
-	if msg != "UTC NOTICE notice" {
-		t.Errorf("Expected 'UTC NOTICE notice' Got '%s'", msg)
-	}
+		if tt.flds != nil {
+			l = log.WithFields(tt.flds...)
+		} else {
+			l = log.Logger
+		}
 
-	log.Warn("warn")
-	if msg != "UTC   WARN http_test.go:72 warn" {
-		t.Errorf("Expected 'UTC   WARN http_test.go:72 warn' Got '%s'", msg)
-	}
+		switch tt.lvl {
+		case log.DebugLevel:
+			l.Debug(tt.msg)
+		case log.TraceLevel:
+			l.Trace(tt.msg).End()
+		case log.InfoLevel:
+			l.Info(tt.msg)
+		case log.NoticeLevel:
+			l.Notice(tt.msg)
+		case log.WarnLevel:
+			l.Warn(tt.msg)
+		case log.ErrorLevel:
+			l.Error(tt.msg)
+		case log.PanicLevel:
+			func() {
+				defer func() {
+					recover()
+				}()
 
-	log.Error("error")
-	if msg != "UTC  ERROR http_test.go:77 error" {
-		t.Errorf("Expected 'UTC  ERROR http_test.go:77 error' Got '%s'", msg)
-	}
+				l.Panic(tt.msg)
+			}()
+		case log.AlertLevel:
+			l.Alert(tt.msg)
+		}
 
-	log.Alert("alert")
-	if msg != "UTC  ALERT http_test.go:82 alert" {
-		t.Errorf("Expected 'UTC  ALERT http_test.go:82 alert' Got '%s'", msg)
-	}
+		if msg != tt.want {
 
-	log.WithFields(
-		log.F("key", "string"),
-		log.F("key", int(1)),
-		log.F("key", int8(2)),
-		log.F("key", int16(3)),
-		log.F("key", int32(4)),
-		log.F("key", int64(5)),
-		log.F("key", uint(1)),
-		log.F("key", uint8(2)),
-		log.F("key", uint16(3)),
-		log.F("key", uint32(4)),
-		log.F("key", uint64(5)),
-		log.F("key", true),
-		log.F("key", struct{ value string }{"struct"}),
-	).Debug("debug")
-	if msg != "UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}" {
-		t.Errorf("UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}' Got '%s'", msg)
-	}
+			if tt.lvl == log.TraceLevel {
+				if !strings.HasPrefix(msg, tt.want) {
+					t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, msg)
+				}
+				continue
+			}
 
-	panicMatchesSkip(t, func() { log.Panic("panic") }, "panic")
-	if msg != "UTC  PANIC http_test.go:106 panic" {
-		t.Errorf("Expected 'UTC  PANIC http_test.go:106 panic' Got '%s'", msg)
-	}
-
-	func() {
-		defer log.Trace("trace").End()
-	}()
-
-	if !strings.HasPrefix(msg, "UTC  TRACE trace ") {
-		t.Errorf("Expected 'UTC  TRACE trace ...' Got '%s'", msg)
+			t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, msg)
+		}
 	}
 
 	log.Debug("badrequest")
@@ -149,23 +134,82 @@ func TestBadValues(t *testing.T) {
 	log.Debug("debug")
 }
 
-func panicMatchesSkip(t *testing.T, fn func(), matches string) {
+type test struct {
+	lvl  log.Level
+	msg  string
+	flds []log.Field
+	want string
+}
 
-	_, file, line, _ := runtime.Caller(2)
-
-	defer func() {
-		if r := recover(); r != nil {
-			err := fmt.Sprintf("%s", r)
-
-			if err != matches {
-				fmt.Printf("%s:%d Panic...  Expected '%s' Got '%s'", path.Base(file), line, matches, err)
-				t.FailNow()
-			}
-		} else {
-			fmt.Printf("%s:%d Panic Expected, none found...  Got '%s'", path.Base(file), line, matches)
-			t.FailNow()
-		}
-	}()
-
-	fn()
+func getTestHTTPLoggerTests() []test {
+	return []test{
+		{
+			lvl:  log.DebugLevel,
+			msg:  "debug",
+			flds: nil,
+			want: "UTC  DEBUG debug",
+		},
+		{
+			lvl:  log.PanicLevel,
+			msg:  "panic",
+			flds: nil,
+			want: "UTC  PANIC http_test.go:85 panic",
+		},
+		{
+			lvl:  log.InfoLevel,
+			msg:  "info",
+			flds: nil,
+			want: "UTC   INFO info",
+		},
+		{
+			lvl:  log.NoticeLevel,
+			msg:  "notice",
+			flds: nil,
+			want: "UTC NOTICE notice",
+		},
+		{
+			lvl:  log.WarnLevel,
+			msg:  "warn",
+			flds: nil,
+			want: "UTC   WARN http_test.go:76 warn",
+		},
+		{
+			lvl:  log.ErrorLevel,
+			msg:  "error",
+			flds: nil,
+			want: "UTC  ERROR http_test.go:78 error",
+		},
+		{
+			lvl:  log.AlertLevel,
+			msg:  "alert",
+			flds: nil,
+			want: "UTC  ALERT http_test.go:88 alert",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "string"),
+				log.F("key", int(1)),
+				log.F("key", int8(2)),
+				log.F("key", int16(3)),
+				log.F("key", int32(4)),
+				log.F("key", int64(5)),
+				log.F("key", uint(1)),
+				log.F("key", uint8(2)),
+				log.F("key", uint16(3)),
+				log.F("key", uint32(4)),
+				log.F("key", uint64(5)),
+				log.F("key", true),
+				log.F("key", struct{ value string }{"struct"}),
+			},
+			want: "UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}",
+		},
+		{
+			lvl:  log.TraceLevel,
+			msg:  "trace",
+			flds: nil,
+			want: "UTC  TRACE trace ",
+		},
+	}
 }

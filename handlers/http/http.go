@@ -35,7 +35,6 @@ type HTTP struct {
 	numWorkers      uint
 	remoteHost      string
 	formatFunc      FormatFunc
-	contentEncoding string
 	timestampFormat string
 	httpClient      stdhttp.Client
 	header          stdhttp.Header
