@@ -1,9 +1,7 @@
 package http
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	stdhttp "net/http"
 	"net/http/httptest"
@@ -72,23 +70,42 @@ func TestHTTPLogger(t *testing.T) {
 	}
 
 	log.Warn("warn")
-	if msg != "UTC   WARN http_test.go:74 warn" {
-		t.Errorf("Expected 'UTC   WARN http_test.go:74 warn' Got '%s'", msg)
+	if msg != "UTC   WARN http_test.go:72 warn" {
+		t.Errorf("Expected 'UTC   WARN http_test.go:72 warn' Got '%s'", msg)
 	}
 
 	log.Error("error")
-	if msg != "UTC  ERROR http_test.go:79 error" {
-		t.Errorf("Expected 'UTC  ERROR http_test.go:79 error' Got '%s'", msg)
+	if msg != "UTC  ERROR http_test.go:77 error" {
+		t.Errorf("Expected 'UTC  ERROR http_test.go:77 error' Got '%s'", msg)
 	}
 
 	log.Alert("alert")
-	if msg != "UTC  ALERT http_test.go:84 alert" {
-		t.Errorf("Expected 'UTC  ALERT http_test.go:84 alert' Got '%s'", msg)
+	if msg != "UTC  ALERT http_test.go:82 alert" {
+		t.Errorf("Expected 'UTC  ALERT http_test.go:82 alert' Got '%s'", msg)
+	}
+
+	log.WithFields(
+		log.F("key", "string"),
+		log.F("key", int(1)),
+		log.F("key", int8(2)),
+		log.F("key", int16(3)),
+		log.F("key", int32(4)),
+		log.F("key", int64(5)),
+		log.F("key", uint(1)),
+		log.F("key", uint8(2)),
+		log.F("key", uint16(3)),
+		log.F("key", uint32(4)),
+		log.F("key", uint64(5)),
+		log.F("key", true),
+		log.F("key", struct{ value string }{"struct"}),
+	).Debug("debug")
+	if msg != "UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}" {
+		t.Errorf("UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}' Got '%s'", msg)
 	}
 
 	panicMatchesSkip(t, func() { log.Panic("panic") }, "panic")
-	if msg != "UTC  PANIC http_test.go:89 panic" {
-		t.Errorf("Expected 'UTC  PANIC http_test.go:89 panic' Got '%s'", msg)
+	if msg != "UTC  PANIC http_test.go:106 panic" {
+		t.Errorf("Expected 'UTC  PANIC http_test.go:106 panic' Got '%s'", msg)
 	}
 
 	func() {
@@ -123,62 +140,14 @@ func TestBadValues(t *testing.T) {
 	}
 
 	hLog.SetFormatFunc(func() Formatter {
-
-		b := new(bytes.Buffer)
-		return func(e *log.Entry) io.Reader {
-			b.WriteString(e.Message)
-			return b
+		return func(e *log.Entry) []byte {
+			return []byte(e.Message)
 		}
 	})
 	log.RegisterHandler(hLog, log.AllLevels...)
 
 	log.Debug("debug")
 }
-
-// func TestNon200HTTPLogger(t *testing.T) {
-
-// 	var msg string
-
-// 	server := httptest.NewServer(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-
-// 		b, err := ioutil.ReadAll(r.Body)
-// 		if err != nil {
-// 			msg = err.Error()
-// 			return
-// 		}
-
-// 		msg = string(b)
-
-// 		fmt.Println(msg)
-// 		if msg == "UTC  DEBUG debug" {
-// 			w.WriteHeader(stdhttp.StatusBadRequest)
-// 			return
-// 		}
-
-// 		fmt.Println(msg)
-
-// 		w.Write(b)
-// 	}))
-// 	defer server.Close()
-
-// 	header := make(stdhttp.Header, 0)
-// 	header.Set("Content-Type", "text/plain")
-
-// 	hLog, err := New(server.URL, header)
-// 	if err != nil {
-// 		log.Fatalf("Error initializing HTTP recieved '%s'", err)
-// 	}
-
-// 	hLog.SetBuffersAndWorkers(1, 1)
-// 	hLog.SetTimestampFormat("MST")
-// 	log.RegisterHandler(hLog, log.AllLevels...)
-
-// 	log.Debug("debug")
-// 	fmt.Println(msg)
-// 	if msg != "UTC  ERROR " {
-// 		t.Errorf("Expected '' Got '%s'", msg)
-// 	}
-// }
 
 func panicMatchesSkip(t *testing.T, fn func(), matches string) {
 

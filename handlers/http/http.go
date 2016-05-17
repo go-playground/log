@@ -3,10 +3,10 @@ package http
 import (
 	"bytes"
 	"fmt"
-	"io"
 	stdlog "log"
 	stdhttp "net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/go-playground/log"
 )
@@ -17,13 +17,15 @@ import (
 type FormatFunc func() Formatter
 
 // Formatter is the function used to format the HTTP entry
-type Formatter func(e *log.Entry) io.Reader
+type Formatter func(e *log.Entry) []byte
 
 const (
-	defaultTS       = "2006-01-02T15:04:05.000000000Z07:00"
-	format          = "%s %6s %s"
-	formatCaller    = "%s %6s %s:%d %s"
-	noColorKeyValue = " %s=%v"
+	defaultTS = "2006-01-02T15:04:05.000000000Z07:00"
+	space     = byte(' ')
+	equals    = byte('=')
+	colon     = byte(':')
+	base10    = 10
+	v         = "%v"
 )
 
 // HTTP is an instance of the http logger
@@ -102,15 +104,28 @@ func (h *HTTP) Run() chan<- *log.Entry {
 
 func (h *HTTP) defaultFormatFunc() Formatter {
 
-	b := new(bytes.Buffer)
+	var b []byte
 	var file string
+	var lvl string
+	var i int
 
-	return func(e *log.Entry) io.Reader {
-		b.Reset()
+	return func(e *log.Entry) []byte {
+		b = b[0:0]
 
 		if e.Line == 0 {
 
-			b.WriteString(fmt.Sprintf(format, e.Timestamp.Format(h.timestampFormat), e.Level, e.Message))
+			b = append(b, e.Timestamp.Format(h.timestampFormat)...)
+			b = append(b, space)
+
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
+
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, e.Message...)
 
 		} else {
 			file = e.File
@@ -121,11 +136,57 @@ func (h *HTTP) defaultFormatFunc() Formatter {
 				}
 			}
 
-			b.WriteString(fmt.Sprintf(formatCaller, e.Timestamp.Format(h.timestampFormat), e.Level, file, e.Line, e.Message))
+			b = append(b, e.Timestamp.Format(h.timestampFormat)...)
+			b = append(b, space)
+
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
+
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, file...)
+			b = append(b, colon)
+			b = strconv.AppendInt(b, int64(e.Line), base10)
+			b = append(b, space)
+			b = append(b, e.Message...)
 		}
 
 		for _, f := range e.Fields {
-			b.WriteString(fmt.Sprintf(noColorKeyValue, f.Key, f.Value))
+			b = append(b, space)
+			b = append(b, f.Key...)
+			b = append(b, equals)
+
+			switch f.Value.(type) {
+			case string:
+				b = append(b, f.Value.(string)...)
+			case int:
+				b = strconv.AppendInt(b, int64(f.Value.(int)), base10)
+			case int8:
+				b = strconv.AppendInt(b, int64(f.Value.(int8)), base10)
+			case int16:
+				b = strconv.AppendInt(b, int64(f.Value.(int16)), base10)
+			case int32:
+				b = strconv.AppendInt(b, int64(f.Value.(int32)), base10)
+			case int64:
+				b = strconv.AppendInt(b, f.Value.(int64), base10)
+			case uint:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint)), base10)
+			case uint8:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint8)), base10)
+			case uint16:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint16)), base10)
+			case uint32:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
+			case uint64:
+				b = strconv.AppendUint(b, f.Value.(uint64), base10)
+			case bool:
+				b = strconv.AppendBool(b, f.Value.(bool))
+			default:
+				b = append(b, fmt.Sprintf(v, f.Value)...)
+			}
 		}
 
 		return b
@@ -134,17 +195,19 @@ func (h *HTTP) defaultFormatFunc() Formatter {
 
 func (h *HTTP) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
-	var reader io.Reader
+	var b []byte
 	formatter := h.formatFunc()
 
 	for e = range entries {
 
-		reader = formatter(e)
+		b = formatter(e)
 
 		// TODO: investigate reuse of http.Request... all that changes is the paylod
+		// // req.Body
+		// req.ContentLength
 
 		// err not gathered as URL parsed during creationg of *HTTP
-		req, _ := stdhttp.NewRequest(h.method, h.remoteHost, reader)
+		req, _ := stdhttp.NewRequest(h.method, h.remoteHost, bytes.NewReader(b))
 
 		req.Header = h.header
 		resp, err := h.httpClient.Do(req)

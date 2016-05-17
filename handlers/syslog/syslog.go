@@ -4,6 +4,7 @@ import (
 	"fmt"
 	stdlog "log"
 	"log/syslog"
+	"strconv"
 
 	"github.com/go-playground/log"
 )
@@ -14,16 +15,15 @@ import (
 type FormatFunc func() Formatter
 
 // Formatter is the function used to format the Redis entry
-type Formatter func(e *log.Entry) string
+type Formatter func(e *log.Entry) []byte
 
 const (
-	defaultTS         = "2006-01-02T15:04:05.000000000Z07:00"
-	colorFormat       = "%s %s%6s%s %s"
-	colorFormatCaller = "%s %s%6s%s %s:%d %s"
-	colorKeyValue     = " %s%s%s=%v"
-	format            = "%s %6s %s"
-	formatCaller      = "%s %6s %s:%d %s"
-	noColorKeyValue   = " %s=%v"
+	defaultTS = "2006-01-02T15:04:05.000000000Z07:00"
+	space     = byte(' ')
+	equals    = byte('=')
+	colon     = byte(':')
+	base10    = 10
+	v         = "%v"
 )
 
 // Syslog is an instance of the syslog logger
@@ -159,18 +159,32 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 
 	var b []byte
 	var file string
+	var lvl string
+	var i int
 
 	if s.displayColor {
 
 		var color log.ANSIEscSeq
 
-		return func(e *log.Entry) string {
+		return func(e *log.Entry) []byte {
 			b = b[0:0]
 			color = s.colors[e.Level]
 
 			if e.Line == 0 {
 
-				b = append(b, fmt.Sprintf(colorFormat, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, e.Message)...)
+				b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+				b = append(b, space)
+				b = append(b, color...)
+
+				lvl = e.Level.String()
+
+				for i = 0; i < 6-len(lvl); i++ {
+					b = append(b, space)
+				}
+				b = append(b, lvl...)
+				b = append(b, log.Reset...)
+				b = append(b, space)
+				b = append(b, e.Message...)
 
 			} else {
 				file = e.File
@@ -181,23 +195,84 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 					}
 				}
 
-				b = append(b, fmt.Sprintf(colorFormatCaller, e.Timestamp.Format(s.timestampFormat), color, e.Level, log.Reset, file, e.Line, e.Message)...)
+				b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+				b = append(b, space)
+				b = append(b, color...)
+
+				lvl = e.Level.String()
+
+				for i = 0; i < 6-len(lvl); i++ {
+					b = append(b, space)
+				}
+
+				b = append(b, lvl...)
+				b = append(b, log.Reset...)
+				b = append(b, space)
+				b = append(b, file...)
+				b = append(b, colon)
+				b = strconv.AppendInt(b, int64(e.Line), base10)
+				b = append(b, space)
+				b = append(b, e.Message...)
 			}
 
 			for _, f := range e.Fields {
-				b = append(b, fmt.Sprintf(colorKeyValue, color, f.Key, log.Reset, f.Value)...)
+				b = append(b, space)
+				b = append(b, color...)
+				b = append(b, f.Key...)
+				b = append(b, log.Reset...)
+				b = append(b, equals)
+
+				switch f.Value.(type) {
+				case string:
+					b = append(b, f.Value.(string)...)
+				case int:
+					b = strconv.AppendInt(b, int64(f.Value.(int)), base10)
+				case int8:
+					b = strconv.AppendInt(b, int64(f.Value.(int8)), base10)
+				case int16:
+					b = strconv.AppendInt(b, int64(f.Value.(int16)), base10)
+				case int32:
+					b = strconv.AppendInt(b, int64(f.Value.(int32)), base10)
+				case int64:
+					b = strconv.AppendInt(b, f.Value.(int64), base10)
+				case uint:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint)), base10)
+				case uint8:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint8)), base10)
+				case uint16:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint16)), base10)
+				case uint32:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
+				case uint64:
+					b = strconv.AppendUint(b, f.Value.(uint64), base10)
+				case bool:
+					b = strconv.AppendBool(b, f.Value.(bool))
+				default:
+					b = append(b, fmt.Sprintf(v, f.Value)...)
+				}
 			}
 
-			return string(b)
+			return b
 		}
 	}
 
-	return func(e *log.Entry) string {
+	return func(e *log.Entry) []byte {
 		b = b[0:0]
 
 		if e.Line == 0 {
 
-			b = append(b, fmt.Sprintf(format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)...)
+			b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+			b = append(b, space)
+
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
+
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, e.Message...)
 
 		} else {
 			file = e.File
@@ -208,13 +283,59 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 				}
 			}
 
-			b = append(b, fmt.Sprintf(formatCaller, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)...)
+			b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+			b = append(b, space)
+
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
+
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, file...)
+			b = append(b, colon)
+			b = strconv.AppendInt(b, int64(e.Line), base10)
+			b = append(b, space)
+			b = append(b, e.Message...)
 		}
 
 		for _, f := range e.Fields {
-			b = append(b, fmt.Sprintf(noColorKeyValue, f.Key, f.Value)...)
+			b = append(b, space)
+			b = append(b, f.Key...)
+			b = append(b, equals)
+
+			switch f.Value.(type) {
+			case string:
+				b = append(b, f.Value.(string)...)
+			case int:
+				b = strconv.AppendInt(b, int64(f.Value.(int)), base10)
+			case int8:
+				b = strconv.AppendInt(b, int64(f.Value.(int8)), base10)
+			case int16:
+				b = strconv.AppendInt(b, int64(f.Value.(int16)), base10)
+			case int32:
+				b = strconv.AppendInt(b, int64(f.Value.(int32)), base10)
+			case int64:
+				b = strconv.AppendInt(b, f.Value.(int64), base10)
+			case uint:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint)), base10)
+			case uint8:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint8)), base10)
+			case uint16:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint16)), base10)
+			case uint32:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
+			case uint64:
+				b = strconv.AppendUint(b, f.Value.(uint64), base10)
+			case bool:
+				b = strconv.AppendBool(b, f.Value.(bool))
+			default:
+				b = append(b, fmt.Sprintf(v, f.Value)...)
+			}
 		}
 
-		return string(b)
+		return b
 	}
 }

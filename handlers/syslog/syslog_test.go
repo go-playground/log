@@ -676,8 +676,8 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 	sLog.SetBuffersAndWorkers(3, 0)
 	sLog.SetTimestampFormat("2006")
 	sLog.SetFormatFunc(func() Formatter {
-		return func(e *log.Entry) string {
-			return e.Message
+		return func(e *log.Entry) []byte {
+			return []byte(e.Message)
 		}
 	})
 
@@ -685,4 +685,78 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 
 	log.Debug("debug")
 	Equal(t, hasString(conn, "debug"), true)
+}
+
+func TestAllFieldTypesFunc(t *testing.T) {
+
+	addr, err := net.ResolveUDPAddr("udp", ":2006")
+	Equal(t, err, nil)
+
+	conn, err := net.ListenUDP("udp", addr)
+	Equal(t, err, nil)
+	defer conn.Close()
+
+	sLog, err := New("udp", "127.0.0.1:2006", stdsyslog.LOG_DEBUG, "")
+	Equal(t, err, nil)
+
+	sLog.DisplayColor(false)
+	sLog.SetBuffersAndWorkers(0, 1)
+	sLog.SetTimestampFormat("2006")
+
+	log.SetCallerInfo(false)
+	log.RegisterHandler(sLog, log.AllLevels...)
+
+	log.WithFields(
+		log.F("key", "string"),
+		log.F("key", int(1)),
+		log.F("key", int8(2)),
+		log.F("key", int16(3)),
+		log.F("key", int32(4)),
+		log.F("key", int64(5)),
+		log.F("key", uint(1)),
+		log.F("key", uint8(2)),
+		log.F("key", uint16(3)),
+		log.F("key", uint32(4)),
+		log.F("key", uint64(5)),
+		log.F("key", true),
+		log.F("key", struct{ value string }{"struct"}),
+	).Debug("debug")
+	Equal(t, hasString(conn, "2016  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n"), true)
+}
+
+func TestAllFieldTypesColorFunc(t *testing.T) {
+
+	addr, err := net.ResolveUDPAddr("udp", ":2007")
+	Equal(t, err, nil)
+
+	conn, err := net.ListenUDP("udp", addr)
+	Equal(t, err, nil)
+	defer conn.Close()
+
+	sLog, err := New("udp", "127.0.0.1:2007", stdsyslog.LOG_DEBUG, "")
+	Equal(t, err, nil)
+
+	sLog.DisplayColor(true)
+	sLog.SetBuffersAndWorkers(0, 1)
+	sLog.SetTimestampFormat("2006")
+
+	log.SetCallerInfo(false)
+	log.RegisterHandler(sLog, log.AllLevels...)
+
+	log.WithFields(
+		log.F("key", "string"),
+		log.F("key", int(1)),
+		log.F("key", int8(2)),
+		log.F("key", int16(3)),
+		log.F("key", int32(4)),
+		log.F("key", int64(5)),
+		log.F("key", uint(1)),
+		log.F("key", uint8(2)),
+		log.F("key", uint16(3)),
+		log.F("key", uint32(4)),
+		log.F("key", uint64(5)),
+		log.F("key", true),
+		log.F("key", struct{ value string }{"struct"}),
+	).Debug("debug")
+	Equal(t, hasString(conn, "2016 [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=true [32mkey[0m={struct}\n"), true)
 }
