@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	stdlog "log"
 	stdhttp "net/http"
 	"net/url"
@@ -196,20 +197,21 @@ func (h *HTTP) defaultFormatFunc() Formatter {
 func (h *HTTP) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
 	var b []byte
+	var reader *bytes.Reader
+
 	formatter := h.formatFunc()
+
+	req, _ := stdhttp.NewRequest(h.method, h.remoteHost, nil)
+	req.Header = h.header
 
 	for e = range entries {
 
 		b = formatter(e)
 
-		// TODO: investigate reuse of http.Request... all that changes is the paylod
-		// // req.Body
-		// req.ContentLength
+		reader = bytes.NewReader(b)
+		req.Body = ioutil.NopCloser(reader)
+		req.ContentLength = int64(reader.Len())
 
-		// err not gathered as URL parsed during creationg of *HTTP
-		req, _ := stdhttp.NewRequest(h.method, h.remoteHost, bytes.NewReader(b))
-
-		req.Header = h.header
 		resp, err := h.httpClient.Do(req)
 		if err != nil {
 			fmt.Printf("**** WARNING Could not post data to %s: %v\n", h.remoteHost, err)
