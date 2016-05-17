@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-playground/log"
-	. "gopkg.in/go-playground/assert.v1"
 )
 
 // NOTES:
@@ -22,6 +21,7 @@ import (
 func TestConsoleLogger(t *testing.T) {
 
 	tests := getConsoleLoggerTests()
+
 	buff := new(bytes.Buffer)
 
 	cLog := New()
@@ -230,7 +230,9 @@ func TestCustomFormatFunc(t *testing.T) {
 	log.RegisterHandler(cLog, log.AllLevels...)
 
 	log.Debug("debug")
-	Equal(t, buff.String(), "debug")
+	if buff.String() != "debug" {
+		log.Errorf("Expected '%s' Got '%s'", "debug", buff.String())
+	}
 	buff.Reset()
 }
 
