@@ -3,6 +3,7 @@ package benchmarks
 import (
 	"errors"
 	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -44,7 +45,12 @@ const (
 	colon                 = byte(':')
 )
 
-func BenchmarkConsoleParallel(b *testing.B) {
+// NOTE: log is a singleton, which means handlers need to be
+// setup only once otherwise each test just adds another log
+// handler and results are cumulative... makes benchmarking
+// annoying because you have to manipulate the TestMain before
+// running the benchmark you want.
+func TestMain(m *testing.M) {
 
 	cLog := console.New()
 	cLog.DisplayColor(false)
@@ -53,9 +59,12 @@ func BenchmarkConsoleParallel(b *testing.B) {
 
 	log.RegisterHandler(cLog, log.AllLevels...)
 
-	b.ReportAllocs()
-	b.ResetTimer()
+	os.Exit(m.Run())
+}
 
+func BenchmarkConsoleParallel(b *testing.B) {
+
+	// log setup in TestMain
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			log.WithFields(
@@ -70,7 +79,6 @@ func BenchmarkConsoleParallel(b *testing.B) {
 				log.F("user-defined type", _jane),
 				log.F("another string", "done!"),
 			).Debug("Go fast.")
-			// log.Debug("debug")
 		}
 
 	})
@@ -78,16 +86,7 @@ func BenchmarkConsoleParallel(b *testing.B) {
 
 func BenchmarkConsoleSimpleFieldsParallel(b *testing.B) {
 
-	cLog := console.New()
-	cLog.DisplayColor(false)
-	cLog.SetWriter(ioutil.Discard)
-	cLog.SetBuffersAndWorkers(3, 3)
-
-	log.RegisterHandler(cLog, log.AllLevels...)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
+	// log setup in TestMain
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			log.Debug("Go fast.")
@@ -95,39 +94,3 @@ func BenchmarkConsoleSimpleFieldsParallel(b *testing.B) {
 
 	})
 }
-
-// func BenchmarkConsoleSimple(b *testing.B) {
-
-// 	cLog := New()
-// 	cLog.SetWriter(ioutil.Discard)
-// 	// cLog.SetFormatFunc(func() Formatter {
-
-// 	// 	b := new(bytes.Buffer)
-
-// 	// 	return func(e *log.Entry) io.WriterTo {
-// 	// 		b.WriteString(e.Message)
-// 	// 		return b
-// 	// 	}
-// 	// })
-
-// 	log.RegisterHandler(cLog, log.AllLevels...)
-
-// 	b.ReportAllocs()
-
-// 	for i := 0; i < b.N; i++ {
-
-// 		log.WithFields(
-// 			log.F("int", 1),
-// 			log.F("int64", int64(1)),
-// 			log.F("float", 3.0),
-// 			log.F("string", "four!"),
-// 			log.F("bool", true),
-// 			log.F("time", time.Unix(0, 0)),
-// 			log.F("error", errExample.Error()),
-// 			log.F("duration", time.Second),
-// 			log.F("user-defined type", _jane),
-// 			log.F("another string", "done!"),
-// 		).Info("Go fast.")
-// 		log.Debug("debug")
-// 	}
-// }
