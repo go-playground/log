@@ -708,3 +708,65 @@ func TestCustomFormatFunc(t *testing.T) {
 	Equal(t, buff.String(), "debug")
 	buff.Reset()
 }
+
+func TestAllFieldTypesFunc(t *testing.T) {
+
+	buff := new(bytes.Buffer)
+	cLog := New()
+	cLog.SetWriter(buff)
+	cLog.DisplayColor(false)
+	cLog.SetTimestampFormat("2006")
+	cLog.SetBuffersAndWorkers(0, 1)
+
+	log.SetCallerInfo(false)
+	log.RegisterHandler(cLog, log.AllLevels...)
+
+	log.WithFields(
+		log.F("key", "string"),
+		log.F("key", int(1)),
+		log.F("key", int8(2)),
+		log.F("key", int16(3)),
+		log.F("key", int32(4)),
+		log.F("key", int64(5)),
+		log.F("key", uint(1)),
+		log.F("key", uint8(2)),
+		log.F("key", uint16(3)),
+		log.F("key", uint32(4)),
+		log.F("key", uint64(5)),
+		log.F("key", true),
+		log.F("key", struct{ value string }{"struct"}),
+	).Debug("debug")
+	Equal(t, buff.String(), "2016  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n")
+	buff.Reset()
+}
+
+func TestAllFieldTypesColorFunc(t *testing.T) {
+
+	buff := new(bytes.Buffer)
+	cLog := New()
+	cLog.SetWriter(buff)
+	cLog.DisplayColor(true)
+	cLog.SetTimestampFormat("2006")
+	cLog.SetBuffersAndWorkers(0, 1)
+
+	log.SetCallerInfo(false)
+	log.RegisterHandler(cLog, log.AllLevels...)
+
+	log.WithFields(
+		log.F("key", "string"),
+		log.F("key", int(1)),
+		log.F("key", int8(2)),
+		log.F("key", int16(3)),
+		log.F("key", int32(4)),
+		log.F("key", int64(5)),
+		log.F("key", uint(1)),
+		log.F("key", uint8(2)),
+		log.F("key", uint16(3)),
+		log.F("key", uint32(4)),
+		log.F("key", uint64(5)),
+		log.F("key", true),
+		log.F("key", struct{ value string }{"struct"}),
+	).Debug("debug")
+	Equal(t, buff.String(), "2016 [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=true [32mkey[0m={struct}\n")
+	buff.Reset()
+}
