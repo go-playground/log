@@ -309,6 +309,67 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 	}
 }
 
+func TestSetFilename(t *testing.T) {
+
+	addr, err := net.ResolveUDPAddr("udp", ":2005")
+	if err != nil {
+		log.Errorf("Expected '%s' Got '%s'", nil, err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Errorf("Expected '%s' Got '%s'", nil, err)
+	}
+	defer conn.Close()
+
+	sLog, err := New("udp", "127.0.0.1:2005", stdsyslog.LOG_DEBUG, "")
+	if err != nil {
+		log.Errorf("Expected '%s' Got '%s'", nil, err)
+	}
+
+	sLog.DisplayColor(false)
+	sLog.SetBuffersAndWorkers(3, 1)
+	sLog.SetTimestampFormat("MST")
+	sLog.SetFilenameDisplay(log.Llongfile)
+
+	log.RegisterHandler(sLog, log.AllLevels...)
+
+	log.Error("error")
+	if s := hasString(conn); !strings.Contains(s, "log/handlers/syslog/syslog_test.go:337 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/syslog/syslog_test.go:337 error", s)
+	}
+}
+
+func TestSetFilenameColor(t *testing.T) {
+	addr, err := net.ResolveUDPAddr("udp", ":2006")
+	if err != nil {
+		log.Errorf("Expected '%s' Got '%s'", nil, err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Errorf("Expected '%s' Got '%s'", nil, err)
+	}
+	defer conn.Close()
+
+	sLog, err := New("udp", "127.0.0.1:2006", stdsyslog.LOG_DEBUG, "")
+	if err != nil {
+		log.Errorf("Expected '%s' Got '%s'", nil, err)
+	}
+
+	sLog.DisplayColor(true)
+	sLog.SetBuffersAndWorkers(3, 1)
+	sLog.SetTimestampFormat("MST")
+	sLog.SetFilenameDisplay(log.Llongfile)
+
+	log.RegisterHandler(sLog, log.AllLevels...)
+
+	log.Error("error")
+	if s := hasString(conn); !strings.Contains(s, "log/handlers/syslog/syslog_test.go:367 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/syslog/syslog_test.go:367 error", s)
+	}
+}
+
 type test struct {
 	lvl    log.Level
 	msg    string

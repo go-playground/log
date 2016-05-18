@@ -26,6 +26,7 @@ const (
 	colon     = byte(':')
 	base10    = 10
 	v         = "%v"
+	gopath    = "GOPATH"
 )
 
 // Console is an instance of the console logger
@@ -36,6 +37,8 @@ type Console struct {
 	writer          io.Writer
 	formatFunc      FormatFunc
 	timestampFormat string
+	gopath          string
+	fileDisplay     log.FilenameDisplay
 	displayColor    bool
 }
 
@@ -61,11 +64,17 @@ func New() *Console {
 		writer:          os.Stderr,
 		timestampFormat: defaultTS,
 		displayColor:    true,
+		fileDisplay:     log.Lshortfile,
 	}
 
 	c.formatFunc = c.defaultFormatFunc
 
 	return c
+}
+
+// SetFilenameDisplay tells Console the filename, when present, how to display
+func (c *Console) SetFilenameDisplay(fd log.FilenameDisplay) {
+	c.fileDisplay = fd
 }
 
 // DisplayColor tells Console to output in color or not
@@ -110,6 +119,16 @@ func (c *Console) SetFormatFunc(fn FormatFunc) {
 
 // Run starts the logger consuming on the returned channed
 func (c *Console) Run() chan<- *log.Entry {
+
+	// pre-setup
+	if c.fileDisplay == log.Llongfile {
+		// gather $GOPATH for use in stripping off of full name
+		// if not found still ok as will be blank
+		c.gopath = os.Getenv(gopath)
+		if len(c.gopath) != 0 {
+			c.gopath += string(os.PathSeparator) + "src" + string(os.PathSeparator)
+		}
+	}
 
 	// in a big high traffic app, set a higher buffer
 	ch := make(chan *log.Entry, c.buffer)
@@ -172,11 +191,17 @@ func (c *Console) defaultFormatFunc() Formatter {
 
 			} else {
 				file = e.File
-				for i := len(file) - 1; i > 0; i-- {
-					if file[i] == '/' {
-						file = file[i+1:]
-						break
+
+				if c.fileDisplay == log.Lshortfile {
+
+					for i = len(file) - 1; i > 0; i-- {
+						if file[i] == '/' {
+							file = file[i+1:]
+							break
+						}
 					}
+				} else {
+					file = file[len(c.gopath):]
 				}
 
 				b = append(b, e.Timestamp.Format(c.timestampFormat)...)
@@ -262,11 +287,17 @@ func (c *Console) defaultFormatFunc() Formatter {
 
 		} else {
 			file = e.File
-			for i := len(file) - 1; i > 0; i-- {
-				if file[i] == '/' {
-					file = file[i+1:]
-					break
+
+			if c.fileDisplay == log.Lshortfile {
+
+				for i = len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						file = file[i+1:]
+						break
+					}
 				}
+			} else {
+				file = file[len(c.gopath):]
 			}
 
 			b = append(b, e.Timestamp.Format(c.timestampFormat)...)

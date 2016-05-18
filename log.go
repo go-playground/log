@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+// FilenameDisplay is the type of file display output
+type FilenameDisplay uint8
+
+const (
+	Lshortfile FilenameDisplay = iota
+	Llongfile
+)
+
 // HandlerChannels is an array of handler channels
 type HandlerChannels []chan<- *Entry
 

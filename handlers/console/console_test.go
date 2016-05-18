@@ -236,6 +236,44 @@ func TestCustomFormatFunc(t *testing.T) {
 	buff.Reset()
 }
 
+func TestSetFilename(t *testing.T) {
+	buff := new(bytes.Buffer)
+
+	cLog := New()
+	cLog.SetWriter(buff)
+	cLog.DisplayColor(false)
+	cLog.SetBuffersAndWorkers(3, 1)
+	cLog.SetTimestampFormat("MST")
+	cLog.SetFilenameDisplay(log.Llongfile)
+
+	log.RegisterHandler(cLog, log.AllLevels...)
+
+	log.Error("error")
+	if !strings.Contains(buff.String(), "log/handlers/console/console_test.go:251 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/console/console_test.go:251 error", buff.String())
+	}
+	buff.Reset()
+}
+
+func TestSetFilenameColor(t *testing.T) {
+	buff := new(bytes.Buffer)
+
+	cLog := New()
+	cLog.SetWriter(buff)
+	cLog.DisplayColor(true)
+	cLog.SetBuffersAndWorkers(3, 1)
+	cLog.SetTimestampFormat("MST")
+	cLog.SetFilenameDisplay(log.Llongfile)
+
+	log.RegisterHandler(cLog, log.AllLevels...)
+
+	log.Error("error")
+	if !strings.Contains(buff.String(), "log/handlers/console/console_test.go:270 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/console/console_test.go:270 error", buff.String())
+	}
+	buff.Reset()
+}
+
 type test struct {
 	lvl    log.Level
 	msg    string

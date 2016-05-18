@@ -7,6 +7,7 @@ import (
 	stdlog "log"
 	stdhttp "net/http"
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/go-playground/log"
@@ -27,6 +28,7 @@ const (
 	colon     = byte(':')
 	base10    = 10
 	v         = "%v"
+	gopath    = "GOPATH"
 )
 
 // HTTP is an instance of the http logger
@@ -39,6 +41,8 @@ type HTTP struct {
 	httpClient      stdhttp.Client
 	header          stdhttp.Header
 	method          string
+	gopath          string
+	fileDisplay     log.FilenameDisplay
 }
 
 // New returns a new instance of the http logger
@@ -56,11 +60,17 @@ func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error)
 		httpClient:      stdhttp.Client{},
 		header:          header,
 		method:          method,
+		fileDisplay:     log.Lshortfile,
 	}
 
 	h.formatFunc = h.defaultFormatFunc
 
 	return h, nil
+}
+
+// SetFilenameDisplay tells HTTP the filename, when present, how to display
+func (h *HTTP) SetFilenameDisplay(fd log.FilenameDisplay) {
+	h.fileDisplay = fd
 }
 
 // SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
@@ -93,6 +103,16 @@ func (h *HTTP) SetFormatFunc(fn FormatFunc) {
 
 // Run starts the logger consuming on the returned channed
 func (h *HTTP) Run() chan<- *log.Entry {
+
+	// pre-setup
+	if h.fileDisplay == log.Llongfile {
+		// gather $GOPATH for use in stripping off of full name
+		// if not found still ok as will be blank
+		h.gopath = os.Getenv(gopath)
+		if len(h.gopath) != 0 {
+			h.gopath += string(os.PathSeparator) + "src" + string(os.PathSeparator)
+		}
+	}
 
 	ch := make(chan *log.Entry, h.buffer)
 
@@ -129,11 +149,17 @@ func (h *HTTP) defaultFormatFunc() Formatter {
 
 		} else {
 			file = e.File
-			for i := len(file) - 1; i > 0; i-- {
-				if file[i] == '/' {
-					file = file[i+1:]
-					break
+
+			if h.fileDisplay == log.Lshortfile {
+
+				for i = len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						file = file[i+1:]
+						break
+					}
 				}
+			} else {
+				file = file[len(h.gopath):]
 			}
 
 			b = append(b, e.Timestamp.Format(h.timestampFormat)...)

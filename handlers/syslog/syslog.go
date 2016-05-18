@@ -4,6 +4,7 @@ import (
 	"fmt"
 	stdlog "log"
 	"log/syslog"
+	"os"
 	"strconv"
 
 	"github.com/go-playground/log"
@@ -24,6 +25,7 @@ const (
 	colon     = byte(':')
 	base10    = 10
 	v         = "%v"
+	gopath    = "GOPATH"
 )
 
 // Syslog is an instance of the syslog logger
@@ -34,6 +36,8 @@ type Syslog struct {
 	writer          *syslog.Writer
 	formatFunc      FormatFunc
 	timestampFormat string
+	gopath          string
+	fileDisplay     log.FilenameDisplay
 	displayColor    bool
 }
 
@@ -64,6 +68,7 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 		colors:          defaultColors,
 		displayColor:    false,
 		timestampFormat: defaultTS,
+		fileDisplay:     log.Lshortfile,
 	}
 
 	s.formatFunc = s.defaultFormatFunc
@@ -75,13 +80,18 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	return s, nil
 }
 
-// DisplayColor tells Console to output in color or not
+// SetFilenameDisplay tells Syslog the filename, when present, how to display
+func (s *Syslog) SetFilenameDisplay(fd log.FilenameDisplay) {
+	s.fileDisplay = fd
+}
+
+// DisplayColor tells Syslog to output in color or not
 // Default is : true
 func (s *Syslog) DisplayColor(color bool) {
 	s.displayColor = color
 }
 
-// SetTimestampFormat sets Console's timestamp output format
+// SetTimestampFormat sets Syslog's timestamp output format
 // Default is : 2006-01-02T15:04:05.000000000Z07:00
 func (s *Syslog) SetTimestampFormat(format string) {
 	s.timestampFormat = format
@@ -111,6 +121,16 @@ func (s *Syslog) SetFormatFunc(fn FormatFunc) {
 
 // Run starts the logger consuming on the returned channed
 func (s *Syslog) Run() chan<- *log.Entry {
+
+	// pre-setup
+	if s.fileDisplay == log.Llongfile {
+		// gather $GOPATH for use in stripping off of full name
+		// if not found still ok as will be blank
+		s.gopath = os.Getenv(gopath)
+		if len(s.gopath) != 0 {
+			s.gopath += string(os.PathSeparator) + "src" + string(os.PathSeparator)
+		}
+	}
 
 	// in a big high traffic app, set a higher buffer
 	ch := make(chan *log.Entry, s.buffer)
@@ -188,11 +208,17 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 
 			} else {
 				file = e.File
-				for i := len(file) - 1; i > 0; i-- {
-					if file[i] == '/' {
-						file = file[i+1:]
-						break
+
+				if s.fileDisplay == log.Lshortfile {
+
+					for i = len(file) - 1; i > 0; i-- {
+						if file[i] == '/' {
+							file = file[i+1:]
+							break
+						}
 					}
+				} else {
+					file = file[len(s.gopath):]
 				}
 
 				b = append(b, e.Timestamp.Format(s.timestampFormat)...)
@@ -276,11 +302,17 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 
 		} else {
 			file = e.File
-			for i := len(file) - 1; i > 0; i-- {
-				if file[i] == '/' {
-					file = file[i+1:]
-					break
+
+			if s.fileDisplay == log.Lshortfile {
+
+				for i = len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						file = file[i+1:]
+						break
+					}
 				}
+			} else {
+				file = file[len(s.gopath):]
 			}
 
 			b = append(b, e.Timestamp.Format(s.timestampFormat)...)

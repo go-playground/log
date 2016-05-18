@@ -134,6 +134,41 @@ func TestBadValues(t *testing.T) {
 	log.Debug("debug")
 }
 
+func TestSetFilenameDisplay(t *testing.T) {
+
+	var msg string
+
+	server := httptest.NewServer(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+
+		msg = string(b)
+	}))
+	defer server.Close()
+
+	header := make(stdhttp.Header, 0)
+	header.Set("Content-Type", "text/plain")
+
+	hLog, err := New(server.URL, "POST", header)
+	if err != nil {
+		log.Fatalf("Error initializing HTTP recieved '%s'", err)
+	}
+
+	hLog.SetBuffersAndWorkers(0, 1)
+	hLog.SetTimestampFormat("MST")
+	hLog.SetFilenameDisplay(log.Llongfile)
+
+	log.RegisterHandler(hLog, log.AllLevels...)
+
+	log.Error("error")
+	if msg != "UTC  ERROR github.com/go-playground/log/handlers/http/http_test.go:166 error" {
+		t.Errorf("Expected '%s' Got '%s'", "UTC  ERROR github.com/go-playground/log/handlers/http/http_test.go:166 error", msg)
+	}
+}
+
 type test struct {
 	lvl  log.Level
 	msg  string
