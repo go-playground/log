@@ -14,7 +14,7 @@ var AllLevels = []Level{
 }
 
 // Level of the log
-type Level int
+type Level uint8
 
 // Log levels.
 const (
