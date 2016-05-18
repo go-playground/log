@@ -19,14 +19,13 @@ type FormatFunc func() Formatter
 type Formatter func(e *log.Entry) []byte
 
 const (
-	defaultTS = "2006-01-02T15:04:05.000000000Z07:00"
-	space     = byte(' ')
-	equals    = byte('=')
-	newLine   = byte('\n')
-	colon     = byte(':')
-	base10    = 10
-	v         = "%v"
-	gopath    = "GOPATH"
+	space   = byte(' ')
+	equals  = byte('=')
+	newLine = byte('\n')
+	colon   = byte(':')
+	base10  = 10
+	v       = "%v"
+	gopath  = "GOPATH"
 )
 
 // Console is an instance of the console logger
@@ -62,7 +61,7 @@ func New() *Console {
 		numWorkers:      1,
 		colors:          defaultColors,
 		writer:          os.Stderr,
-		timestampFormat: defaultTS,
+		timestampFormat: log.DefaultTimeFormat,
 		displayColor:    true,
 		fileDisplay:     log.Lshortfile,
 	}

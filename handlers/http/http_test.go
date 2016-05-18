@@ -48,9 +48,9 @@ func TestHTTPLogger(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Error initializing HTTP recieved '%s'", err)
 	}
-
 	hLog.SetBuffersAndWorkers(0, 0)
 	hLog.SetTimestampFormat("MST")
+	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
 	log.RegisterHandler(hLog, log.AllLevels...)
 
 	for i, tt := range tests {

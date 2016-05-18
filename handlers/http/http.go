@@ -22,13 +22,12 @@ type FormatFunc func() Formatter
 type Formatter func(e *log.Entry) []byte
 
 const (
-	defaultTS = "2006-01-02T15:04:05.000000000Z07:00"
-	space     = byte(' ')
-	equals    = byte('=')
-	colon     = byte(':')
-	base10    = 10
-	v         = "%v"
-	gopath    = "GOPATH"
+	space  = byte(' ')
+	equals = byte('=')
+	colon  = byte(':')
+	base10 = 10
+	v      = "%v"
+	gopath = "GOPATH"
 )
 
 // HTTP is an instance of the http logger
@@ -56,7 +55,7 @@ func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error)
 		buffer:          0,
 		remoteHost:      remoteHost,
 		numWorkers:      1,
-		timestampFormat: defaultTS,
+		timestampFormat: log.DefaultTimeFormat,
 		httpClient:      stdhttp.Client{},
 		header:          header,
 		method:          method,

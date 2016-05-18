@@ -41,24 +41,24 @@ func TestSyslogLogger(t *testing.T) {
 
 	addr, err := net.ResolveUDPAddr("udp", ":2000")
 	if err != nil {
-		t.Errorf("Expected '%s' Got '%s'", nil, err)
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		t.Errorf("Expected '%s' Got '%s'", nil, err)
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 	defer conn.Close()
 
 	sLog, err := New("udp", "127.0.0.1:2000", stdsyslog.LOG_DEBUG, "")
 	if err != nil {
-		t.Errorf("Expected '%s' Got '%s'", nil, err)
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	sLog.DisplayColor(false)
 	sLog.SetBuffersAndWorkers(3, 3)
 	sLog.SetTimestampFormat("MST")
-
+	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
 	log.RegisterHandler(sLog, log.AllLevels...)
 
 	for i, tt := range tests {
@@ -148,18 +148,18 @@ func TestSyslogLoggerColor(t *testing.T) {
 
 	addr, err := net.ResolveUDPAddr("udp", ":2001")
 	if err != nil {
-		t.Errorf("Expected '%s' Got '%s'", nil, err)
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		t.Errorf("Expected '%s' Got '%s'", nil, err)
+		t.Errorf("Expected '%v' Got '%s'", nil, err)
 	}
 	defer conn.Close()
 
 	sLog, err := New("udp", "127.0.0.1:2001", stdsyslog.LOG_DEBUG, "")
 	if err != nil {
-		t.Errorf("Expected '%s' Got '%s'", nil, err)
+		t.Errorf("Expected '%v' Got '%s'", nil, err)
 	}
 
 	sLog.DisplayColor(true)
@@ -266,11 +266,11 @@ func TestSyslogLoggerColor(t *testing.T) {
 func TestBadAddress(t *testing.T) {
 	sLog, err := New("udp", "255.255.255.67", stdsyslog.LOG_DEBUG, "")
 	if err == nil {
-		log.Errorf("Expected '%s' Got '%s'", "not nil", err)
+		log.Errorf("Expected '%v' Got '%v'", "not nil", err)
 	}
 
 	if sLog != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, sLog)
+		log.Errorf("Expected '%v' Got '%v'", nil, sLog)
 	}
 }
 
@@ -278,18 +278,18 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 
 	addr, err := net.ResolveUDPAddr("udp", ":2004")
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 	defer conn.Close()
 
 	sLog, err := New("udp", "127.0.0.1:2004", stdsyslog.LOG_DEBUG, "")
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	sLog.DisplayColor(true)
@@ -313,18 +313,18 @@ func TestSetFilename(t *testing.T) {
 
 	addr, err := net.ResolveUDPAddr("udp", ":2005")
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 	defer conn.Close()
 
 	sLog, err := New("udp", "127.0.0.1:2005", stdsyslog.LOG_DEBUG, "")
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	sLog.DisplayColor(false)
@@ -343,18 +343,18 @@ func TestSetFilename(t *testing.T) {
 func TestSetFilenameColor(t *testing.T) {
 	addr, err := net.ResolveUDPAddr("udp", ":2006")
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 	defer conn.Close()
 
 	sLog, err := New("udp", "127.0.0.1:2006", stdsyslog.LOG_DEBUG, "")
 	if err != nil {
-		log.Errorf("Expected '%s' Got '%s'", nil, err)
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
 	sLog.DisplayColor(true)

@@ -29,7 +29,7 @@ func TestConsoleLogger(t *testing.T) {
 	cLog.DisplayColor(false)
 	cLog.SetBuffersAndWorkers(3, 0)
 	cLog.SetTimestampFormat("MST")
-
+	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
 	log.RegisterHandler(cLog, log.AllLevels...)
 
 	for i, tt := range tests {

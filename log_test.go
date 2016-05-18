@@ -29,7 +29,7 @@ func TestConsoleLogger1(t *testing.T) {
 	th := &testHandler{
 		writer: buff,
 	}
-
+	Logger.SetCallerInfoLevels(WarnLevel, ErrorLevel, PanicLevel, AlertLevel, FatalLevel)
 	Logger.RegisterHandler(th, AllLevels...)
 
 	if bl := Logger.HasHandlers(); !bl {
@@ -144,7 +144,7 @@ func TestConsoleLoggerCaller1(t *testing.T) {
 	tests := getLogCallerTests1()
 
 	buff := new(bytes.Buffer)
-	Logger.SetCallerInfo(true)
+	Logger.SetCallerInfoLevels(AllLevels...)
 	Logger.SetCallerSkipDiff(0)
 
 	th := &testHandler{

@@ -198,11 +198,11 @@ func SetTimeFormat(format string) {
 	Logger.SetTimeFormat(format)
 }
 
-// SetCallerInfo tells the logger to gather and set file and line number
-// information on all Entry objects regardless of log type.
-// By defaut only error or warning style logs gather this information by default.
-func SetCallerInfo(info bool) {
-	Logger.SetCallerInfo(info)
+// SetCallerInfoLevels tells the logger to gather and set file and line number
+// information on Entry objects for the provided log levels.
+// By defaut all but TraceLevel, InfoLevel and NoticeLevel are set to gather information.
+func SetCallerInfoLevels(levels ...Level) {
+	Logger.SetCallerInfoLevels(levels...)
 }
 
 // SetCallerSkipDiff adds the provided diff to the caller SkipLevel values.

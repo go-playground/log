@@ -78,7 +78,7 @@ func BenchmarkConsoleParallel(b *testing.B) {
 				log.F("duration", time.Second),
 				log.F("user-defined type", _jane),
 				log.F("another string", "done!"),
-			).Debug("Go fast.")
+			).Info("Go fast.")
 		}
 
 	})
@@ -89,7 +89,7 @@ func BenchmarkConsoleSimpleFieldsParallel(b *testing.B) {
 	// log setup in TestMain
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			log.Debug("Go fast.")
+			log.Info("Go fast.")
 		}
 
 	})

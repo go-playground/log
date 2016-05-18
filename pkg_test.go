@@ -30,7 +30,7 @@ func TestConsoleLogger2(t *testing.T) {
 		writer: buff,
 	}
 
-	SetCallerInfo(false)
+	SetCallerInfoLevels(WarnLevel, ErrorLevel, PanicLevel, AlertLevel, FatalLevel)
 	RegisterHandler(th, AllLevels...)
 
 	if bl := HasHandlers(); !bl {
@@ -208,7 +208,7 @@ func TestConsoleLoggerCaller2(t *testing.T) {
 
 	tests := getLogCallerTests()
 	buff := new(bytes.Buffer)
-	SetCallerInfo(true)
+	SetCallerInfoLevels(AllLevels...)
 	SetCallerSkipDiff(0)
 
 	th := &testHandler{
