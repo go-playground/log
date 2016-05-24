@@ -11,6 +11,7 @@ import (
 // FilenameDisplay is the type of file display output
 type FilenameDisplay uint8
 
+// FilenameDisplay options
 const (
 	Lshortfile FilenameDisplay = iota
 	Llongfile
