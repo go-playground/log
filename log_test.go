@@ -3,11 +3,10 @@ package log
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	. "gopkg.in/go-playground/assert.v1"
 )
 
 // NOTES:
@@ -21,161 +20,111 @@ import (
 // go test -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
 //
 
-func TestConsoleLogger(t *testing.T) {
+func TestConsoleLogger1(t *testing.T) {
+
+	tests := getLogTests1()
 
 	buff := new(bytes.Buffer)
 
 	th := &testHandler{
 		writer: buff,
 	}
-
+	Logger.SetCallerInfoLevels(WarnLevel, ErrorLevel, PanicLevel, AlertLevel, FatalLevel)
 	Logger.RegisterHandler(th, AllLevels...)
 
-	Logger.Debug("debug")
-	Equal(t, buff.String(), "debug")
+	if bl := Logger.HasHandlers(); !bl {
+		t.Errorf("test HasHandlers: Expected '%t' Got '%t'", true, bl)
+	}
+
+	for i, tt := range tests {
+
+		buff.Reset()
+		var l LeveledLogger
+
+		if tt.flds != nil {
+			l = Logger.WithFields(tt.flds...)
+		} else {
+			l = Logger
+		}
+
+		switch tt.lvl {
+		case uint8(DebugLevel):
+			if len(tt.printf) == 0 {
+				l.Debug(tt.msg)
+			} else {
+				l.Debugf(tt.printf, tt.msg)
+			}
+		case uint8(TraceLevel):
+			if len(tt.printf) == 0 {
+				l.Trace(tt.msg).End()
+			} else {
+				l.Tracef(tt.printf, tt.msg).End()
+			}
+		case uint8(InfoLevel):
+			if len(tt.printf) == 0 {
+				l.Info(tt.msg)
+			} else {
+				l.Infof(tt.printf, tt.msg)
+			}
+		case uint8(NoticeLevel):
+			if len(tt.printf) == 0 {
+				l.Notice(tt.msg)
+			} else {
+				l.Noticef(tt.printf, tt.msg)
+			}
+		case uint8(WarnLevel):
+			if len(tt.printf) == 0 {
+				l.Warn(tt.msg)
+			} else {
+				l.Warnf(tt.printf, tt.msg)
+			}
+		case uint8(ErrorLevel):
+			if len(tt.printf) == 0 {
+				l.Error(tt.msg)
+			} else {
+				l.Errorf(tt.printf, tt.msg)
+			}
+		case uint8(PanicLevel):
+			func() {
+				defer func() {
+					recover()
+				}()
+
+				if len(tt.printf) == 0 {
+					l.Panic(tt.msg)
+				} else {
+					l.Panicf(tt.printf, tt.msg)
+				}
+			}()
+		case uint8(AlertLevel):
+			if len(tt.printf) == 0 {
+				l.Alert(tt.msg)
+			} else {
+				l.Alertf(tt.printf, tt.msg)
+			}
+
+		case 100:
+			Println(tt.msg)
+		case 101:
+			Printf(tt.printf, tt.msg)
+		case 102:
+			Print(tt.msg)
+		}
+
+		if buff.String() != tt.want {
+
+			if tt.lvl == uint8(TraceLevel) {
+				if !strings.HasPrefix(buff.String(), tt.want) {
+					t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+				}
+				continue
+			}
+
+			t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+		}
+	}
+
 	buff.Reset()
-
-	Logger.Debugf("%s", "debugf")
-	Equal(t, buff.String(), "debugf")
-	buff.Reset()
-
-	Logger.Info("info")
-	Equal(t, buff.String(), "info")
-	buff.Reset()
-
-	Logger.Infof("%s", "infof")
-	Equal(t, buff.String(), "infof")
-	buff.Reset()
-
-	Logger.Notice("notice")
-	Equal(t, buff.String(), "notice")
-	buff.Reset()
-
-	Logger.Noticef("%s", "noticef")
-	Equal(t, buff.String(), "noticef")
-	buff.Reset()
-
-	Logger.Warn("warn")
-	Equal(t, buff.String(), "warn")
-	buff.Reset()
-
-	Logger.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "warnf")
-	buff.Reset()
-
-	Logger.Error("error")
-	Equal(t, buff.String(), "error")
-	buff.Reset()
-
-	Logger.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "errorf")
-	buff.Reset()
-
-	Logger.Alert("alert")
-	Equal(t, buff.String(), "alert")
-	buff.Reset()
-
-	Logger.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "alertf")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.Panic("panic") }, "panic")
-	Equal(t, buff.String(), "panic")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, buff.String(), "panicf")
-	buff.Reset()
-
-	// WithFields
-	Logger.WithFields(F("key", "value")).Info("info")
-	Equal(t, buff.String(), "info key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "infof key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "notice key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "noticef key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "debug key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "debugf key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "warn key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "warnf key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Error("error")
-	Equal(t, buff.String(), "error key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "errorf key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "alert key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "alertf key=value")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "panicf key=value")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "panic key=value")
-	buff.Reset()
-
-	func() {
-		defer Logger.Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
-	buff.Reset()
-
-	func() {
-		defer Logger.Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
-	buff.Reset()
-
-	func() {
-		defer Logger.WithFields(F("key", "value")).Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
-	buff.Reset()
-
-	func() {
-		defer Logger.WithFields(F("key", "value")).Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
-	buff.Reset()
-
 	// Test Custom Entry ( most common case is Unmarshalled from JSON when using centralized logging)
 	entry := new(Entry)
 	entry.ApplicationID = "APP"
@@ -184,15 +133,19 @@ func TestConsoleLogger(t *testing.T) {
 	entry.Message = "Test Message"
 	entry.Fields = make([]Field, 0)
 	Logger.HandleEntry(entry)
-	Equal(t, buff.String(), "Test Message")
-	buff.Reset()
+
+	if buff.String() != "INFO Test Message\n" {
+		t.Errorf("test Custom Entry: Expected '%s' Got '%s'", "INFO Test Message\n", buff.String())
+	}
 }
 
-func TestConsoleLoggerCaller(t *testing.T) {
+func TestConsoleLoggerCaller1(t *testing.T) {
+
+	tests := getLogCallerTests1()
 
 	buff := new(bytes.Buffer)
-
-	Logger.SetCallerInfo(true)
+	Logger.SetCallerInfoLevels(AllLevels...)
+	Logger.SetCallerSkipDiff(0)
 
 	th := &testHandler{
 		writer: buff,
@@ -200,153 +153,99 @@ func TestConsoleLoggerCaller(t *testing.T) {
 
 	Logger.RegisterHandler(th, AllLevels...)
 
-	Equal(t, Logger.GetCallerInfo(), true)
+	if bl := Logger.HasHandlers(); !bl {
+		t.Errorf("test HasHandlers: Expected '%t' Got '%t'", true, bl)
+	}
 
-	Logger.Debug("debug")
-	Equal(t, buff.String(), "debug")
+	for i, tt := range tests {
+
+		buff.Reset()
+		var l LeveledLogger
+
+		if tt.flds != nil {
+			l = Logger.WithFields(tt.flds...)
+		} else {
+			l = Logger
+		}
+
+		switch tt.lvl {
+		case uint8(DebugLevel):
+			if len(tt.printf) == 0 {
+				l.Debug(tt.msg)
+			} else {
+				l.Debugf(tt.printf, tt.msg)
+			}
+		case uint8(TraceLevel):
+			if len(tt.printf) == 0 {
+				l.Trace(tt.msg).End()
+			} else {
+				l.Tracef(tt.printf, tt.msg).End()
+			}
+		case uint8(InfoLevel):
+			if len(tt.printf) == 0 {
+				l.Info(tt.msg)
+			} else {
+				l.Infof(tt.printf, tt.msg)
+			}
+		case uint8(NoticeLevel):
+			if len(tt.printf) == 0 {
+				l.Notice(tt.msg)
+			} else {
+				l.Noticef(tt.printf, tt.msg)
+			}
+		case uint8(WarnLevel):
+			if len(tt.printf) == 0 {
+				l.Warn(tt.msg)
+			} else {
+				l.Warnf(tt.printf, tt.msg)
+			}
+		case uint8(ErrorLevel):
+			if len(tt.printf) == 0 {
+				l.Error(tt.msg)
+			} else {
+				l.Errorf(tt.printf, tt.msg)
+			}
+		case uint8(PanicLevel):
+			func() {
+				defer func() {
+					recover()
+				}()
+
+				if len(tt.printf) == 0 {
+					l.Panic(tt.msg)
+				} else {
+					l.Panicf(tt.printf, tt.msg)
+				}
+			}()
+		case uint8(AlertLevel):
+			if len(tt.printf) == 0 {
+				l.Alert(tt.msg)
+			} else {
+				l.Alertf(tt.printf, tt.msg)
+			}
+
+		case 100:
+			Println(tt.msg)
+		case 101:
+			Printf(tt.printf, tt.msg)
+		case 102:
+			Print(tt.msg)
+		}
+
+		if buff.String() != tt.want {
+
+			if tt.lvl == uint8(TraceLevel) {
+				if !strings.HasPrefix(buff.String(), tt.want) {
+					t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+				}
+				continue
+			}
+
+			t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+		}
+	}
+
 	buff.Reset()
-
-	Logger.Debugf("%s", "debugf")
-	Equal(t, buff.String(), "debugf")
-	buff.Reset()
-
-	Logger.Info("info")
-	Equal(t, buff.String(), "info")
-	buff.Reset()
-
-	Logger.Infof("%s", "infof")
-	Equal(t, buff.String(), "infof")
-	buff.Reset()
-
-	Logger.Notice("notice")
-	Equal(t, buff.String(), "notice")
-	buff.Reset()
-
-	Logger.Noticef("%s", "noticef")
-	Equal(t, buff.String(), "noticef")
-	buff.Reset()
-
-	Logger.Warn("warn")
-	Equal(t, buff.String(), "warn")
-	buff.Reset()
-
-	Logger.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "warnf")
-	buff.Reset()
-
-	Logger.Error("error")
-	Equal(t, buff.String(), "error")
-	buff.Reset()
-
-	Logger.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "errorf")
-	buff.Reset()
-
-	Logger.Alert("alert")
-	Equal(t, buff.String(), "alert")
-	buff.Reset()
-
-	Logger.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "alertf")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.Panic("panic") }, "panic")
-	Equal(t, buff.String(), "panic")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, buff.String(), "panicf")
-	buff.Reset()
-
-	// WithFields
-	Logger.WithFields(F("key", "value")).Info("info")
-	Equal(t, buff.String(), "info key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "infof key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "notice key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "noticef key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "debug key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "debugf key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "warn key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "warnf key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Error("error")
-	Equal(t, buff.String(), "error key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "errorf key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "alert key=value")
-	buff.Reset()
-
-	Logger.WithFields(F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "alertf key=value")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "panicf key=value")
-	buff.Reset()
-
-	PanicMatches(t, func() { Logger.WithFields(F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "panic key=value")
-	buff.Reset()
-
-	func() {
-		defer Logger.Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
-	buff.Reset()
-
-	func() {
-		defer Logger.Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
-	buff.Reset()
-
-	func() {
-		defer Logger.WithFields(F("key", "value")).Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^trace\\s+\\.*")
-	buff.Reset()
-
-	func() {
-		defer Logger.WithFields(F("key", "value")).Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^tracef\\s+\\.*")
-	buff.Reset()
-
 	// Test Custom Entry ( most common case is Unmarshalled from JSON when using centralized logging)
 	entry := new(Entry)
 	entry.ApplicationID = "APP"
@@ -354,24 +253,68 @@ func TestConsoleLoggerCaller(t *testing.T) {
 	entry.Timestamp = time.Now().UTC()
 	entry.Message = "Test Message"
 	entry.Fields = make([]Field, 0)
+	entry.Line = 256
+	entry.File = "log_test.go"
 	Logger.HandleEntry(entry)
-	Equal(t, buff.String(), "Test Message")
-	buff.Reset()
+
+	if buff.String() != "INFO log_test.go:256 Test Message\n" {
+		t.Errorf("test Custom Entry: Expected '%s' Got '%s'", "INFO log_test.go:256 Test Message\n", buff.String())
+	}
 }
 
 func TestLevel(t *testing.T) {
-	l := Level(9999)
-	Equal(t, l.String(), "Unknow Level")
 
-	Equal(t, DebugLevel.String(), "DEBUG")
-	Equal(t, TraceLevel.String(), "TRACE")
-	Equal(t, InfoLevel.String(), "INFO")
-	Equal(t, NoticeLevel.String(), "NOTICE")
-	Equal(t, WarnLevel.String(), "WARN")
-	Equal(t, ErrorLevel.String(), "ERROR")
-	Equal(t, PanicLevel.String(), "PANIC")
-	Equal(t, AlertLevel.String(), "ALERT")
-	Equal(t, FatalLevel.String(), "FATAL")
+	tests := []struct {
+		value string
+		want  string
+	}{
+		{
+			value: Level(255).String(),
+			want:  "Unknow Level",
+		},
+		{
+			value: DebugLevel.String(),
+			want:  "DEBUG",
+		},
+		{
+			value: TraceLevel.String(),
+			want:  "TRACE",
+		},
+		{
+			value: InfoLevel.String(),
+			want:  "INFO",
+		},
+		{
+			value: NoticeLevel.String(),
+			want:  "NOTICE",
+		},
+		{
+			value: WarnLevel.String(),
+			want:  "WARN",
+		},
+		{
+			value: ErrorLevel.String(),
+			want:  "ERROR",
+		},
+		{
+			value: PanicLevel.String(),
+			want:  "PANIC",
+		},
+		{
+			value: AlertLevel.String(),
+			want:  "ALERT",
+		},
+		{
+			value: FatalLevel.String(),
+			want:  "FATAL",
+		},
+	}
+
+	for i, tt := range tests {
+		if tt.value != tt.want {
+			t.Errorf("Test %d: Expected '%s' Got '%s'", i, tt.want, tt.value)
+		}
+	}
 }
 
 func TestSettings(t *testing.T) {
@@ -395,8 +338,13 @@ func TestEntry(t *testing.T) {
 	}}
 
 	e := Logger.entryPool.Get().(*Entry)
-	Equal(t, e.ApplicationID, "app-log")
-	NotEqual(t, e.wg, nil)
+	if e.ApplicationID != "app-log" {
+		t.Errorf("Test App ID: Expected '%s' Got '%s'", "app-log", e.ApplicationID)
+	}
+
+	if e.wg == nil {
+		t.Errorf("Test WaitGroup: Expected '%s' Got '%v'", "Not Nil", e.wg)
+	}
 
 	e = newEntry(InfoLevel, "test", []Field{F("key", "value")}, 0)
 	Logger.HandleEntry(e)
@@ -410,16 +358,24 @@ func TestFatal(t *testing.T) {
 	}
 
 	Logger.Fatal("fatal")
-	Equal(t, i, 1)
+	if i != 1 {
+		t.Errorf("test Fatals: Expected '%d' Got '%d'", 1, i)
+	}
 
 	Logger.Fatalf("fatalf")
-	Equal(t, i, 1)
+	if i != 1 {
+		t.Errorf("test Fatals: Expected '%d' Got '%d'", 1, i)
+	}
 
 	Logger.WithFields(F("key", "value")).Fatal("fatal")
-	Equal(t, i, 1)
+	if i != 1 {
+		t.Errorf("test Fatals: Expected '%d' Got '%d'", 1, i)
+	}
 
 	Logger.WithFields(F("key", "value")).Fatalf("fatalf")
-	Equal(t, i, 1)
+	if i != 1 {
+		t.Errorf("test Fatals: Expected '%d' Got '%d'", 1, i)
+	}
 }
 
 func TestColors(t *testing.T) {
@@ -447,4 +403,600 @@ func TestColors(t *testing.T) {
 
 	fmt.Printf("%s%sRedInverse%s\n", Red, Inverse, Reset)
 	fmt.Printf("%sGreenInverse%s\n", Green+Inverse, Reset)
+}
+
+func getLogTests1() []test {
+	return []test{
+		{
+			lvl:  uint8(102),
+			msg:  "print",
+			flds: nil,
+			want: "INFO print\n",
+		},
+		{
+			lvl:    uint8(101),
+			msg:    "printf",
+			printf: "%s",
+			flds:   nil,
+			want:   "INFO printf\n",
+		},
+		{
+			lvl:  uint8(100),
+			msg:  "println",
+			flds: nil,
+			want: "INFO println\n",
+		},
+		{
+			lvl:  uint8(PanicLevel),
+			msg:  "panicln",
+			flds: nil,
+			want: "PANIC log_test.go:94 panicln\n",
+		},
+		{
+			lvl:  uint8(DebugLevel),
+			msg:  "debug",
+			flds: nil,
+			want: "DEBUG debug\n",
+		},
+		{
+			lvl:    uint8(DebugLevel),
+			msg:    "debugf",
+			printf: "%s",
+			flds:   nil,
+			want:   "DEBUG debugf\n",
+		},
+		{
+			lvl:  uint8(InfoLevel),
+			msg:  "info",
+			flds: nil,
+			want: "INFO info\n",
+		},
+		{
+			lvl:    uint8(InfoLevel),
+			msg:    "infof",
+			printf: "%s",
+			flds:   nil,
+			want:   "INFO infof\n",
+		},
+		{
+			lvl:  uint8(NoticeLevel),
+			msg:  "notice",
+			flds: nil,
+			want: "NOTICE notice\n",
+		},
+		{
+			lvl:    uint8(NoticeLevel),
+			msg:    "noticef",
+			printf: "%s",
+			flds:   nil,
+			want:   "NOTICE noticef\n",
+		},
+		{
+			lvl:  uint8(WarnLevel),
+			msg:  "warn",
+			flds: nil,
+			want: "WARN log_test.go:77 warn\n",
+		},
+		{
+			lvl:    uint8(WarnLevel),
+			msg:    "warnf",
+			printf: "%s",
+			flds:   nil,
+			want:   "WARN log_test.go:79 warnf\n",
+		},
+		{
+			lvl:  uint8(ErrorLevel),
+			msg:  "error",
+			flds: nil,
+			want: "ERROR log_test.go:83 error\n",
+		},
+		{
+			lvl:    uint8(ErrorLevel),
+			msg:    "errorf",
+			printf: "%s",
+			flds:   nil,
+			want:   "ERROR log_test.go:85 errorf\n",
+		},
+		{
+			lvl:  uint8(AlertLevel),
+			msg:  "alert",
+			flds: nil,
+			want: "ALERT log_test.go:101 alert\n",
+		},
+		{
+			lvl:    uint8(AlertLevel),
+			msg:    "alertf",
+			printf: "%s",
+			flds:   nil,
+			want:   "ALERT log_test.go:103 alertf\n",
+		},
+		{
+			lvl:  uint8(PanicLevel),
+			msg:  "panic",
+			flds: nil,
+			want: "PANIC log_test.go:94 panic\n",
+		},
+		{
+			lvl:    uint8(PanicLevel),
+			msg:    "panicf",
+			printf: "%s",
+			flds:   nil,
+			want:   "PANIC log_test.go:96 panicf\n",
+		},
+		{
+			lvl: uint8(DebugLevel),
+			msg: "debug",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "DEBUG debug key=value\n",
+		},
+		{
+			lvl:    uint8(DebugLevel),
+			msg:    "debugf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "DEBUG debugf key=value\n",
+		},
+		{
+			lvl: uint8(InfoLevel),
+			msg: "info",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "INFO info key=value\n",
+		},
+		{
+			lvl:    uint8(InfoLevel),
+			msg:    "infof",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "INFO infof key=value\n",
+		},
+		{
+			lvl: uint8(NoticeLevel),
+			msg: "notice",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "NOTICE notice key=value\n",
+		},
+		{
+			lvl:    uint8(NoticeLevel),
+			msg:    "noticef",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "NOTICE noticef key=value\n",
+		},
+		{
+			lvl: uint8(WarnLevel),
+			msg: "warn",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "WARN log_test.go:77 warn key=value\n",
+		},
+		{
+			lvl:    uint8(WarnLevel),
+			msg:    "warnf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "WARN log_test.go:79 warnf key=value\n",
+		},
+		{
+			lvl: uint8(ErrorLevel),
+			msg: "error",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ERROR log_test.go:83 error key=value\n",
+		},
+		{
+			lvl:    uint8(ErrorLevel),
+			msg:    "errorf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ERROR log_test.go:85 errorf key=value\n",
+		},
+		{
+			lvl: uint8(AlertLevel),
+			msg: "alert",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ALERT log_test.go:101 alert key=value\n",
+		},
+		{
+			lvl: uint8(AlertLevel),
+			msg: "alert",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ALERT log_test.go:101 alert key=value\n",
+		},
+		{
+			lvl:    uint8(AlertLevel),
+			msg:    "alertf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ALERT log_test.go:103 alertf key=value\n",
+		},
+		{
+			lvl:    uint8(PanicLevel),
+			msg:    "panicf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "PANIC log_test.go:96 panicf key=value\n",
+		},
+		{
+			lvl: uint8(PanicLevel),
+			msg: "panic",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "PANIC log_test.go:94 panic key=value\n",
+		},
+		{
+			lvl:  uint8(TraceLevel),
+			msg:  "trace",
+			flds: nil,
+			want: "TRACE trace",
+		},
+		{
+			lvl:    uint8(TraceLevel),
+			msg:    "tracef",
+			printf: "%s",
+			flds:   nil,
+			want:   "TRACE tracef",
+		},
+		{
+			lvl: uint8(TraceLevel),
+			msg: "trace",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "TRACE trace key=value",
+		},
+		{
+			lvl:    uint8(TraceLevel),
+			msg:    "tracef",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "TRACE tracef key=value",
+		},
+		{
+			lvl: uint8(DebugLevel),
+			msg: "debug",
+			flds: []Field{
+				F("key", "string"),
+				F("key", int(1)),
+				F("key", int8(2)),
+				F("key", int16(3)),
+				F("key", int32(4)),
+				F("key", int64(5)),
+				F("key", uint(1)),
+				F("key", uint8(2)),
+				F("key", uint16(3)),
+				F("key", uint32(4)),
+				F("key", uint64(5)),
+				F("key", true),
+				F("key", struct{ value string }{"struct"}),
+			},
+			want: "DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n",
+		},
+	}
+}
+
+func getLogCallerTests1() []test {
+	return []test{
+		{
+			lvl:  uint8(102),
+			msg:  "print",
+			flds: nil,
+			want: "INFO log_test.go:232 print\n",
+		},
+		{
+			lvl:    uint8(101),
+			msg:    "printf",
+			printf: "%s",
+			flds:   nil,
+			want:   "INFO log_test.go:230 printf\n",
+		},
+		{
+			lvl:  uint8(100),
+			msg:  "println",
+			flds: nil,
+			want: "INFO log_test.go:228 println\n",
+		},
+		{
+			lvl:  uint8(PanicLevel),
+			msg:  "panicln",
+			flds: nil,
+			want: "PANIC log_test.go:215 panicln\n",
+		},
+		{
+			lvl:  uint8(DebugLevel),
+			msg:  "debug",
+			flds: nil,
+			want: "DEBUG log_test.go:174 debug\n",
+		},
+		{
+			lvl:    uint8(DebugLevel),
+			msg:    "debugf",
+			printf: "%s",
+			flds:   nil,
+			want:   "DEBUG log_test.go:176 debugf\n",
+		},
+		{
+			lvl:  uint8(InfoLevel),
+			msg:  "info",
+			flds: nil,
+			want: "INFO log_test.go:186 info\n",
+		},
+		{
+			lvl:    uint8(InfoLevel),
+			msg:    "infof",
+			printf: "%s",
+			flds:   nil,
+			want:   "INFO log_test.go:188 infof\n",
+		},
+		{
+			lvl:  uint8(NoticeLevel),
+			msg:  "notice",
+			flds: nil,
+			want: "NOTICE log_test.go:192 notice\n",
+		},
+		{
+			lvl:    uint8(NoticeLevel),
+			msg:    "noticef",
+			printf: "%s",
+			flds:   nil,
+			want:   "NOTICE log_test.go:194 noticef\n",
+		},
+		{
+			lvl:  uint8(WarnLevel),
+			msg:  "warn",
+			flds: nil,
+			want: "WARN log_test.go:198 warn\n",
+		},
+		{
+			lvl:    uint8(WarnLevel),
+			msg:    "warnf",
+			printf: "%s",
+			flds:   nil,
+			want:   "WARN log_test.go:200 warnf\n",
+		},
+		{
+			lvl:  uint8(ErrorLevel),
+			msg:  "error",
+			flds: nil,
+			want: "ERROR log_test.go:204 error\n",
+		},
+		{
+			lvl:    uint8(ErrorLevel),
+			msg:    "errorf",
+			printf: "%s",
+			flds:   nil,
+			want:   "ERROR log_test.go:206 errorf\n",
+		},
+		{
+			lvl:  uint8(AlertLevel),
+			msg:  "alert",
+			flds: nil,
+			want: "ALERT log_test.go:222 alert\n",
+		},
+		{
+			lvl:    uint8(AlertLevel),
+			msg:    "alertf",
+			printf: "%s",
+			flds:   nil,
+			want:   "ALERT log_test.go:224 alertf\n",
+		},
+		{
+			lvl:  uint8(PanicLevel),
+			msg:  "panic",
+			flds: nil,
+			want: "PANIC log_test.go:215 panic\n",
+		},
+		{
+			lvl:    uint8(PanicLevel),
+			msg:    "panicf",
+			printf: "%s",
+			flds:   nil,
+			want:   "PANIC log_test.go:217 panicf\n",
+		},
+		{
+			lvl: uint8(DebugLevel),
+			msg: "debug",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "DEBUG log_test.go:174 debug key=value\n",
+		},
+		{
+			lvl:    uint8(DebugLevel),
+			msg:    "debugf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "DEBUG log_test.go:176 debugf key=value\n",
+		},
+		{
+			lvl: uint8(InfoLevel),
+			msg: "info",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "INFO log_test.go:186 info key=value\n",
+		},
+		{
+			lvl:    uint8(InfoLevel),
+			msg:    "infof",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "INFO log_test.go:188 infof key=value\n",
+		},
+		{
+			lvl: uint8(NoticeLevel),
+			msg: "notice",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "NOTICE log_test.go:192 notice key=value\n",
+		},
+		{
+			lvl:    uint8(NoticeLevel),
+			msg:    "noticef",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "NOTICE log_test.go:194 noticef key=value\n",
+		},
+		{
+			lvl: uint8(WarnLevel),
+			msg: "warn",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "WARN log_test.go:198 warn key=value\n",
+		},
+		{
+			lvl:    uint8(WarnLevel),
+			msg:    "warnf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "WARN log_test.go:200 warnf key=value\n",
+		},
+		{
+			lvl: uint8(ErrorLevel),
+			msg: "error",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ERROR log_test.go:204 error key=value\n",
+		},
+		{
+			lvl:    uint8(ErrorLevel),
+			msg:    "errorf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ERROR log_test.go:206 errorf key=value\n",
+		},
+		{
+			lvl: uint8(AlertLevel),
+			msg: "alert",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ALERT log_test.go:222 alert key=value\n",
+		},
+		{
+			lvl: uint8(AlertLevel),
+			msg: "alert",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ALERT log_test.go:222 alert key=value\n",
+		},
+		{
+			lvl:    uint8(AlertLevel),
+			msg:    "alertf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "ALERT log_test.go:224 alertf key=value\n",
+		},
+		{
+			lvl:    uint8(PanicLevel),
+			msg:    "panicf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "PANIC log_test.go:217 panicf key=value\n",
+		},
+		{
+			lvl: uint8(PanicLevel),
+			msg: "panic",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "PANIC log_test.go:215 panic key=value\n",
+		},
+		{
+			lvl:  uint8(TraceLevel),
+			msg:  "trace",
+			flds: nil,
+			want: "TRACE log_test.go:180 trace ",
+		},
+		{
+			lvl:    uint8(TraceLevel),
+			msg:    "tracef",
+			printf: "%s",
+			flds:   nil,
+			want:   "TRACE log_test.go:182 tracef ",
+		},
+		{
+			lvl: uint8(TraceLevel),
+			msg: "trace",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "TRACE log_test.go:180 trace ",
+		},
+		{
+			lvl:    uint8(TraceLevel),
+			msg:    "tracef",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "TRACE log_test.go:182 tracef ",
+		},
+		{
+			lvl: uint8(DebugLevel),
+			msg: "debug",
+			flds: []Field{
+				F("key", "string"),
+				F("key", int(1)),
+				F("key", int8(2)),
+				F("key", int16(3)),
+				F("key", int32(4)),
+				F("key", int64(5)),
+				F("key", uint(1)),
+				F("key", uint8(2)),
+				F("key", uint16(3)),
+				F("key", uint32(4)),
+				F("key", uint64(5)),
+				F("key", true),
+				F("key", struct{ value string }{"struct"}),
+			},
+			want: "DEBUG log_test.go:174 debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n",
+		},
+	}
 }

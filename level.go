@@ -14,7 +14,7 @@ var AllLevels = []Level{
 }
 
 // Level of the log
-type Level int
+type Level uint8
 
 // Log levels.
 const (
@@ -53,3 +53,5 @@ func (l Level) String() string {
 		return "Unknow Level"
 	}
 }
+
+// TODO: Add a bytes method along with string

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-playground/log"
-	. "gopkg.in/go-playground/assert.v1"
 )
 
 // NOTES:
@@ -32,652 +31,857 @@ func read(conn *net.UDPConn) (string, error) {
 	return string(bytes[0:read]), err
 }
 
-func hasString(conn *net.UDPConn, s string) bool {
+func hasString(conn *net.UDPConn) string {
 	read, _ := read(conn)
-	return strings.Contains(read, s)
-}
-
-func TestBadAddress(t *testing.T) {
-	sLog, err := New("udp", "255.255.255.67", stdsyslog.LOG_DEBUG, "")
-	Equal(t, sLog, nil)
-	NotEqual(t, err, nil)
+	return read
 }
 
 func TestSyslogLogger(t *testing.T) {
-
-	year := time.Now().Format("2006")
+	tests := getSyslogLoggerTests()
 
 	addr, err := net.ResolveUDPAddr("udp", ":2000")
-	Equal(t, err, nil)
+	if err != nil {
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
 
 	conn, err := net.ListenUDP("udp", addr)
-	Equal(t, err, nil)
+	if err != nil {
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
 	defer conn.Close()
 
 	sLog, err := New("udp", "127.0.0.1:2000", stdsyslog.LOG_DEBUG, "")
-	Equal(t, err, nil)
-
-	sLog.DisplayColor(false)
-	sLog.SetChannelBuffer(3)
-	sLog.SetTimestampFormat("2006")
-	sLog.SetANSIReset(log.Reset)
-
-	log.RegisterHandler(sLog, log.AllLevels...)
-
-	log.Debug("debug")
-	Equal(t, hasString(conn, year+"  DEBUG debug"), true)
-
-	log.Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+"  DEBUG debugf"), true)
-
-	log.Info("info")
-	Equal(t, hasString(conn, year+"   INFO info"), true)
-
-	log.Infof("%s", "infof")
-	Equal(t, hasString(conn, year+"   INFO infof"), true)
-
-	log.Notice("notice")
-	Equal(t, hasString(conn, year+" NOTICE notice"), true)
-
-	log.Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" NOTICE noticef"), true)
-
-	log.Warn("warn")
-	Equal(t, hasString(conn, year+"   WARN warn"), true)
-
-	log.Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+"   WARN warnf"), true)
-
-	log.Error("error")
-	Equal(t, hasString(conn, year+"  ERROR error"), true)
-
-	log.Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+"  ERROR errorf"), true)
-
-	log.Alert("alert")
-	Equal(t, hasString(conn, year+"  ALERT alert"), true)
-
-	log.Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+"  ALERT alertf"), true)
-
-	log.Print("print")
-	Equal(t, hasString(conn, year+"   INFO print"), true)
-
-	log.Printf("%s", "printf")
-	Equal(t, hasString(conn, year+"   INFO printf"), true)
-
-	log.Println("println")
-	Equal(t, hasString(conn, year+"   INFO println"), true)
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, hasString(conn, year+"  PANIC panic"), true)
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, hasString(conn, year+"  PANIC panicf"), true)
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, hasString(conn, year+"  PANIC panicln"), true)
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, hasString(conn, year+"  DEBUG debug key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+"  DEBUG debugf key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, hasString(conn, year+"   INFO info key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, hasString(conn, year+"   INFO infof key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, hasString(conn, year+" NOTICE notice key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" NOTICE noticef key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, hasString(conn, year+"   WARN warn key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+"   WARN warnf key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, hasString(conn, year+"  ERROR error key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+"  ERROR errorf key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, hasString(conn, year+"  ALERT alert key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+"  ALERT alertf key=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, hasString(conn, year+"  PANIC panicf key=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, hasString(conn, year+"  PANIC panic key=value"), true)
-
-	func() {
-		defer log.Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE trace"), true)
-
-	func() {
-		defer log.Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE tracef"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE trace"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE tracef"), true)
-
-	e := &log.Entry{
-		Level:     log.FatalLevel,
-		Message:   "fatal",
-		Timestamp: time.Now(),
+	if err != nil {
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
-	log.HandleEntry(e)
+	sLog.DisplayColor(false)
+	sLog.SetBuffersAndWorkers(3, 3)
+	sLog.SetTimestampFormat("MST")
+	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
+	log.RegisterHandler(sLog, log.AllLevels...)
 
-	Equal(t, hasString(conn, year+"  FATAL fatal"), true)
+	for i, tt := range tests {
 
-	// Test Custom Formatter
-	sLog.SetFormatter(func(e *log.Entry) string {
-		return e.Message
-	})
+		var l log.LeveledLogger
 
-	log.Debug("debug")
-	Equal(t, hasString(conn, "debug"), true)
+		if tt.flds != nil {
+			l = log.WithFields(tt.flds...)
+		} else {
+			l = log.Logger
+		}
+
+		switch tt.lvl {
+		case log.DebugLevel:
+			if len(tt.printf) == 0 {
+				l.Debug(tt.msg)
+			} else {
+				l.Debugf(tt.printf, tt.msg)
+			}
+		case log.TraceLevel:
+			if len(tt.printf) == 0 {
+				l.Trace(tt.msg).End()
+			} else {
+				l.Tracef(tt.printf, tt.msg).End()
+			}
+		case log.InfoLevel:
+			if len(tt.printf) == 0 {
+				l.Info(tt.msg)
+			} else {
+				l.Infof(tt.printf, tt.msg)
+			}
+		case log.NoticeLevel:
+			if len(tt.printf) == 0 {
+				l.Notice(tt.msg)
+			} else {
+				l.Noticef(tt.printf, tt.msg)
+			}
+		case log.WarnLevel:
+			if len(tt.printf) == 0 {
+				l.Warn(tt.msg)
+			} else {
+				l.Warnf(tt.printf, tt.msg)
+			}
+		case log.ErrorLevel:
+			if len(tt.printf) == 0 {
+				l.Error(tt.msg)
+			} else {
+				l.Errorf(tt.printf, tt.msg)
+			}
+		case log.PanicLevel:
+			func() {
+				defer func() {
+					recover()
+				}()
+
+				if len(tt.printf) == 0 {
+					l.Panic(tt.msg)
+				} else {
+					l.Panicf(tt.printf, tt.msg)
+				}
+			}()
+		case log.AlertLevel:
+			if len(tt.printf) == 0 {
+				l.Alert(tt.msg)
+			} else {
+				l.Alertf(tt.printf, tt.msg)
+			}
+		}
+
+		if s := hasString(conn); !strings.HasSuffix(s, tt.want) {
+
+			if tt.lvl == log.TraceLevel {
+				if !strings.Contains(s, tt.want) {
+					t.Errorf("test %d: Contains Suffix '%s' Got '%s'", i, tt.want, s)
+				}
+				continue
+			}
+
+			t.Errorf("test %d: Expected Suffix '%s' Got '%s'", i, tt.want, s)
+		}
+	}
 }
 
 func TestSyslogLoggerColor(t *testing.T) {
 
-	year := time.Now().Format("2006")
+	tests := getSyslogLoggerColorTests()
 
 	addr, err := net.ResolveUDPAddr("udp", ":2001")
-	Equal(t, err, nil)
+	if err != nil {
+		t.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
 
 	conn, err := net.ListenUDP("udp", addr)
-	Equal(t, err, nil)
+	if err != nil {
+		t.Errorf("Expected '%v' Got '%s'", nil, err)
+	}
 	defer conn.Close()
 
 	sLog, err := New("udp", "127.0.0.1:2001", stdsyslog.LOG_DEBUG, "")
-	Equal(t, err, nil)
+	if err != nil {
+		t.Errorf("Expected '%v' Got '%s'", nil, err)
+	}
 
 	sLog.DisplayColor(true)
-	sLog.SetChannelBuffer(3)
-	sLog.SetTimestampFormat("2006")
+	sLog.SetBuffersAndWorkers(3, 3)
+	sLog.SetTimestampFormat("MST")
 
 	log.RegisterHandler(sLog, log.AllLevels...)
 
-	log.Debug("debug")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m debug"), true)
+	for i, tt := range tests {
 
-	log.Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m debugf"), true)
+		var l log.LeveledLogger
 
-	log.Info("info")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m info"), true)
+		if tt.flds != nil {
+			l = log.WithFields(tt.flds...)
+		} else {
+			l = log.Logger
+		}
 
-	log.Infof("%s", "infof")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m info"), true)
+		switch tt.lvl {
+		case log.DebugLevel:
+			if len(tt.printf) == 0 {
+				l.Debug(tt.msg)
+			} else {
+				l.Debugf(tt.printf, tt.msg)
+			}
+		case log.TraceLevel:
+			if len(tt.printf) == 0 {
+				l.Trace(tt.msg).End()
+			} else {
+				l.Tracef(tt.printf, tt.msg).End()
+			}
+		case log.InfoLevel:
+			if len(tt.printf) == 0 {
+				l.Info(tt.msg)
+			} else {
+				l.Infof(tt.printf, tt.msg)
+			}
+		case log.NoticeLevel:
+			if len(tt.printf) == 0 {
+				l.Notice(tt.msg)
+			} else {
+				l.Noticef(tt.printf, tt.msg)
+			}
+		case log.WarnLevel:
+			if len(tt.printf) == 0 {
+				l.Warn(tt.msg)
+			} else {
+				l.Warnf(tt.printf, tt.msg)
+			}
+		case log.ErrorLevel:
+			if len(tt.printf) == 0 {
+				l.Error(tt.msg)
+			} else {
+				l.Errorf(tt.printf, tt.msg)
+			}
+		case log.PanicLevel:
+			func() {
+				defer func() {
+					recover()
+				}()
 
-	log.Notice("notice")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m notice"), true)
+				if len(tt.printf) == 0 {
+					l.Panic(tt.msg)
+				} else {
+					l.Panicf(tt.printf, tt.msg)
+				}
+			}()
+		case log.AlertLevel:
+			if len(tt.printf) == 0 {
+				l.Alert(tt.msg)
+			} else {
+				l.Alertf(tt.printf, tt.msg)
+			}
+		}
 
-	log.Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m noticef"), true)
+		if s := hasString(conn); !strings.HasSuffix(s, tt.want) {
 
-	log.Warn("warn")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m warn"), true)
+			if tt.lvl == log.TraceLevel {
+				if !strings.Contains(s, tt.want) {
+					t.Errorf("test %d: Expected Contains '%s' Got '%s'", i, tt.want, s)
+				}
+				continue
+			}
 
-	log.Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m warnf"), true)
-
-	log.Error("error")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m error"), true)
-
-	log.Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m errorf"), true)
-
-	log.Alert("alert")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m alert"), true)
-
-	log.Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m alertf"), true)
-
-	log.Print("print")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m print"), true)
-
-	log.Printf("%s", "printf")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m printf"), true)
-
-	log.Println("println")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m println"), true)
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m panic"), true)
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m panicf"), true)
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m panicln"), true)
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m debug [32mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m debugf [32mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m info [34mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m infof [34mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m notice [36;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m noticef [36;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m warn [33;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m warnf [33;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m error [31;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m errorf [31;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m alert [31m[4mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m alertf [31m[4mkey[0m=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m panicf [31mkey[0m=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m panic [31mkey[0m=value"), true)
-
-	func() {
-		defer log.Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m trace"), true)
-
-	func() {
-		defer log.Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m tracef"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m trace"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m tracef"), true)
+			t.Errorf("test %d: Expected Suffix '%s' Got '%s'", i, tt.want, s)
+		}
+	}
 
 	e := &log.Entry{
 		Level:     log.FatalLevel,
 		Message:   "fatal",
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
+		Line:      259,
+		File:      "syslog_test.go",
 	}
 
 	log.HandleEntry(e)
 
-	Equal(t, hasString(conn, year+" [31m[4m[5m FATAL[0m fatal"), true)
-
-	// test changing level color
-	sLog.SetLevelColor(log.DebugLevel, log.Red)
-
-	log.Debug("debug")
-	Equal(t, hasString(conn, "2016 [31m DEBUG[0m debug"), true)
+	if s := hasString(conn); !strings.Contains(s, "UTC [31m[4m[5m FATAL[0m syslog_test.go:259 fatal\n") {
+		t.Errorf("test fatal: Expected Contains '%s' Got '%s'", "UTC [31m[4m[5m FATAL[0m syslog_test.go:259 fatal\n", s)
+	}
 }
 
-func TestSyslogLoggerCaller(t *testing.T) {
-
-	year := time.Now().Format("2006")
-
-	addr, err := net.ResolveUDPAddr("udp", ":2002")
-	Equal(t, err, nil)
-
-	conn, err := net.ListenUDP("udp", addr)
-	Equal(t, err, nil)
-	defer conn.Close()
-
-	sLog, err := New("udp", "127.0.0.1:2002", stdsyslog.LOG_DEBUG, "")
-	Equal(t, err, nil)
-
-	sLog.DisplayColor(false)
-	sLog.SetChannelBuffer(3)
-	sLog.SetTimestampFormat("2006")
-	sLog.SetANSIReset(log.Reset)
-
-	log.SetCallerInfo(true)
-	log.RegisterHandler(sLog, log.AllLevels...)
-
-	log.Debug("debug")
-	Equal(t, hasString(conn, year+"  DEBUG syslog_test.go:387 debug"), true)
-
-	log.Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+"  DEBUG syslog_test.go:390 debugf"), true)
-
-	log.Info("info")
-	Equal(t, hasString(conn, year+"   INFO syslog_test.go:393 info"), true)
-
-	log.Infof("%s", "infof")
-	Equal(t, hasString(conn, year+"   INFO syslog_test.go:396 infof"), true)
-
-	log.Notice("notice")
-	Equal(t, hasString(conn, year+" NOTICE syslog_test.go:399 notice"), true)
-
-	log.Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" NOTICE syslog_test.go:402 noticef"), true)
-
-	log.Warn("warn")
-	Equal(t, hasString(conn, year+"   WARN syslog_test.go:405 warn"), true)
-
-	log.Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+"   WARN syslog_test.go:408 warnf"), true)
-
-	log.Error("error")
-	Equal(t, hasString(conn, year+"  ERROR syslog_test.go:411 error"), true)
-
-	log.Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+"  ERROR syslog_test.go:414 errorf"), true)
-
-	log.Alert("alert")
-	Equal(t, hasString(conn, year+"  ALERT syslog_test.go:417 alert"), true)
-
-	log.Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+"  ALERT syslog_test.go:420 alertf"), true)
-
-	log.Print("print")
-	Equal(t, hasString(conn, year+"   INFO syslog_test.go:423 print"), true)
-
-	log.Printf("%s", "printf")
-	Equal(t, hasString(conn, year+"   INFO syslog_test.go:426 printf"), true)
-
-	log.Println("println")
-	Equal(t, hasString(conn, year+"   INFO syslog_test.go:429 println"), true)
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, hasString(conn, year+"  PANIC syslog_test.go:432 panic"), true)
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, hasString(conn, year+"  PANIC syslog_test.go:435 panicf"), true)
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, hasString(conn, year+"  PANIC syslog_test.go:438 panicln"), true)
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, hasString(conn, year+"  DEBUG syslog_test.go:442 debug key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+"  DEBUG syslog_test.go:445 debugf key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, hasString(conn, year+"   INFO syslog_test.go:448 info key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, hasString(conn, year+"   INFO syslog_test.go:451 infof key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, hasString(conn, year+" NOTICE syslog_test.go:454 notice key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" NOTICE syslog_test.go:457 noticef key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, hasString(conn, year+"   WARN syslog_test.go:460 warn key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+"   WARN syslog_test.go:463 warnf key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, hasString(conn, year+"  ERROR syslog_test.go:466 error key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+"  ERROR syslog_test.go:469 errorf key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, hasString(conn, year+"  ALERT syslog_test.go:472 alert key=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+"  ALERT syslog_test.go:475 alertf key=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, hasString(conn, year+"  PANIC syslog_test.go:478 panicf key=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, hasString(conn, year+"  PANIC syslog_test.go:481 panic key=value"), true)
-
-	func() {
-		defer log.Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE syslog_test.go:486 trace"), true)
-
-	func() {
-		defer log.Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE syslog_test.go:492 tracef"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE syslog_test.go:498 trace"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+"  TRACE syslog_test.go:504 tracef"), true)
-
-	e := &log.Entry{
-		Level:     log.FatalLevel,
-		Message:   "fatal",
-		Timestamp: time.Now(),
+func TestBadAddress(t *testing.T) {
+	sLog, err := New("udp", "255.255.255.67", stdsyslog.LOG_DEBUG, "")
+	if err == nil {
+		log.Errorf("Expected '%v' Got '%v'", "not nil", err)
 	}
 
-	log.HandleEntry(e)
+	if sLog != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, sLog)
+	}
+}
 
-	Equal(t, hasString(conn, year+"  FATAL :0 fatal"), true)
+func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 
-	// Test Custom Formatter
-	sLog.SetFormatter(func(e *log.Entry) string {
-		return e.Message
+	addr, err := net.ResolveUDPAddr("udp", ":2004")
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
+	defer conn.Close()
+
+	sLog, err := New("udp", "127.0.0.1:2004", stdsyslog.LOG_DEBUG, "")
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
+
+	sLog.DisplayColor(true)
+	sLog.SetBuffersAndWorkers(3, 0)
+	sLog.SetTimestampFormat("2006")
+	sLog.SetFormatFunc(func() Formatter {
+		return func(e *log.Entry) []byte {
+			return []byte(e.Message)
+		}
 	})
 
-	log.Debug("debug")
-	Equal(t, hasString(conn, "debug"), true)
-}
-
-func TestSyslogLoggerColorCaller(t *testing.T) {
-
-	year := time.Now().Format("2006")
-
-	addr, err := net.ResolveUDPAddr("udp", ":2003")
-	Equal(t, err, nil)
-
-	conn, err := net.ListenUDP("udp", addr)
-	Equal(t, err, nil)
-	defer conn.Close()
-
-	sLog, err := New("udp", "127.0.0.1:2003", stdsyslog.LOG_DEBUG, "")
-	Equal(t, err, nil)
-
-	sLog.DisplayColor(true)
-	sLog.SetChannelBuffer(3)
-	sLog.SetTimestampFormat("2006")
-
 	log.RegisterHandler(sLog, log.AllLevels...)
 
 	log.Debug("debug")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m syslog_test.go:547 debug"), true)
+	if s := hasString(conn); s != "debug" {
+		log.Errorf("Expected '%s' Got '%s'", "debug", s)
+	}
+}
 
-	log.Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m syslog_test.go:550 debugf"), true)
+func TestSetFilename(t *testing.T) {
 
-	log.Info("info")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m syslog_test.go:553 info"), true)
-
-	log.Infof("%s", "infof")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m syslog_test.go:556 info"), true)
-
-	log.Notice("notice")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m syslog_test.go:559 notice"), true)
-
-	log.Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m syslog_test.go:562 noticef"), true)
-
-	log.Warn("warn")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m syslog_test.go:565 warn"), true)
-
-	log.Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m syslog_test.go:568 warnf"), true)
-
-	log.Error("error")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m syslog_test.go:571 error"), true)
-
-	log.Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m syslog_test.go:574 errorf"), true)
-
-	log.Alert("alert")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m syslog_test.go:577 alert"), true)
-
-	log.Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m syslog_test.go:580 alertf"), true)
-
-	log.Print("print")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m syslog_test.go:583 print"), true)
-
-	log.Printf("%s", "printf")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m syslog_test.go:586 printf"), true)
-
-	log.Println("println")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m syslog_test.go:589 println"), true)
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m syslog_test.go:592 panic"), true)
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m syslog_test.go:595 panicf"), true)
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m syslog_test.go:598 panicln"), true)
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m syslog_test.go:602 debug [32mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, hasString(conn, year+" [32m DEBUG[0m syslog_test.go:605 debugf [32mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m syslog_test.go:608 info [34mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, hasString(conn, year+" [34m  INFO[0m syslog_test.go:611 infof [34mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m syslog_test.go:614 notice [36;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, hasString(conn, year+" [36;1mNOTICE[0m syslog_test.go:617 noticef [36;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m syslog_test.go:620 warn [33;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, hasString(conn, year+" [33;1m  WARN[0m syslog_test.go:623 warnf [33;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m syslog_test.go:626 error [31;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, hasString(conn, year+" [31;1m ERROR[0m syslog_test.go:629 errorf [31;1mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m syslog_test.go:632 alert [31m[4mkey[0m=value"), true)
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, hasString(conn, year+" [31m[4m ALERT[0m syslog_test.go:635 alertf [31m[4mkey[0m=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m syslog_test.go:638 panicf [31mkey[0m=value"), true)
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, hasString(conn, year+" [31m PANIC[0m syslog_test.go:641 panic [31mkey[0m=value"), true)
-
-	func() {
-		defer log.Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m syslog_test.go:646 trace"), true)
-
-	func() {
-		defer log.Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m syslog_test.go:652 tracef"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m syslog_test.go:658 trace"), true)
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
-	}()
-
-	Equal(t, hasString(conn, year+" [37;1m TRACE[0m syslog_test.go:664 tracef"), true)
-
-	e := &log.Entry{
-		Level:     log.FatalLevel,
-		Message:   "fatal",
-		Timestamp: time.Now(),
+	addr, err := net.ResolveUDPAddr("udp", ":2005")
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
-	log.HandleEntry(e)
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
+	defer conn.Close()
 
-	Equal(t, hasString(conn, year+" [31m[4m[5m FATAL[0m :0 fatal"), true)
+	sLog, err := New("udp", "127.0.0.1:2005", stdsyslog.LOG_DEBUG, "")
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
 
-	// test changing level color
-	sLog.SetLevelColor(log.DebugLevel, log.Red)
+	sLog.DisplayColor(false)
+	sLog.SetBuffersAndWorkers(3, 1)
+	sLog.SetTimestampFormat("MST")
+	sLog.SetFilenameDisplay(log.Llongfile)
 
-	log.Debug("debug")
-	Equal(t, hasString(conn, "2016 [31m DEBUG[0m syslog_test.go:681 debug"), true)
+	log.RegisterHandler(sLog, log.AllLevels...)
+
+	log.Error("error")
+	if s := hasString(conn); !strings.Contains(s, "log/handlers/syslog/syslog_test.go:337 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/syslog/syslog_test.go:337 error", s)
+	}
+}
+
+func TestSetFilenameColor(t *testing.T) {
+	addr, err := net.ResolveUDPAddr("udp", ":2006")
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
+	defer conn.Close()
+
+	sLog, err := New("udp", "127.0.0.1:2006", stdsyslog.LOG_DEBUG, "")
+	if err != nil {
+		log.Errorf("Expected '%v' Got '%v'", nil, err)
+	}
+
+	sLog.DisplayColor(true)
+	sLog.SetBuffersAndWorkers(3, 1)
+	sLog.SetTimestampFormat("MST")
+	sLog.SetFilenameDisplay(log.Llongfile)
+
+	log.RegisterHandler(sLog, log.AllLevels...)
+
+	log.Error("error")
+	if s := hasString(conn); !strings.Contains(s, "log/handlers/syslog/syslog_test.go:367 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/syslog/syslog_test.go:367 error", s)
+	}
+}
+
+type test struct {
+	lvl    log.Level
+	msg    string
+	flds   []log.Field
+	want   string
+	printf string
+}
+
+func getSyslogLoggerTests() []test {
+	return []test{
+		{
+			lvl:  log.DebugLevel,
+			msg:  "debug",
+			flds: nil,
+			want: "UTC  DEBUG debug\n",
+		},
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  DEBUG debugf\n",
+		},
+		{
+			lvl:  log.InfoLevel,
+			msg:  "info",
+			flds: nil,
+			want: "UTC   INFO info\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC   INFO infof\n",
+		},
+		{
+			lvl:  log.NoticeLevel,
+			msg:  "notice",
+			flds: nil,
+			want: "UTC NOTICE notice\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC NOTICE noticef\n",
+		},
+		{
+			lvl:  log.WarnLevel,
+			msg:  "warn",
+			flds: nil,
+			want: "UTC   WARN syslog_test.go:101 warn\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC   WARN syslog_test.go:103 warnf\n",
+		},
+		{
+			lvl:  log.ErrorLevel,
+			msg:  "error",
+			flds: nil,
+			want: "UTC  ERROR syslog_test.go:107 error\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  ERROR syslog_test.go:109 errorf\n",
+		},
+		{
+			lvl:  log.AlertLevel,
+			msg:  "alert",
+			flds: nil,
+			want: "UTC  ALERT syslog_test.go:125 alert\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  ALERT syslog_test.go:127 alertf\n",
+		},
+		{
+			lvl:  log.PanicLevel,
+			msg:  "panic",
+			flds: nil,
+			want: "UTC  PANIC syslog_test.go:118 panic\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  PANIC syslog_test.go:120 panicf\n",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  DEBUG debug key=value\n",
+		},
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  DEBUG debugf key=value\n",
+		},
+		{
+			lvl: log.InfoLevel,
+			msg: "info",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   INFO info key=value\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   INFO infof key=value\n",
+		},
+		{
+			lvl: log.NoticeLevel,
+			msg: "notice",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC NOTICE notice key=value\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC NOTICE noticef key=value\n",
+		},
+		{
+			lvl: log.WarnLevel,
+			msg: "warn",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   WARN syslog_test.go:101 warn key=value\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   WARN syslog_test.go:103 warnf key=value\n",
+		},
+		{
+			lvl: log.ErrorLevel,
+			msg: "error",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ERROR syslog_test.go:107 error key=value\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ERROR syslog_test.go:109 errorf key=value\n",
+		},
+		{
+			lvl: log.AlertLevel,
+			msg: "alert",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ALERT syslog_test.go:125 alert key=value\n",
+		},
+		{
+			lvl: log.AlertLevel,
+			msg: "alert",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ALERT syslog_test.go:125 alert key=value\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ALERT syslog_test.go:127 alertf key=value\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  PANIC syslog_test.go:120 panicf key=value\n",
+		},
+		{
+			lvl: log.PanicLevel,
+			msg: "panic",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  PANIC syslog_test.go:118 panic key=value\n",
+		},
+		{
+			lvl:  log.TraceLevel,
+			msg:  "trace",
+			flds: nil,
+			want: "UTC  TRACE trace",
+		},
+		{
+			lvl:    log.TraceLevel,
+			msg:    "tracef",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  TRACE tracef",
+		},
+		{
+			lvl: log.TraceLevel,
+			msg: "trace",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  TRACE trace key=value",
+		},
+		{
+			lvl:    log.TraceLevel,
+			msg:    "tracef",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  TRACE tracef key=value",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "string"),
+				log.F("key", int(1)),
+				log.F("key", int8(2)),
+				log.F("key", int16(3)),
+				log.F("key", int32(4)),
+				log.F("key", int64(5)),
+				log.F("key", uint(1)),
+				log.F("key", uint8(2)),
+				log.F("key", uint16(3)),
+				log.F("key", uint32(4)),
+				log.F("key", uint64(5)),
+				log.F("key", true),
+				log.F("key", struct{ value string }{"struct"}),
+			},
+			want: "UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n",
+		},
+	}
+}
+
+func getSyslogLoggerColorTests() []test {
+	return []test{
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [32m DEBUG[0m debugf\n",
+		},
+		{
+			lvl:  log.DebugLevel,
+			msg:  "debug",
+			flds: nil,
+			want: "UTC [32m DEBUG[0m debug\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [34m  INFO[0m infof\n",
+		},
+		{
+			lvl:  log.InfoLevel,
+			msg:  "info",
+			flds: nil,
+			want: "UTC [34m  INFO[0m info\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [36;1mNOTICE[0m noticef\n",
+		},
+		{
+			lvl:  log.NoticeLevel,
+			msg:  "notice",
+			flds: nil,
+			want: "UTC [36;1mNOTICE[0m notice\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [33;1m  WARN[0m syslog_test.go:210 warnf\n",
+		},
+		{
+			lvl:  log.WarnLevel,
+			msg:  "warn",
+			flds: nil,
+			want: "UTC [33;1m  WARN[0m syslog_test.go:208 warn\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [31;1m ERROR[0m syslog_test.go:216 errorf\n",
+		},
+		{
+			lvl:  log.ErrorLevel,
+			msg:  "error",
+			flds: nil,
+			want: "UTC [31;1m ERROR[0m syslog_test.go:214 error\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [31m[4m ALERT[0m syslog_test.go:234 alertf\n",
+		},
+		{
+			lvl:  log.AlertLevel,
+			msg:  "alert",
+			flds: nil,
+			want: "UTC [31m[4m ALERT[0m syslog_test.go:232 alert\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [31m PANIC[0m syslog_test.go:227 panicf\n",
+		},
+		{
+			lvl:  log.PanicLevel,
+			msg:  "panic",
+			flds: nil,
+			want: "UTC [31m PANIC[0m syslog_test.go:225 panic\n",
+		},
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [32m DEBUG[0m debugf [32mkey[0m=value\n",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [32m DEBUG[0m debug [32mkey[0m=value\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [34m  INFO[0m infof [34mkey[0m=value\n",
+		},
+		{
+			lvl: log.InfoLevel,
+			msg: "info",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [34m  INFO[0m info [34mkey[0m=value\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [36;1mNOTICE[0m noticef [36;1mkey[0m=value\n",
+		},
+		{
+			lvl: log.NoticeLevel,
+			msg: "notice",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [36;1mNOTICE[0m notice [36;1mkey[0m=value\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [33;1m  WARN[0m syslog_test.go:210 warnf [33;1mkey[0m=value\n",
+		},
+		{
+			lvl: log.WarnLevel,
+			msg: "warn",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [33;1m  WARN[0m syslog_test.go:208 warn [33;1mkey[0m=value\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31;1m ERROR[0m syslog_test.go:216 errorf [31;1mkey[0m=value\n",
+		},
+		{
+			lvl: log.ErrorLevel,
+			msg: "error",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31;1m ERROR[0m syslog_test.go:214 error [31;1mkey[0m=value\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m[4m ALERT[0m syslog_test.go:234 alertf [31m[4mkey[0m=value\n",
+		},
+		{
+			lvl: log.AlertLevel,
+			msg: "alert",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m[4m ALERT[0m syslog_test.go:232 alert [31m[4mkey[0m=value\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m PANIC[0m syslog_test.go:227 panicf [31mkey[0m=value\n",
+		},
+		{
+			lvl: log.PanicLevel,
+			msg: "panic",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m PANIC[0m syslog_test.go:225 panic [31mkey[0m=value\n",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "string"),
+				log.F("key", int(1)),
+				log.F("key", int8(2)),
+				log.F("key", int16(3)),
+				log.F("key", int32(4)),
+				log.F("key", int64(5)),
+				log.F("key", uint(1)),
+				log.F("key", uint8(2)),
+				log.F("key", uint16(3)),
+				log.F("key", uint32(4)),
+				log.F("key", uint64(5)),
+				log.F("key", true),
+				log.F("key", struct{ value string }{"struct"}),
+			},
+			want: "UTC [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=true [32mkey[0m={struct}\n",
+		},
+	}
 }

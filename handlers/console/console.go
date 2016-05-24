@@ -3,39 +3,42 @@ package console
 import (
 	"fmt"
 	"io"
+	stdlog "log"
 	"os"
-	"time"
+	"strconv"
 
 	"github.com/go-playground/log"
 )
 
+// FormatFunc is the function that the workers use to create
+// a new Formatter per worker allowing reusable go routine safe
+// variable to be used within your Formatter function.
+type FormatFunc func() Formatter
+
+// Formatter is the function used to format the Redis entry
+type Formatter func(e *log.Entry) []byte
+
 const (
-	colorFields           = "%s %s%6s%s %-25s"
-	colorNoFields         = "%s %s%6s%s %s"
-	colorKeyValue         = " %s%s%s=%v"
-	colorFieldsCaller     = "%s %s%6s%s %s:%d %-25s"
-	colorNoFieldsCaller   = "%s %s%6s%s %s:%d %s"
-	noColorFields         = "%s %6s %-25s"
-	noColorNoFields       = "%s %6s %s"
-	noColorKeyValue       = " %s=%v"
-	noColorFieldsCaller   = "%s %6s %s:%d %-25s"
-	noColorNoFieldsCaller = "%s %6s %s:%d %s"
+	space   = byte(' ')
+	equals  = byte('=')
+	newLine = byte('\n')
+	colon   = byte(':')
+	base10  = 10
+	v       = "%v"
+	gopath  = "GOPATH"
 )
 
 // Console is an instance of the console logger
 type Console struct {
 	buffer          uint
+	numWorkers      uint
 	colors          [9]log.ANSIEscSeq
-	ansiReset       log.ANSIEscSeq
 	writer          io.Writer
+	formatFunc      FormatFunc
 	timestampFormat string
-	start           time.Time
-	format          string
-	formatFields    string
-	formatKeyValue  string
-	formatTs        func(e *log.Entry) string
+	gopath          string
+	fileDisplay     log.FilenameDisplay
 	displayColor    bool
-	miniTimestamp   bool
 }
 
 // Colors mapping.
@@ -53,16 +56,24 @@ var defaultColors = [...]log.ANSIEscSeq{
 
 // New returns a new instance of the console logger
 func New() *Console {
-	return &Console{
+	c := &Console{
 		buffer:          0,
+		numWorkers:      1,
 		colors:          defaultColors,
-		ansiReset:       log.Reset,
 		writer:          os.Stderr,
-		miniTimestamp:   true,
-		timestampFormat: time.RFC3339Nano,
+		timestampFormat: log.DefaultTimeFormat,
 		displayColor:    true,
-		start:           time.Now(),
+		fileDisplay:     log.Lshortfile,
 	}
+
+	c.formatFunc = c.defaultFormatFunc
+
+	return c
+}
+
+// SetFilenameDisplay tells Console the filename, when present, how to display
+func (c *Console) SetFilenameDisplay(fd log.FilenameDisplay) {
+	c.fileDisplay = fd
 }
 
 // DisplayColor tells Console to output in color or not
@@ -72,27 +83,9 @@ func (c *Console) DisplayColor(color bool) {
 }
 
 // SetTimestampFormat sets Console's timestamp output format
-// Default is : time.RFC3339Nano
-// automatically calls UseMiniTimestamp(false)
+// Default is : "2006-01-02T15:04:05.000000000Z07:00"
 func (c *Console) SetTimestampFormat(format string) {
-	c.UseMiniTimestamp(false)
 	c.timestampFormat = format
-}
-
-// UseMiniTimestamp tells Console to use the mini timestamp(for development mostly)
-// Default is : true
-func (c *Console) UseMiniTimestamp(mini bool) {
-	c.miniTimestamp = mini
-}
-
-// SetLevelColor updates Console's level color values
-func (c *Console) SetLevelColor(l log.Level, color log.ANSIEscSeq) {
-	c.colors[l] = color
-}
-
-// SetANSIReset sets the ANSI Reset sequence
-func (c *Console) SetANSIReset(code log.ANSIEscSeq) {
-	c.ansiReset = code
 }
 
 // SetWriter sets Console's wriiter
@@ -101,57 +94,46 @@ func (c *Console) SetWriter(w io.Writer) {
 	c.writer = w
 }
 
-// SetChannelBuffer tells Console what the channel buffer size should be
-// Default is : 0
-func (c *Console) SetChannelBuffer(i uint) {
-	c.buffer = i
+// SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
+// These settings should be thought about together, hence setting both in the same function.
+func (c *Console) SetBuffersAndWorkers(size uint, workers uint) {
+	c.buffer = size
+
+	if workers == 0 {
+		// just in case no log registered yet
+		stdlog.Println("Invalid number of workers specified, setting to 1")
+		log.Warn("Invalid number of workers specified, setting to 1")
+
+		workers = 1
+	}
+
+	c.numWorkers = workers
+}
+
+// SetFormatFunc sets FormatFunc each worker will call to get
+// a Formatter func
+func (c *Console) SetFormatFunc(fn FormatFunc) {
+	c.formatFunc = fn
 }
 
 // Run starts the logger consuming on the returned channed
 func (c *Console) Run() chan<- *log.Entry {
 
-	// in a big high traffic app, set a higher buffer
-	ch := make(chan *log.Entry, c.buffer)
-
-	if c.miniTimestamp {
-		c.formatTs = func(e *log.Entry) string {
-			return fmt.Sprintf("%04d", int(time.Since(c.start)/time.Second))
-		}
-	} else {
-		c.formatTs = func(e *log.Entry) string {
-			return e.Timestamp.Format(c.timestampFormat)
+	// pre-setup
+	if c.fileDisplay == log.Llongfile {
+		// gather $GOPATH for use in stripping off of full name
+		// if not found still ok as will be blank
+		c.gopath = os.Getenv(gopath)
+		if len(c.gopath) != 0 {
+			c.gopath += string(os.PathSeparator) + "src" + string(os.PathSeparator)
 		}
 	}
 
-	// GetCallerInfo may want to add logic to not solely rely upon this
-	if log.GetCallerInfo() {
-		if c.displayColor {
-			c.format = colorNoFieldsCaller
-			c.formatFields = colorFieldsCaller
-			c.formatKeyValue = colorKeyValue
+	// in a big high traffic app, set a higher buffer
+	ch := make(chan *log.Entry, c.buffer)
 
-			go c.handleLogCaller(ch)
-		} else {
-			c.format = noColorNoFieldsCaller
-			c.formatFields = noColorFieldsCaller
-			c.formatKeyValue = noColorKeyValue
-
-			go c.handleLogNoColorCaller(ch)
-		}
-	} else {
-		if c.displayColor {
-			c.format = colorNoFields
-			c.formatFields = colorFields
-			c.formatKeyValue = colorKeyValue
-
-			go c.handleLog(ch)
-		} else {
-			c.format = noColorNoFields
-			c.formatFields = noColorFields
-			c.formatKeyValue = noColorKeyValue
-
-			go c.handleLogNoColor(ch)
-		}
+	for i := 0; i <= int(c.numWorkers); i++ {
+		go c.handleLog(ch)
 	}
 
 	return ch
@@ -161,115 +143,217 @@ func (c *Console) Run() chan<- *log.Entry {
 func (c *Console) handleLog(entries <-chan *log.Entry) {
 
 	var e *log.Entry
-	var color log.ANSIEscSeq
+	// var b io.WriterTo
+	var b []byte
+	formatter := c.formatFunc()
 
 	for e = range entries {
 
-		color = c.colors[e.Level]
-
-		if len(e.Fields) == 0 {
-			fmt.Fprintf(c.writer, c.format, c.formatTs(e), color, e.Level, c.ansiReset, e.Message)
-		} else {
-			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), color, e.Level, c.ansiReset, e.Message)
-		}
-
-		for _, f := range e.Fields {
-			fmt.Fprintf(c.writer, c.formatKeyValue, color, f.Key, c.ansiReset, f.Value)
-		}
-
-		fmt.Fprintln(c.writer)
+		b = formatter(e)
+		c.writer.Write(b)
+		// b.WriteTo(c.writer)
 
 		e.Consumed()
 	}
 }
 
-// handleLog consumes and logs any Entry's passed to the channel
-func (c *Console) handleLogCaller(entries <-chan *log.Entry) {
+func (c *Console) defaultFormatFunc() Formatter {
 
-	var e *log.Entry
-	var color log.ANSIEscSeq
+	var b []byte
 	var file string
+	var lvl string
+	var i int
 
-	for e = range entries {
+	if c.displayColor {
 
-		color = c.colors[e.Level]
+		var color log.ANSIEscSeq
 
-		file = e.File
-		for i := len(file) - 1; i > 0; i-- {
-			if file[i] == '/' {
-				file = file[i+1:]
-				break
+		return func(e *log.Entry) []byte {
+			b = b[0:0]
+			color = c.colors[e.Level]
+
+			if e.Line == 0 {
+
+				b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+				b = append(b, space)
+				b = append(b, color...)
+
+				lvl = e.Level.String()
+
+				for i = 0; i < 6-len(lvl); i++ {
+					b = append(b, space)
+				}
+				b = append(b, lvl...)
+				b = append(b, log.Reset...)
+				b = append(b, space)
+				b = append(b, e.Message...)
+
+			} else {
+				file = e.File
+
+				if c.fileDisplay == log.Lshortfile {
+
+					for i = len(file) - 1; i > 0; i-- {
+						if file[i] == '/' {
+							file = file[i+1:]
+							break
+						}
+					}
+				} else {
+					file = file[len(c.gopath):]
+				}
+
+				b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+				b = append(b, space)
+				b = append(b, color...)
+
+				lvl = e.Level.String()
+
+				for i = 0; i < 6-len(lvl); i++ {
+					b = append(b, space)
+				}
+
+				b = append(b, lvl...)
+				b = append(b, log.Reset...)
+				b = append(b, space)
+				b = append(b, file...)
+				b = append(b, colon)
+				b = strconv.AppendInt(b, int64(e.Line), base10)
+				b = append(b, space)
+				b = append(b, e.Message...)
+			}
+
+			for _, f := range e.Fields {
+				b = append(b, space)
+				b = append(b, color...)
+				b = append(b, f.Key...)
+				b = append(b, log.Reset...)
+				b = append(b, equals)
+
+				switch f.Value.(type) {
+				case string:
+					b = append(b, f.Value.(string)...)
+				case int:
+					b = strconv.AppendInt(b, int64(f.Value.(int)), base10)
+				case int8:
+					b = strconv.AppendInt(b, int64(f.Value.(int8)), base10)
+				case int16:
+					b = strconv.AppendInt(b, int64(f.Value.(int16)), base10)
+				case int32:
+					b = strconv.AppendInt(b, int64(f.Value.(int32)), base10)
+				case int64:
+					b = strconv.AppendInt(b, f.Value.(int64), base10)
+				case uint:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint)), base10)
+				case uint8:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint8)), base10)
+				case uint16:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint16)), base10)
+				case uint32:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
+				case uint64:
+					b = strconv.AppendUint(b, f.Value.(uint64), base10)
+				case bool:
+					b = strconv.AppendBool(b, f.Value.(bool))
+				default:
+					b = append(b, fmt.Sprintf(v, f.Value)...)
+				}
+			}
+
+			b = append(b, newLine)
+
+			return b
+		}
+	}
+
+	return func(e *log.Entry) []byte {
+		b = b[0:0]
+
+		if e.Line == 0 {
+
+			b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+			b = append(b, space)
+
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
+
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, e.Message...)
+
+		} else {
+			file = e.File
+
+			if c.fileDisplay == log.Lshortfile {
+
+				for i = len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						file = file[i+1:]
+						break
+					}
+				}
+			} else {
+				file = file[len(c.gopath):]
+			}
+
+			b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+			b = append(b, space)
+
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
+
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, file...)
+			b = append(b, colon)
+			b = strconv.AppendInt(b, int64(e.Line), base10)
+			b = append(b, space)
+			b = append(b, e.Message...)
+		}
+
+		for _, f := range e.Fields {
+			b = append(b, space)
+			b = append(b, f.Key...)
+			b = append(b, equals)
+
+			switch f.Value.(type) {
+			case string:
+				b = append(b, f.Value.(string)...)
+			case int:
+				b = strconv.AppendInt(b, int64(f.Value.(int)), base10)
+			case int8:
+				b = strconv.AppendInt(b, int64(f.Value.(int8)), base10)
+			case int16:
+				b = strconv.AppendInt(b, int64(f.Value.(int16)), base10)
+			case int32:
+				b = strconv.AppendInt(b, int64(f.Value.(int32)), base10)
+			case int64:
+				b = strconv.AppendInt(b, f.Value.(int64), base10)
+			case uint:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint)), base10)
+			case uint8:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint8)), base10)
+			case uint16:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint16)), base10)
+			case uint32:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
+			case uint64:
+				b = strconv.AppendUint(b, f.Value.(uint64), base10)
+			case bool:
+				b = strconv.AppendBool(b, f.Value.(bool))
+			default:
+				b = append(b, fmt.Sprintf(v, f.Value)...)
 			}
 		}
 
-		if len(e.Fields) == 0 {
-			fmt.Fprintf(c.writer, c.format, c.formatTs(e), color, e.Level, c.ansiReset, file, e.Line, e.Message)
-		} else {
-			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), color, e.Level, c.ansiReset, file, e.Line, e.Message)
-		}
+		b = append(b, newLine)
 
-		for _, f := range e.Fields {
-			fmt.Fprintf(c.writer, c.formatKeyValue, color, f.Key, c.ansiReset, f.Value)
-		}
-
-		fmt.Fprintln(c.writer)
-
-		e.Consumed()
-	}
-}
-
-// handleLogNoColor consumes and logs any Entry's passed to the channel, with no color
-func (c *Console) handleLogNoColor(entries <-chan *log.Entry) {
-
-	var e *log.Entry
-
-	for e = range entries {
-
-		if len(e.Fields) == 0 {
-			fmt.Fprintf(c.writer, c.format, c.formatTs(e), e.Level, e.Message)
-		} else {
-			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), e.Level, e.Message)
-		}
-
-		for _, f := range e.Fields {
-			fmt.Fprintf(c.writer, c.formatKeyValue, f.Key, f.Value)
-		}
-
-		fmt.Fprintln(c.writer)
-
-		e.Consumed()
-	}
-}
-
-// handleLogNoColorCaller consumes and logs any Entry's passed to the channel,
-// with no color, file and line info
-func (c *Console) handleLogNoColorCaller(entries <-chan *log.Entry) {
-
-	var e *log.Entry
-	var file string
-
-	for e = range entries {
-
-		file = e.File
-		for i := len(file) - 1; i > 0; i-- {
-			if file[i] == '/' {
-				file = file[i+1:]
-				break
-			}
-		}
-
-		if len(e.Fields) == 0 {
-			fmt.Fprintf(c.writer, c.format, c.formatTs(e), e.Level, file, e.Line, e.Message)
-		} else {
-			fmt.Fprintf(c.writer, c.formatFields, c.formatTs(e), e.Level, file, e.Line, e.Message)
-		}
-
-		for _, f := range e.Fields {
-			fmt.Fprintf(c.writer, c.formatKeyValue, f.Key, f.Value)
-		}
-
-		fmt.Fprintln(c.writer)
-
-		e.Consumed()
+		return b
 	}
 }

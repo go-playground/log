@@ -2,11 +2,10 @@ package console
 
 import (
 	"bytes"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-playground/log"
-	. "gopkg.in/go-playground/assert.v1"
 )
 
 // NOTES:
@@ -21,699 +20,772 @@ import (
 
 func TestConsoleLogger(t *testing.T) {
 
+	tests := getConsoleLoggerTests()
+
 	buff := new(bytes.Buffer)
 
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(false)
-	cLog.SetChannelBuffer(3)
-	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
-	cLog.SetANSIReset(log.Reset)
-
+	cLog.SetBuffersAndWorkers(3, 0)
+	cLog.SetTimestampFormat("MST")
+	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
 	log.RegisterHandler(cLog, log.AllLevels...)
 
-	log.Debug("debug")
-	Equal(t, buff.String(), "0000  DEBUG debug\n")
-	buff.Reset()
+	for i, tt := range tests {
 
-	log.Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000  DEBUG debugf\n")
-	buff.Reset()
+		buff.Reset()
+		var l log.LeveledLogger
 
-	log.Info("info")
-	Equal(t, buff.String(), "0000   INFO info\n")
-	buff.Reset()
+		if tt.flds != nil {
+			l = log.WithFields(tt.flds...)
+		} else {
+			l = log.Logger
+		}
 
-	log.Infof("%s", "infof")
-	Equal(t, buff.String(), "0000   INFO infof\n")
-	buff.Reset()
+		switch tt.lvl {
+		case log.DebugLevel:
+			if len(tt.printf) == 0 {
+				l.Debug(tt.msg)
+			} else {
+				l.Debugf(tt.printf, tt.msg)
+			}
+		case log.TraceLevel:
+			if len(tt.printf) == 0 {
+				l.Trace(tt.msg).End()
+			} else {
+				l.Tracef(tt.printf, tt.msg).End()
+			}
+		case log.InfoLevel:
+			if len(tt.printf) == 0 {
+				l.Info(tt.msg)
+			} else {
+				l.Infof(tt.printf, tt.msg)
+			}
+		case log.NoticeLevel:
+			if len(tt.printf) == 0 {
+				l.Notice(tt.msg)
+			} else {
+				l.Noticef(tt.printf, tt.msg)
+			}
+		case log.WarnLevel:
+			if len(tt.printf) == 0 {
+				l.Warn(tt.msg)
+			} else {
+				l.Warnf(tt.printf, tt.msg)
+			}
+		case log.ErrorLevel:
+			if len(tt.printf) == 0 {
+				l.Error(tt.msg)
+			} else {
+				l.Errorf(tt.printf, tt.msg)
+			}
+		case log.PanicLevel:
+			func() {
+				defer func() {
+					recover()
+				}()
 
-	log.Notice("notice")
-	Equal(t, buff.String(), "0000 NOTICE notice\n")
-	buff.Reset()
+				if len(tt.printf) == 0 {
+					l.Panic(tt.msg)
+				} else {
+					l.Panicf(tt.printf, tt.msg)
+				}
+			}()
+		case log.AlertLevel:
+			if len(tt.printf) == 0 {
+				l.Alert(tt.msg)
+			} else {
+				l.Alertf(tt.printf, tt.msg)
+			}
+		}
 
-	log.Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 NOTICE noticef\n")
-	buff.Reset()
+		if buff.String() != tt.want {
 
-	log.Warn("warn")
-	Equal(t, buff.String(), "0000   WARN warn\n")
-	buff.Reset()
+			if tt.lvl == log.TraceLevel {
+				if !strings.HasPrefix(buff.String(), tt.want) {
+					t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+				}
+				continue
+			}
 
-	log.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000   WARN warnf\n")
-	buff.Reset()
-
-	log.Error("error")
-	Equal(t, buff.String(), "0000  ERROR error\n")
-	buff.Reset()
-
-	log.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000  ERROR errorf\n")
-	buff.Reset()
-
-	log.Alert("alert")
-	Equal(t, buff.String(), "0000  ALERT alert\n")
-	buff.Reset()
-
-	log.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000  ALERT alertf\n")
-	buff.Reset()
-
-	log.Print("print")
-	Equal(t, buff.String(), "0000   INFO print\n")
-	buff.Reset()
-
-	log.Printf("%s", "printf")
-	Equal(t, buff.String(), "0000   INFO printf\n")
-	buff.Reset()
-
-	log.Println("println")
-	Equal(t, buff.String(), "0000   INFO println\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, buff.String(), "0000  PANIC panic\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, buff.String(), "0000  PANIC panicf\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, buff.String(), "0000  PANIC panicln\n")
-	buff.Reset()
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "0000  DEBUG debug                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000  DEBUG debugf                    key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "0000   INFO info                      key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "0000   INFO infof                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "0000 NOTICE notice                    key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 NOTICE noticef                   key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "0000   WARN warn                      key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000   WARN warnf                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "0000  ERROR error                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000  ERROR errorf                    key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "0000  ALERT alert                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000  ALERT alertf                    key=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "0000  PANIC panicf                    key=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "0000  PANIC panic                     key=value\n")
-	buff.Reset()
-
-	func() {
-		defer log.Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\strace\\.*")
-	buff.Reset()
-
-	func() {
-		defer log.Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\stracef\\.*")
-	buff.Reset()
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\strace\\.*")
-	buff.Reset()
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\stracef\\.*")
-	buff.Reset()
-
-	// year := time.Now().Format("2006")
-	// cLog.UseMiniTimestamp(false)
-	// cLog.SetTimestampFormat("2006")
-
-	// log.Info("info")
-	// Equal(t, buff.String(), "  INFO["+year+"] info\n")
-	// buff.Reset()
+			t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+		}
+	}
 }
 
 func TestConsoleLoggerColor(t *testing.T) {
 
+	tests := getConsoleLoggerColorTests()
 	buff := new(bytes.Buffer)
 
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(true)
-	cLog.SetChannelBuffer(3)
-	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
+	cLog.SetBuffersAndWorkers(3, 3)
+	cLog.SetTimestampFormat("MST")
+
+	log.RegisterHandler(cLog, log.AllLevels...)
+
+	for i, tt := range tests {
+
+		buff.Reset()
+		var l log.LeveledLogger
+
+		if tt.flds != nil {
+			l = log.WithFields(tt.flds...)
+		} else {
+			l = log.Logger
+		}
+
+		switch tt.lvl {
+		case log.DebugLevel:
+			if len(tt.printf) == 0 {
+				l.Debug(tt.msg)
+			} else {
+				l.Debugf(tt.printf, tt.msg)
+			}
+		case log.TraceLevel:
+			if len(tt.printf) == 0 {
+				l.Trace(tt.msg).End()
+			} else {
+				l.Tracef(tt.printf, tt.msg).End()
+			}
+		case log.InfoLevel:
+			if len(tt.printf) == 0 {
+				l.Info(tt.msg)
+			} else {
+				l.Infof(tt.printf, tt.msg)
+			}
+		case log.NoticeLevel:
+			if len(tt.printf) == 0 {
+				l.Notice(tt.msg)
+			} else {
+				l.Noticef(tt.printf, tt.msg)
+			}
+		case log.WarnLevel:
+			if len(tt.printf) == 0 {
+				l.Warn(tt.msg)
+			} else {
+				l.Warnf(tt.printf, tt.msg)
+			}
+		case log.ErrorLevel:
+			if len(tt.printf) == 0 {
+				l.Error(tt.msg)
+			} else {
+				l.Errorf(tt.printf, tt.msg)
+			}
+		case log.PanicLevel:
+			func() {
+				defer func() {
+					recover()
+				}()
+
+				if len(tt.printf) == 0 {
+					l.Panic(tt.msg)
+				} else {
+					l.Panicf(tt.printf, tt.msg)
+				}
+			}()
+		case log.AlertLevel:
+			if len(tt.printf) == 0 {
+				l.Alert(tt.msg)
+			} else {
+				l.Alertf(tt.printf, tt.msg)
+			}
+		}
+
+		if buff.String() != tt.want {
+
+			if tt.lvl == log.TraceLevel {
+				if !strings.HasPrefix(buff.String(), tt.want) {
+					t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+				}
+				continue
+			}
+
+			t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
+		}
+	}
+}
+
+func TestCustomFormatFunc(t *testing.T) {
+
+	buff := new(bytes.Buffer)
+	cLog := New()
+	cLog.SetWriter(buff)
+	cLog.SetTimestampFormat("2006")
+	cLog.SetBuffersAndWorkers(3, 2)
+	cLog.SetFormatFunc(func() Formatter {
+
+		var b []byte
+
+		return func(e *log.Entry) []byte {
+			b = b[0:0]
+			b = append(b, e.Message...)
+			return b
+		}
+	})
 
 	log.RegisterHandler(cLog, log.AllLevels...)
 
 	log.Debug("debug")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m debug\n")
+	if buff.String() != "debug" {
+		log.Errorf("Expected '%s' Got '%s'", "debug", buff.String())
+	}
 	buff.Reset()
-
-	log.Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m debugf\n")
-	buff.Reset()
-
-	log.Info("info")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m info\n")
-	buff.Reset()
-
-	log.Infof("%s", "infof")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m infof\n")
-	buff.Reset()
-
-	log.Notice("notice")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m notice\n")
-	buff.Reset()
-
-	log.Notice("%s", "noticef")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m %snoticef\n")
-	buff.Reset()
-
-	log.Warn("warn")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m warn\n")
-	buff.Reset()
-
-	log.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m warnf\n")
-	buff.Reset()
-
-	log.Error("error")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m error\n")
-	buff.Reset()
-
-	log.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m errorf\n")
-	buff.Reset()
-
-	log.Alert("alert")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m alert\n")
-	buff.Reset()
-
-	log.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m alertf\n")
-	buff.Reset()
-
-	log.Print("print")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m print\n")
-	buff.Reset()
-
-	log.Printf("%s", "printf")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m printf\n")
-	buff.Reset()
-
-	log.Println("println")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m println\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m panic\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m panicf\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m panicln\n")
-	buff.Reset()
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m debug                     [32mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m debugf                    [32mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m info                      [34mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m infof                     [34mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m notice                    [36;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m noticef                   [36;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m warn                      [33;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m warnf                     [33;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m error                     [31;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m errorf                    [31;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m alert                     [31m[4mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m alertf                    [31m[4mkey[0m=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m panicf                    [31mkey[0m=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m panic                     [31mkey[0m=value\n")
-	buff.Reset()
-
-	cLog.SetLevelColor(log.DebugLevel, log.LightGreen)
-
-	log.Debug("debug")
-	Equal(t, buff.String(), "0000 [32;1m DEBUG[0m debug\n")
-	buff.Reset()
-
-	// year := time.Now().Format("2006")
-	// cLog.UseMiniTimestamp(false)
-	// cLog.SetTimestampFormat("2006")
-
-	// log.Info("info")
-	// Equal(t, buff.String(), "[34m  INFO[0m["+year+"] info\n")
-	// buff.Reset()
-
-	// log.WithFields(log.F("key", "value")).Info("info")
-	// Equal(t, buff.String(), "[34m  INFO[0m["+year+"] info                      [34mkey[0m=value\n")
-	// buff.Reset()
 }
 
-func TestConsoleLoggerCaller(t *testing.T) {
-
+func TestSetFilename(t *testing.T) {
 	buff := new(bytes.Buffer)
 
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(false)
-	cLog.SetChannelBuffer(3)
-	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
-	cLog.SetANSIReset(log.Reset)
+	cLog.SetBuffersAndWorkers(3, 1)
+	cLog.SetTimestampFormat("MST")
+	cLog.SetFilenameDisplay(log.Llongfile)
 
-	log.SetCallerInfo(true)
 	log.RegisterHandler(cLog, log.AllLevels...)
 
-	log.Debug("debug")
-	Equal(t, buff.String(), "0000  DEBUG console_test.go:382 debug\n")
-	buff.Reset()
-
-	log.Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000  DEBUG console_test.go:386 debugf\n")
-	buff.Reset()
-
-	log.Info("info")
-	Equal(t, buff.String(), "0000   INFO console_test.go:390 info\n")
-	buff.Reset()
-
-	log.Infof("%s", "infof")
-	Equal(t, buff.String(), "0000   INFO console_test.go:394 infof\n")
-	buff.Reset()
-
-	log.Notice("notice")
-	Equal(t, buff.String(), "0000 NOTICE console_test.go:398 notice\n")
-	buff.Reset()
-
-	log.Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 NOTICE console_test.go:402 noticef\n")
-	buff.Reset()
-
-	log.Warn("warn")
-	Equal(t, buff.String(), "0000   WARN console_test.go:406 warn\n")
-	buff.Reset()
-
-	log.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000   WARN console_test.go:410 warnf\n")
-	buff.Reset()
-
 	log.Error("error")
-	Equal(t, buff.String(), "0000  ERROR console_test.go:414 error\n")
+	if !strings.Contains(buff.String(), "log/handlers/console/console_test.go:251 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/console/console_test.go:251 error", buff.String())
+	}
 	buff.Reset()
-
-	log.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000  ERROR console_test.go:418 errorf\n")
-	buff.Reset()
-
-	log.Alert("alert")
-	Equal(t, buff.String(), "0000  ALERT console_test.go:422 alert\n")
-	buff.Reset()
-
-	log.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000  ALERT console_test.go:426 alertf\n")
-	buff.Reset()
-
-	log.Print("print")
-	Equal(t, buff.String(), "0000   INFO console_test.go:430 print\n")
-	buff.Reset()
-
-	log.Printf("%s", "printf")
-	Equal(t, buff.String(), "0000   INFO console_test.go:434 printf\n")
-	buff.Reset()
-
-	log.Println("println")
-	Equal(t, buff.String(), "0000   INFO console_test.go:438 println\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, buff.String(), "0000  PANIC console_test.go:442 panic\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, buff.String(), "0000  PANIC console_test.go:446 panicf\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, buff.String(), "0000  PANIC console_test.go:450 panicln\n")
-	buff.Reset()
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "0000  DEBUG console_test.go:455 debug                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000  DEBUG console_test.go:459 debugf                    key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "0000   INFO console_test.go:463 info                      key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "0000   INFO console_test.go:467 infof                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "0000 NOTICE console_test.go:471 notice                    key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 NOTICE console_test.go:475 noticef                   key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "0000   WARN console_test.go:479 warn                      key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000   WARN console_test.go:483 warnf                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "0000  ERROR console_test.go:487 error                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000  ERROR console_test.go:491 errorf                    key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "0000  ALERT console_test.go:495 alert                     key=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000  ALERT console_test.go:499 alertf                    key=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "0000  PANIC console_test.go:503 panicf                    key=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "0000  PANIC console_test.go:507 panic                     key=value\n")
-	buff.Reset()
-
-	func() {
-		defer log.Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\sconsole_test.go:513\\strace\\.*")
-	buff.Reset()
-
-	func() {
-		defer log.Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\sconsole_test.go:521\\stracef\\.*")
-	buff.Reset()
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Trace("trace").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\sconsole_test.go:529\\strace\\.*")
-	buff.Reset()
-
-	func() {
-		defer log.WithFields(log.F("key", "value")).Tracef("tracef").End()
-	}()
-
-	// TODO: finish up regex
-	MatchRegex(t, buff.String(), "^0000\\s\\sTRACE\\sconsole_test.go:537\\stracef\\.*")
-	buff.Reset()
-
-	// year := time.Now().Format("2006")
-	// cLog.UseMiniTimestamp(false)
-	// cLog.SetTimestampFormat("2006")
-
-	// log.Info("info")
-	// Equal(t, buff.String(), "  INFO["+year+"] info\n")
-	// buff.Reset()
 }
 
-func TestConsoleLoggerColorCaller(t *testing.T) {
-
+func TestSetFilenameColor(t *testing.T) {
 	buff := new(bytes.Buffer)
 
 	cLog := New()
 	cLog.SetWriter(buff)
 	cLog.DisplayColor(true)
-	cLog.SetChannelBuffer(3)
-	cLog.SetTimestampFormat(time.RFC3339)
-	cLog.UseMiniTimestamp(true)
+	cLog.SetBuffersAndWorkers(3, 1)
+	cLog.SetTimestampFormat("MST")
+	cLog.SetFilenameDisplay(log.Llongfile)
 
-	log.SetCallerInfo(true)
 	log.RegisterHandler(cLog, log.AllLevels...)
 
-	log.Debug("debug")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m console_test.go:566 debug\n")
-	buff.Reset()
-
-	log.Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m console_test.go:570 debugf\n")
-	buff.Reset()
-
-	log.Info("info")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m console_test.go:574 info\n")
-	buff.Reset()
-
-	log.Infof("%s", "infof")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m console_test.go:578 infof\n")
-	buff.Reset()
-
-	log.Notice("notice")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m console_test.go:582 notice\n")
-	buff.Reset()
-
-	log.Notice("%s", "noticef")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m console_test.go:586 %snoticef\n")
-	buff.Reset()
-
-	log.Warn("warn")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m console_test.go:590 warn\n")
-	buff.Reset()
-
-	log.Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m console_test.go:594 warnf\n")
-	buff.Reset()
-
 	log.Error("error")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m console_test.go:598 error\n")
-	buff.Reset()
-
-	log.Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m console_test.go:602 errorf\n")
-	buff.Reset()
-
-	log.Alert("alert")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m console_test.go:606 alert\n")
-	buff.Reset()
-
-	log.Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m console_test.go:610 alertf\n")
-	buff.Reset()
-
-	log.Print("print")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m console_test.go:614 print\n")
-	buff.Reset()
-
-	log.Printf("%s", "printf")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m console_test.go:618 printf\n")
-	buff.Reset()
-
-	log.Println("println")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m console_test.go:622 println\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panic("panic") }, "panic")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m console_test.go:626 panic\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicf("%s", "panicf") }, "panicf")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m console_test.go:630 panicf\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.Panicln("panicln") }, "panicln")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m console_test.go:634 panicln\n")
-	buff.Reset()
-
-	// WithFields
-	log.WithFields(log.F("key", "value")).Debug("debug")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m console_test.go:639 debug                     [32mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Debugf("%s", "debugf")
-	Equal(t, buff.String(), "0000 [32m DEBUG[0m console_test.go:643 debugf                    [32mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Info("info")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m console_test.go:647 info                      [34mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Infof("%s", "infof")
-	Equal(t, buff.String(), "0000 [34m  INFO[0m console_test.go:651 infof                     [34mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Notice("notice")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m console_test.go:655 notice                    [36;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Noticef("%s", "noticef")
-	Equal(t, buff.String(), "0000 [36;1mNOTICE[0m console_test.go:659 noticef                   [36;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warn("warn")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m console_test.go:663 warn                      [33;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Warnf("%s", "warnf")
-	Equal(t, buff.String(), "0000 [33;1m  WARN[0m console_test.go:667 warnf                     [33;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Error("error")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m console_test.go:671 error                     [31;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Errorf("%s", "errorf")
-	Equal(t, buff.String(), "0000 [31;1m ERROR[0m console_test.go:675 errorf                    [31;1mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alert("alert")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m console_test.go:679 alert                     [31m[4mkey[0m=value\n")
-	buff.Reset()
-
-	log.WithFields(log.F("key", "value")).Alertf("%s", "alertf")
-	Equal(t, buff.String(), "0000 [31m[4m ALERT[0m console_test.go:683 alertf                    [31m[4mkey[0m=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panicf("%s", "panicf") }, "panicf key=value")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m console_test.go:687 panicf                    [31mkey[0m=value\n")
-	buff.Reset()
-
-	PanicMatches(t, func() { log.WithFields(log.F("key", "value")).Panic("panic") }, "panic key=value")
-	Equal(t, buff.String(), "0000 [31m PANIC[0m console_test.go:691 panic                     [31mkey[0m=value\n")
-	buff.Reset()
-
-	cLog.SetLevelColor(log.DebugLevel, log.LightGreen)
-
-	log.Debug("debug")
-	Equal(t, buff.String(), "0000 [32;1m DEBUG[0m console_test.go:697 debug\n")
+	if !strings.Contains(buff.String(), "log/handlers/console/console_test.go:270 error") {
+		t.Errorf("Expected '%s' Got '%s'", "log/handlers/console/console_test.go:270 error", buff.String())
+	}
 	buff.Reset()
 }
 
-func TestConsoleLoggerColorCallerTimeFormat(t *testing.T) {
+type test struct {
+	lvl    log.Level
+	msg    string
+	flds   []log.Field
+	want   string
+	printf string
+}
 
-	year := time.Now().Format("2006")
-	buff := new(bytes.Buffer)
+func getConsoleLoggerTests() []test {
+	return []test{
+		{
+			lvl:  log.DebugLevel,
+			msg:  "debug",
+			flds: nil,
+			want: "UTC  DEBUG debug\n",
+		},
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  DEBUG debugf\n",
+		},
+		{
+			lvl:  log.InfoLevel,
+			msg:  "info",
+			flds: nil,
+			want: "UTC   INFO info\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC   INFO infof\n",
+		},
+		{
+			lvl:  log.NoticeLevel,
+			msg:  "notice",
+			flds: nil,
+			want: "UTC NOTICE notice\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC NOTICE noticef\n",
+		},
+		{
+			lvl:  log.WarnLevel,
+			msg:  "warn",
+			flds: nil,
+			want: "UTC   WARN console_test.go:73 warn\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC   WARN console_test.go:75 warnf\n",
+		},
+		{
+			lvl:  log.ErrorLevel,
+			msg:  "error",
+			flds: nil,
+			want: "UTC  ERROR console_test.go:79 error\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  ERROR console_test.go:81 errorf\n",
+		},
+		{
+			lvl:  log.AlertLevel,
+			msg:  "alert",
+			flds: nil,
+			want: "UTC  ALERT console_test.go:97 alert\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  ALERT console_test.go:99 alertf\n",
+		},
+		{
+			lvl:  log.PanicLevel,
+			msg:  "panic",
+			flds: nil,
+			want: "UTC  PANIC console_test.go:90 panic\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  PANIC console_test.go:92 panicf\n",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  DEBUG debug key=value\n",
+		},
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  DEBUG debugf key=value\n",
+		},
+		{
+			lvl: log.InfoLevel,
+			msg: "info",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   INFO info key=value\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   INFO infof key=value\n",
+		},
+		{
+			lvl: log.NoticeLevel,
+			msg: "notice",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC NOTICE notice key=value\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC NOTICE noticef key=value\n",
+		},
+		{
+			lvl: log.WarnLevel,
+			msg: "warn",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   WARN console_test.go:73 warn key=value\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC   WARN console_test.go:75 warnf key=value\n",
+		},
+		{
+			lvl: log.ErrorLevel,
+			msg: "error",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ERROR console_test.go:79 error key=value\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ERROR console_test.go:81 errorf key=value\n",
+		},
+		{
+			lvl: log.AlertLevel,
+			msg: "alert",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ALERT console_test.go:97 alert key=value\n",
+		},
+		{
+			lvl: log.AlertLevel,
+			msg: "alert",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ALERT console_test.go:97 alert key=value\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  ALERT console_test.go:99 alertf key=value\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  PANIC console_test.go:92 panicf key=value\n",
+		},
+		{
+			lvl: log.PanicLevel,
+			msg: "panic",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  PANIC console_test.go:90 panic key=value\n",
+		},
+		{
+			lvl:  log.TraceLevel,
+			msg:  "trace",
+			flds: nil,
+			want: "UTC  TRACE trace",
+		},
+		{
+			lvl:    log.TraceLevel,
+			msg:    "tracef",
+			printf: "%s",
+			flds:   nil,
+			want:   "UTC  TRACE tracef",
+		},
+		{
+			lvl: log.TraceLevel,
+			msg: "trace",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  TRACE trace key=value",
+		},
+		{
+			lvl:    log.TraceLevel,
+			msg:    "tracef",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC  TRACE tracef key=value",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "string"),
+				log.F("key", int(1)),
+				log.F("key", int8(2)),
+				log.F("key", int16(3)),
+				log.F("key", int32(4)),
+				log.F("key", int64(5)),
+				log.F("key", uint(1)),
+				log.F("key", uint8(2)),
+				log.F("key", uint16(3)),
+				log.F("key", uint32(4)),
+				log.F("key", uint64(5)),
+				log.F("key", true),
+				log.F("key", struct{ value string }{"struct"}),
+			},
+			want: "UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n",
+		},
+	}
+}
 
-	cLog := New()
-	cLog.SetWriter(buff)
-	cLog.DisplayColor(true)
-	cLog.SetChannelBuffer(3)
-	cLog.SetTimestampFormat("2006")
-
-	log.SetCallerInfo(true)
-	log.RegisterHandler(cLog, log.AllLevels...)
-
-	log.Debug("debug")
-	Equal(t, buff.String(), year+" [32m DEBUG[0m console_test.go:716 debug\n")
-	buff.Reset()
+func getConsoleLoggerColorTests() []test {
+	return []test{
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [32m DEBUG[0m debugf\n",
+		},
+		{
+			lvl:  log.DebugLevel,
+			msg:  "debug",
+			flds: nil,
+			want: "UTC [32m DEBUG[0m debug\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [34m  INFO[0m infof\n",
+		},
+		{
+			lvl:  log.InfoLevel,
+			msg:  "info",
+			flds: nil,
+			want: "UTC [34m  INFO[0m info\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [36;1mNOTICE[0m noticef\n",
+		},
+		{
+			lvl:  log.NoticeLevel,
+			msg:  "notice",
+			flds: nil,
+			want: "UTC [36;1mNOTICE[0m notice\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [33;1m  WARN[0m console_test.go:170 warnf\n",
+		},
+		{
+			lvl:  log.WarnLevel,
+			msg:  "warn",
+			flds: nil,
+			want: "UTC [33;1m  WARN[0m console_test.go:168 warn\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [31;1m ERROR[0m console_test.go:176 errorf\n",
+		},
+		{
+			lvl:  log.ErrorLevel,
+			msg:  "error",
+			flds: nil,
+			want: "UTC [31;1m ERROR[0m console_test.go:174 error\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [31m[4m ALERT[0m console_test.go:194 alertf\n",
+		},
+		{
+			lvl:  log.AlertLevel,
+			msg:  "alert",
+			flds: nil,
+			want: "UTC [31m[4m ALERT[0m console_test.go:192 alert\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds:   nil,
+			want: "UTC [31m PANIC[0m console_test.go:187 panicf\n",
+		},
+		{
+			lvl:  log.PanicLevel,
+			msg:  "panic",
+			flds: nil,
+			want: "UTC [31m PANIC[0m console_test.go:185 panic\n",
+		},
+		{
+			lvl:    log.DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [32m DEBUG[0m debugf [32mkey[0m=value\n",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [32m DEBUG[0m debug [32mkey[0m=value\n",
+		},
+		{
+			lvl:    log.InfoLevel,
+			msg:    "infof",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [34m  INFO[0m infof [34mkey[0m=value\n",
+		},
+		{
+			lvl: log.InfoLevel,
+			msg: "info",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [34m  INFO[0m info [34mkey[0m=value\n",
+		},
+		{
+			lvl:    log.NoticeLevel,
+			msg:    "noticef",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [36;1mNOTICE[0m noticef [36;1mkey[0m=value\n",
+		},
+		{
+			lvl: log.NoticeLevel,
+			msg: "notice",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [36;1mNOTICE[0m notice [36;1mkey[0m=value\n",
+		},
+		{
+			lvl:    log.WarnLevel,
+			msg:    "warnf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [33;1m  WARN[0m console_test.go:170 warnf [33;1mkey[0m=value\n",
+		},
+		{
+			lvl: log.WarnLevel,
+			msg: "warn",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [33;1m  WARN[0m console_test.go:168 warn [33;1mkey[0m=value\n",
+		},
+		{
+			lvl:    log.ErrorLevel,
+			msg:    "errorf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31;1m ERROR[0m console_test.go:176 errorf [31;1mkey[0m=value\n",
+		},
+		{
+			lvl: log.ErrorLevel,
+			msg: "error",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31;1m ERROR[0m console_test.go:174 error [31;1mkey[0m=value\n",
+		},
+		{
+			lvl:    log.AlertLevel,
+			msg:    "alertf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m[4m ALERT[0m console_test.go:194 alertf [31m[4mkey[0m=value\n",
+		},
+		{
+			lvl: log.AlertLevel,
+			msg: "alert",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m[4m ALERT[0m console_test.go:192 alert [31m[4mkey[0m=value\n",
+		},
+		{
+			lvl:    log.PanicLevel,
+			msg:    "panicf",
+			printf: "%s",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m PANIC[0m console_test.go:187 panicf [31mkey[0m=value\n",
+		},
+		{
+			lvl: log.PanicLevel,
+			msg: "panic",
+			flds: []log.Field{
+				log.F("key", "value"),
+			},
+			want: "UTC [31m PANIC[0m console_test.go:185 panic [31mkey[0m=value\n",
+		},
+		{
+			lvl: log.DebugLevel,
+			msg: "debug",
+			flds: []log.Field{
+				log.F("key", "string"),
+				log.F("key", int(1)),
+				log.F("key", int8(2)),
+				log.F("key", int16(3)),
+				log.F("key", int32(4)),
+				log.F("key", int64(5)),
+				log.F("key", uint(1)),
+				log.F("key", uint8(2)),
+				log.F("key", uint16(3)),
+				log.F("key", uint32(4)),
+				log.F("key", uint64(5)),
+				log.F("key", true),
+				log.F("key", struct{ value string }{"struct"}),
+			},
+			want: "UTC [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=true [32mkey[0m={struct}\n",
+		},
+	}
 }

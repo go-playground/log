@@ -1,39 +1,43 @@
 package syslog
 
 import (
-	"bytes"
 	"fmt"
+	stdlog "log"
 	"log/syslog"
-	"sync"
-	"time"
+	"os"
+	"strconv"
 
 	"github.com/go-playground/log"
 )
 
-const (
-	colorNoFields         = "%s %s%6s%s %s"
-	colorKeyValue         = " %s%s%s=%v"
-	colorNoFieldsCaller   = "%s %s%6s%s %s:%d %s"
-	noColorNoFields       = "%s %6s %s"
-	noColorKeyValue       = " %s=%v"
-	noColorNoFieldsCaller = "%s %6s %s:%d %s"
-)
+// FormatFunc is the function that the workers use to create
+// a new Formatter per worker allowing reusable go routine safe
+// variable to be used within your Formatter function.
+type FormatFunc func() Formatter
 
-// Formatter is the function used to format the syslog entry
-type Formatter func(e *log.Entry) string
+// Formatter is the function used to format the Redis entry
+type Formatter func(e *log.Entry) []byte
+
+const (
+	space  = byte(' ')
+	equals = byte('=')
+	colon  = byte(':')
+	base10 = 10
+	v      = "%v"
+	gopath = "GOPATH"
+)
 
 // Syslog is an instance of the syslog logger
 type Syslog struct {
-	buffer             uint
-	colors             [9]log.ANSIEscSeq
-	ansiReset          log.ANSIEscSeq
-	writer             *syslog.Writer
-	formatter          Formatter
-	timestampFormat    string
-	format             string
-	formatKeyValue     string
-	displayColor       bool
-	hasCustomFormatter bool
+	buffer          uint
+	numWorkers      uint
+	colors          [9]log.ANSIEscSeq
+	writer          *syslog.Writer
+	formatFunc      FormatFunc
+	timestampFormat string
+	gopath          string
+	fileDisplay     log.FilenameDisplay
+	displayColor    bool
 }
 
 var (
@@ -49,10 +53,6 @@ var (
 		log.AlertLevel:  log.Red + log.Underscore,
 		log.FatalLevel:  log.Red + log.Underscore + log.Blink,
 	}
-
-	syslogBuffPool = &sync.Pool{New: func() interface{} {
-		return new(bytes.Buffer)
-	}}
 )
 
 // New returns a new instance of the syslog logger
@@ -62,15 +62,15 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	var err error
 
 	s := &Syslog{
-		buffer:             0,
-		colors:             defaultColors,
-		ansiReset:          log.Reset,
-		displayColor:       false,
-		timestampFormat:    time.RFC3339Nano,
-		hasCustomFormatter: false,
+		buffer:          0,
+		numWorkers:      1,
+		colors:          defaultColors,
+		displayColor:    false,
+		timestampFormat: log.DefaultTimeFormat,
+		fileDisplay:     log.Lshortfile,
 	}
 
-	s.formatter = s.defaultFormatEntry
+	s.formatFunc = s.defaultFormatFunc
 
 	if s.writer, err = syslog.Dial(network, raddr, priority, tag); err != nil {
 		return nil, err
@@ -79,74 +79,64 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	return s, nil
 }
 
-// SetLevelColor updates Console's level color values
-func (s *Syslog) SetLevelColor(l log.Level, color log.ANSIEscSeq) {
-	s.colors[l] = color
+// SetFilenameDisplay tells Syslog the filename, when present, how to display
+func (s *Syslog) SetFilenameDisplay(fd log.FilenameDisplay) {
+	s.fileDisplay = fd
 }
 
-// SetANSIReset sets the ANSI Reset sequence
-func (s *Syslog) SetANSIReset(code log.ANSIEscSeq) {
-	s.ansiReset = code
-}
-
-// DisplayColor tells Console to output in color or not
+// DisplayColor tells Syslog to output in color or not
 // Default is : true
 func (s *Syslog) DisplayColor(color bool) {
 	s.displayColor = color
 }
 
-// SetTimestampFormat sets Console's timestamp output format
-// Default is : time.RFC3339Nano
+// SetTimestampFormat sets Syslog's timestamp output format
+// Default is : 2006-01-02T15:04:05.000000000Z07:00
 func (s *Syslog) SetTimestampFormat(format string) {
 	s.timestampFormat = format
 }
 
-// SetFormatter sets the  Syslog entry formatter
-// Default is : defaultFormatEntry
-func (s *Syslog) SetFormatter(f Formatter) {
-	s.formatter = f
-	s.hasCustomFormatter = true
+// SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
+// These settings should be thought about together, hence setting both in the same function.
+func (s *Syslog) SetBuffersAndWorkers(size uint, workers uint) {
+	s.buffer = size
+
+	if workers == 0 {
+		// just in case no log registered yet
+		stdlog.Println("Invalid number of workers specified, setting to 1")
+		log.Warn("Invalid number of workers specified, setting to 1")
+
+		workers = 1
+	}
+
+	s.numWorkers = workers
 }
 
-// SetChannelBuffer tells Syslog what the channel buffer size should be
-// Default is : 0
-func (s *Syslog) SetChannelBuffer(i uint) {
-	s.buffer = i
+// SetFormatFunc sets FormatFunc each worker will call to get
+// a Formatter func
+func (s *Syslog) SetFormatFunc(fn FormatFunc) {
+	s.formatFunc = fn
 }
 
 // Run starts the logger consuming on the returned channed
 func (s *Syslog) Run() chan<- *log.Entry {
 
-	// in a big high traffic app, set a higher buffer
-	ch := make(chan *log.Entry, s.buffer)
-
-	if !s.hasCustomFormatter {
-
-		// GetCallerInfo may want to add logic to not solely rely upon this
-		if log.GetCallerInfo() {
-			if s.displayColor {
-				s.format = colorNoFieldsCaller
-				s.formatKeyValue = colorKeyValue
-				s.formatter = s.defaultFormatEntryColorCaller
-			} else {
-				s.format = noColorNoFieldsCaller
-				s.formatKeyValue = noColorKeyValue
-				s.formatter = s.defaultFormatEntryCaller
-			}
-		} else {
-			if s.displayColor {
-				s.format = colorNoFields
-				s.formatKeyValue = colorKeyValue
-				s.formatter = s.defaultFormatEntryColor
-			} else {
-				s.format = noColorNoFields
-				s.formatKeyValue = noColorKeyValue
-				s.formatter = s.defaultFormatEntry
-			}
+	// pre-setup
+	if s.fileDisplay == log.Llongfile {
+		// gather $GOPATH for use in stripping off of full name
+		// if not found still ok as will be blank
+		s.gopath = os.Getenv(gopath)
+		if len(s.gopath) != 0 {
+			s.gopath += string(os.PathSeparator) + "src" + string(os.PathSeparator)
 		}
 	}
 
-	go s.handleLog(ch)
+	// in a big high traffic app, set a higher buffer
+	ch := make(chan *log.Entry, s.buffer)
+
+	for i := 0; i <= int(s.numWorkers); i++ {
+		go s.handleLog(ch)
+	}
 
 	return ch
 }
@@ -157,9 +147,11 @@ func (s *Syslog) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
 	var line string
 
+	formatter := s.formatFunc()
+
 	for e = range entries {
 
-		line = s.formatter(e)
+		line = string(formatter(e))
 
 		switch e.Level {
 		case log.DebugLevel:
@@ -182,88 +174,199 @@ func (s *Syslog) handleLog(entries <-chan *log.Entry) {
 	}
 }
 
-func (s *Syslog) defaultFormatEntry(e *log.Entry) string {
+func (s *Syslog) defaultFormatFunc() Formatter {
 
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
+	var b []byte
+	var file string
+	var lvl string
+	var i int
 
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, e.Message)
+	if s.displayColor {
 
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, f.Key, f.Value)
-	}
+		var color log.ANSIEscSeq
 
-	str := buff.String()
-	syslogBuffPool.Put(buff)
+		return func(e *log.Entry) []byte {
+			b = b[0:0]
+			color = s.colors[e.Level]
 
-	return str
-}
+			if e.Line == 0 {
 
-func (s *Syslog) defaultFormatEntryColor(e *log.Entry) string {
+				b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+				b = append(b, space)
+				b = append(b, color...)
 
-	color := s.colors[e.Level]
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
+				lvl = e.Level.String()
 
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, e.Message)
+				for i = 0; i < 6-len(lvl); i++ {
+					b = append(b, space)
+				}
+				b = append(b, lvl...)
+				b = append(b, log.Reset...)
+				b = append(b, space)
+				b = append(b, e.Message...)
 
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, color, f.Key, s.ansiReset, f.Value)
-	}
+			} else {
+				file = e.File
 
-	str := buff.String()
-	syslogBuffPool.Put(buff)
+				if s.fileDisplay == log.Lshortfile {
 
-	return str
-}
+					for i = len(file) - 1; i > 0; i-- {
+						if file[i] == '/' {
+							file = file[i+1:]
+							break
+						}
+					}
+				} else {
+					file = file[len(s.gopath):]
+				}
 
-func (s *Syslog) defaultFormatEntryCaller(e *log.Entry) string {
+				b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+				b = append(b, space)
+				b = append(b, color...)
 
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
+				lvl = e.Level.String()
 
-	file := e.File
-	for i := len(file) - 1; i > 0; i-- {
-		if file[i] == '/' {
-			file = file[i+1:]
-			break
+				for i = 0; i < 6-len(lvl); i++ {
+					b = append(b, space)
+				}
+
+				b = append(b, lvl...)
+				b = append(b, log.Reset...)
+				b = append(b, space)
+				b = append(b, file...)
+				b = append(b, colon)
+				b = strconv.AppendInt(b, int64(e.Line), base10)
+				b = append(b, space)
+				b = append(b, e.Message...)
+			}
+
+			for _, f := range e.Fields {
+				b = append(b, space)
+				b = append(b, color...)
+				b = append(b, f.Key...)
+				b = append(b, log.Reset...)
+				b = append(b, equals)
+
+				switch f.Value.(type) {
+				case string:
+					b = append(b, f.Value.(string)...)
+				case int:
+					b = strconv.AppendInt(b, int64(f.Value.(int)), base10)
+				case int8:
+					b = strconv.AppendInt(b, int64(f.Value.(int8)), base10)
+				case int16:
+					b = strconv.AppendInt(b, int64(f.Value.(int16)), base10)
+				case int32:
+					b = strconv.AppendInt(b, int64(f.Value.(int32)), base10)
+				case int64:
+					b = strconv.AppendInt(b, f.Value.(int64), base10)
+				case uint:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint)), base10)
+				case uint8:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint8)), base10)
+				case uint16:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint16)), base10)
+				case uint32:
+					b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
+				case uint64:
+					b = strconv.AppendUint(b, f.Value.(uint64), base10)
+				case bool:
+					b = strconv.AppendBool(b, f.Value.(bool))
+				default:
+					b = append(b, fmt.Sprintf(v, f.Value)...)
+				}
+			}
+
+			return b
 		}
 	}
 
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), e.Level, file, e.Line, e.Message)
+	return func(e *log.Entry) []byte {
+		b = b[0:0]
 
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, f.Key, f.Value)
-	}
+		if e.Line == 0 {
 
-	str := buff.String()
-	syslogBuffPool.Put(buff)
+			b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+			b = append(b, space)
 
-	return str
-}
+			lvl = e.Level.String()
 
-func (s *Syslog) defaultFormatEntryColorCaller(e *log.Entry) string {
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
 
-	color := s.colors[e.Level]
-	buff := syslogBuffPool.Get().(*bytes.Buffer)
-	buff.Reset()
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, e.Message...)
 
-	file := e.File
-	for i := len(file) - 1; i > 0; i-- {
-		if file[i] == '/' {
-			file = file[i+1:]
-			break
+		} else {
+			file = e.File
+
+			if s.fileDisplay == log.Lshortfile {
+
+				for i = len(file) - 1; i > 0; i-- {
+					if file[i] == '/' {
+						file = file[i+1:]
+						break
+					}
+				}
+			} else {
+				file = file[len(s.gopath):]
+			}
+
+			b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+			b = append(b, space)
+
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
+				b = append(b, space)
+			}
+
+			b = append(b, lvl...)
+			b = append(b, space)
+			b = append(b, file...)
+			b = append(b, colon)
+			b = strconv.AppendInt(b, int64(e.Line), base10)
+			b = append(b, space)
+			b = append(b, e.Message...)
 		}
+
+		for _, f := range e.Fields {
+			b = append(b, space)
+			b = append(b, f.Key...)
+			b = append(b, equals)
+
+			switch f.Value.(type) {
+			case string:
+				b = append(b, f.Value.(string)...)
+			case int:
+				b = strconv.AppendInt(b, int64(f.Value.(int)), base10)
+			case int8:
+				b = strconv.AppendInt(b, int64(f.Value.(int8)), base10)
+			case int16:
+				b = strconv.AppendInt(b, int64(f.Value.(int16)), base10)
+			case int32:
+				b = strconv.AppendInt(b, int64(f.Value.(int32)), base10)
+			case int64:
+				b = strconv.AppendInt(b, f.Value.(int64), base10)
+			case uint:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint)), base10)
+			case uint8:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint8)), base10)
+			case uint16:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint16)), base10)
+			case uint32:
+				b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
+			case uint64:
+				b = strconv.AppendUint(b, f.Value.(uint64), base10)
+			case bool:
+				b = strconv.AppendBool(b, f.Value.(bool))
+			default:
+				b = append(b, fmt.Sprintf(v, f.Value)...)
+			}
+		}
+
+		return b
 	}
-
-	fmt.Fprintf(buff, s.format, e.Timestamp.Format(s.timestampFormat), color, e.Level, s.ansiReset, file, e.Line, e.Message)
-
-	for _, f := range e.Fields {
-		fmt.Fprintf(buff, s.formatKeyValue, color, f.Key, s.ansiReset, f.Value)
-	}
-
-	str := buff.String()
-	syslogBuffPool.Put(buff)
-
-	return str
 }
