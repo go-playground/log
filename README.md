@@ -194,6 +194,24 @@ Why? because my time is spread pretty thin maintaining all of the libraries I ha
 it is so freeing not to worry about it and will help me keep pouring out bigger and better
 things for you the community.
 
+Benchmarks
+----------
+###### Run on MacBook Pro (Retina, 15-inch, Late 2013) 2.6 GHz Intel Core i7 16 GB 1600 MHz DDR3 using Go version go1.6.2 darwin/amd64
+NOTE: only putting benchmarks at others request, by no means does the number of allocations 
+make one log library better than another!
+```go
+go test -cpu=4 -bench=. -benchmem=true
+
+PASS
+BenchmarkLogConsoleTenFieldsParallel-4	 1000000	      1930 ns/op	    1113 B/op	      35 allocs/op
+BenchmarkLogConsoleSimpleParallel-4   	 3000000	       450 ns/op	      88 B/op	       4 allocs/op
+BenchmarkLogrusText10Fields-4         	  300000	      3943 ns/op	    4291 B/op	      63 allocs/op
+BenchmarkLogrusTextSimple-4           	 2000000	       633 ns/op	     672 B/op	      15 allocs/op
+BenchmarkLog1510Fields-4              	  100000	     16375 ns/op	    4378 B/op	      92 allocs/op
+BenchmarkLog15Simple-4                	 1000000	      1982 ns/op	     320 B/op	       9 allocs/op
+ok  	github.com/go-playground/log/benchmarks	10.716s
+```
+
 Special Thanks
 --------------
 Special thanks to the following libraries that inspired

@@ -69,7 +69,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func BenchmarkConsoleTenFieldsParallel(b *testing.B) {
+func BenchmarkLogConsoleTenFieldsParallel(b *testing.B) {
 
 	b.ResetTimer()
 	// log setup in TestMain
@@ -92,7 +92,7 @@ func BenchmarkConsoleTenFieldsParallel(b *testing.B) {
 	})
 }
 
-func BenchmarkConsoleSimpleFieldsParallel(b *testing.B) {
+func BenchmarkLogConsoleSimpleParallel(b *testing.B) {
 
 	b.ResetTimer()
 	// log setup in TestMain
