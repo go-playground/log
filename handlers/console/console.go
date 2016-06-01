@@ -1,6 +1,7 @@
 package console
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	stdlog "log"
@@ -39,6 +40,7 @@ type Console struct {
 	gopath          string
 	fileDisplay     log.FilenameDisplay
 	displayColor    bool
+	redirStdOutput  bool
 }
 
 // Colors mapping.
@@ -74,6 +76,12 @@ func New() *Console {
 // SetFilenameDisplay tells Console the filename, when present, how to display
 func (c *Console) SetFilenameDisplay(fd log.FilenameDisplay) {
 	c.fileDisplay = fd
+}
+
+// RedirectSTDLogOutput tells Console to redirect the std Logger output
+// to the log package itself.
+func (c *Console) RedirectSTDLogOutput(b bool) {
+	c.redirStdOutput = b
 }
 
 // DisplayColor tells Console to output in color or not
@@ -136,7 +144,36 @@ func (c *Console) Run() chan<- *log.Entry {
 		go c.handleLog(ch)
 	}
 
+	// let's check to see if we should hanlde the std log messages as well
+	if c.redirStdOutput {
+
+		done := make(chan struct{})
+
+		go handleStdLogger(done)
+
+		<-done // have to wait, it was running too quickly and some messages can be lost
+	}
+
 	return ch
+}
+
+// this will redirect the output of
+func handleStdLogger(done chan<- struct{}) {
+	r, w := io.Pipe()
+	defer r.Close()
+	defer w.Close()
+
+	stdlog.SetOutput(w)
+
+	scanner := bufio.NewScanner(r)
+
+	go func() {
+		done <- struct{}{}
+	}()
+
+	for scanner.Scan() {
+		log.WithFields(log.F("stdlog", true)).Info(scanner.Text())
+	}
 }
 
 // handleLog consumes and logs any Entry's passed to the channel

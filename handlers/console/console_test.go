@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	stdlog "log"
 	"strings"
 	"testing"
 
@@ -19,7 +20,6 @@ import (
 // go test -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
 
 func TestConsoleLogger(t *testing.T) {
-
 	tests := getConsoleLoggerTests()
 
 	buff := new(bytes.Buffer)
@@ -272,6 +272,29 @@ func TestSetFilenameColor(t *testing.T) {
 		t.Errorf("Expected '%s' Got '%s'", "log/handlers/console/console_test.go:270 error", buff.String())
 	}
 	buff.Reset()
+}
+
+func TestConsoleSTDLogCapturing(t *testing.T) {
+
+	buff := new(bytes.Buffer)
+
+	cLog := New()
+	cLog.SetWriter(buff)
+	cLog.DisplayColor(false)
+	cLog.SetBuffersAndWorkers(3, 3)
+	cLog.SetTimestampFormat("MST")
+	cLog.RedirectSTDLogOutput(true)
+	log.RegisterHandler(cLog, log.AllLevels...)
+
+	stdlog.Println("STD LOG message")
+
+	s := buff.String()
+
+	expected := "STD LOG message stdlog=true"
+
+	if !strings.Contains(s, expected) {
+		t.Errorf("Expected '%s' Got '%s'", expected, s)
+	}
 }
 
 type test struct {
