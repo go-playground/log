@@ -172,7 +172,7 @@ func handleStdLogger(done chan<- struct{}) {
 	}()
 
 	for scanner.Scan() {
-		log.WithFields(log.F("stdlog", true)).Info(scanner.Text())
+		log.WithFields(log.F("stdlog", true)).Notice(scanner.Text())
 	}
 }
 
