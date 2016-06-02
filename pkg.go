@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 )
 
@@ -175,6 +176,13 @@ func Printf(msg string, v ...interface{}) {
 // WithFields returns a log Entry with fields set
 func WithFields(fields ...Field) LeveledLogger {
 	return newEntry(InfoLevel, "", fields, skipLevel)
+}
+
+// StackTrace creates a new log Entry with pre-populated field with stack trace.
+func StackTrace() LeveledLogger {
+	trace := make([]byte, 1<<16)
+	n := runtime.Stack(trace, true)
+	return newEntry(DebugLevel, "", []Field{F("stack trace", string(trace[:n])+"\n")}, skipLevel)
 }
 
 // HandleEntry send the logs entry out to all the registered handlers

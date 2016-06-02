@@ -260,6 +260,22 @@ func TestConsoleLoggerCaller1(t *testing.T) {
 	if buff.String() != "INFO log_test.go:256 Test Message\n" {
 		t.Errorf("test Custom Entry: Expected '%s' Got '%s'", "INFO log_test.go:256 Test Message\n", buff.String())
 	}
+
+	buff.Reset()
+	Logger.StackTrace().Debug()
+
+	expected := "DEBUG log_test.go:265  stack trace="
+	if !strings.HasPrefix(buff.String(), expected) {
+		t.Errorf("Expected Prefix '%s' Got '%s'", expected, buff.String())
+	}
+
+	buff.Reset()
+	Logger.WithFields(Logger.F("key", "value")).StackTrace().Debug()
+
+	expected = "DEBUG log_test.go:273  key=value stack trace="
+	if !strings.HasPrefix(buff.String(), expected) {
+		t.Errorf("Expected Prefix '%s' Got '%s'", expected, buff.String())
+	}
 }
 
 func TestLevel(t *testing.T) {

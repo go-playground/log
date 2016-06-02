@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -193,6 +194,20 @@ func (e *Entry) Fatalf(msg string, v ...interface{}) {
 	e.Message = fmt.Sprintf(msg, v...)
 	Logger.HandleEntry(e)
 	exitFunc(1)
+}
+
+// WithFields adds the provided fieldsto the current entry
+func (e *Entry) WithFields(fields ...Field) LeveledLogger {
+	e.Fields = append(e.Fields, fields...)
+	return e
+}
+
+// StackTrace adds a field with stack trace to the current log Entry.
+func (e *Entry) StackTrace() LeveledLogger {
+	trace := make([]byte, 1<<16)
+	n := runtime.Stack(trace, true)
+	e.Fields = append(e.Fields, F("stack trace", string(trace[:n])+"\n"))
+	return e
 }
 
 // Consumed lets the Entry and subsequently the Logger

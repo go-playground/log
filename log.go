@@ -105,15 +105,11 @@ type LeveledLogger interface {
 	Panicf(msg string, v ...interface{})
 	Alertf(msg string, v ...interface{})
 	Fatalf(msg string, v ...interface{})
-}
-
-// FieldLeveledLogger interface for logging by level and WithFields
-type FieldLeveledLogger interface {
-	LeveledLogger
 	WithFields(...Field) LeveledLogger
+	StackTrace() LeveledLogger
 }
 
-var _ FieldLeveledLogger = Logger
+var _ LeveledLogger = Logger
 
 // Debug level formatted message.
 func (l *logger) Debug(v ...interface{}) {
@@ -253,6 +249,13 @@ func (l *logger) F(key string, value interface{}) Field {
 // WithFields returns a log Entry with fields set
 func (l *logger) WithFields(fields ...Field) LeveledLogger {
 	return newEntry(InfoLevel, "", fields, skipLevel)
+}
+
+// StackTrace creates a new log Entry with pre-populated field with stack trace.
+func (l *logger) StackTrace() LeveledLogger {
+	trace := make([]byte, 1<<16)
+	n := runtime.Stack(trace, true)
+	return newEntry(DebugLevel, "", []Field{F("stack trace", string(trace[:n])+"\n")}, skipLevel)
 }
 
 func (l *logger) HandleEntry(e *Entry) {

@@ -401,6 +401,22 @@ func TestConsoleLoggerCaller2(t *testing.T) {
 	if buff.String() != "INFO pkg_test.go:399 Test Message\n" {
 		t.Errorf("test Custom Entry: Expected '%s' Got '%s'", "INFO pkg_test.go:399 Test Message\n", buff.String())
 	}
+
+	buff.Reset()
+	StackTrace().Debug()
+
+	expected := "DEBUG pkg_test.go:406  stack trace="
+	if !strings.HasPrefix(buff.String(), expected) {
+		t.Errorf("Expected Prefix '%s' Got '%s'", expected, buff.String())
+	}
+
+	buff.Reset()
+	StackTrace().WithFields(F("key", "value")).Debug()
+
+	expected = "DEBUG pkg_test.go:414  stack trace="
+	if !strings.HasPrefix(buff.String(), expected) {
+		t.Errorf("Expected Prefix '%s' Got '%s'", expected, buff.String())
+	}
 }
 
 func TestFatal2(t *testing.T) {
