@@ -21,17 +21,17 @@ type FormatFunc func() Formatter
 type Formatter func(e *log.Entry) *gomail.Message
 
 const (
-	space           = byte(' ')
-	equals          = byte('=')
-	colon           = byte(':')
-	base10          = 10
-	v               = "%v"
 	gopath          = "GOPATH"
 	contentType     = "text/html"
 	defaultTemplate = `<!DOCTYPE html>
 <html>
     <body>
         <h2>{{ .Message }}</h2>
+        {{ if ne .ApplicationID "" }}
+            <h4>{{ .ApplicationID }}</h4>
+        {{ end }}
+        <p>{{ .Level.String }}</p>
+        <p>{{ ts . }}</p>
         {{ if ne .Line 0 }}
             {{ display_file . }}:{{ .Line }}
         {{ end }}
@@ -159,6 +159,10 @@ func (email *Email) Run() chan<- *log.Entry {
 				} else {
 					file = file[len(email.gopath):]
 				}
+				return
+			},
+			"ts": func(e *log.Entry) (ts string) {
+				ts = e.Timestamp.Format(email.timestampFormat)
 				return
 			},
 		},
