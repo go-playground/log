@@ -16,7 +16,7 @@ import (
 // FormatFunc is the function that the workers use to create
 // a new Formatter per worker allowing reusable go routine safe
 // variable to be used within your Formatter function.
-type FormatFunc func(h *HTTP) Formatter
+type FormatFunc func(h HTTP) Formatter
 
 // Formatter is the function used to format the HTTP entry
 type Formatter func(e *log.Entry) []byte
@@ -30,8 +30,20 @@ const (
 	gopath = "GOPATH"
 )
 
+// HTTP interface to allow for defining handlers based upon this one.
+type HTTP interface {
+	SetFilenameDisplay(fd log.FilenameDisplay)
+	FilenameDisplay() log.FilenameDisplay
+	SetBuffersAndWorkers(size uint, workers uint)
+	SetTimestampFormat(format string)
+	TimestampFormat() string
+	GOPATH() string
+	SetFormatFunc(fn FormatFunc)
+	Run() chan<- *log.Entry
+}
+
 // HTTP is an instance of the http logger
-type HTTP struct {
+type internalHTTP struct {
 	buffer          uint // channel buffer
 	numWorkers      uint
 	remoteHost      string
@@ -44,14 +56,16 @@ type HTTP struct {
 	fileDisplay     log.FilenameDisplay
 }
 
+var _ HTTP = new(internalHTTP)
+
 // New returns a new instance of the http logger
-func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error) {
+func New(remoteHost string, method string, header stdhttp.Header) (HTTP, error) {
 
 	if _, err := url.Parse(remoteHost); err != nil {
 		return nil, err
 	}
 
-	return &HTTP{
+	return &internalHTTP{
 		buffer:          0,
 		remoteHost:      remoteHost,
 		numWorkers:      1,
@@ -65,18 +79,18 @@ func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error)
 }
 
 // SetFilenameDisplay tells HTTP the filename, when present, how to display
-func (h *HTTP) SetFilenameDisplay(fd log.FilenameDisplay) {
+func (h *internalHTTP) SetFilenameDisplay(fd log.FilenameDisplay) {
 	h.fileDisplay = fd
 }
 
 // FilenameDisplay returns Console's current filename display setting
-func (h *HTTP) FilenameDisplay() log.FilenameDisplay {
+func (h *internalHTTP) FilenameDisplay() log.FilenameDisplay {
 	return h.fileDisplay
 }
 
 // SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
 // These settings should be thought about together, hence setting both in the same function.
-func (h *HTTP) SetBuffersAndWorkers(size uint, workers uint) {
+func (h *internalHTTP) SetBuffersAndWorkers(size uint, workers uint) {
 	h.buffer = size
 
 	if workers == 0 {
@@ -92,28 +106,28 @@ func (h *HTTP) SetBuffersAndWorkers(size uint, workers uint) {
 
 // SetTimestampFormat sets HTTP's timestamp output format
 // Default is : "2006-01-02T15:04:05.000000000Z07:00"
-func (h *HTTP) SetTimestampFormat(format string) {
+func (h *internalHTTP) SetTimestampFormat(format string) {
 	h.timestampFormat = format
 }
 
 // TimestampFormat returns HTTP's current timestamp output format
-func (h *HTTP) TimestampFormat() string {
+func (h *internalHTTP) TimestampFormat() string {
 	return h.timestampFormat
 }
 
 // GOPATH returns the GOPATH calculated by HTTP
-func (h *HTTP) GOPATH() string {
+func (h *internalHTTP) GOPATH() string {
 	return h.gopath
 }
 
 // SetFormatFunc sets FormatFunc each worker will call to get
 // a Formatter func
-func (h *HTTP) SetFormatFunc(fn FormatFunc) {
+func (h *internalHTTP) SetFormatFunc(fn FormatFunc) {
 	h.formatFunc = fn
 }
 
 // Run starts the logger consuming on the returned channed
-func (h *HTTP) Run() chan<- *log.Entry {
+func (h *internalHTTP) Run() chan<- *log.Entry {
 
 	// pre-setup
 	if h.fileDisplay == log.Llongfile {
@@ -133,7 +147,7 @@ func (h *HTTP) Run() chan<- *log.Entry {
 	return ch
 }
 
-func defaultFormatFunc(h *HTTP) Formatter {
+func defaultFormatFunc(h HTTP) Formatter {
 
 	var b []byte
 	var file string
@@ -233,7 +247,7 @@ func defaultFormatFunc(h *HTTP) Formatter {
 	}
 }
 
-func (h *HTTP) handleLog(entries <-chan *log.Entry) {
+func (h *internalHTTP) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
 	var b []byte
 	var reader *bytes.Reader
