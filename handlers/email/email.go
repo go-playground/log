@@ -2,7 +2,6 @@ package email
 
 import (
 	"bytes"
-	"fmt"
 	"html/template"
 	stdlog "log"
 	"os"
@@ -156,7 +155,6 @@ func (email *Email) Run() chan<- *log.Entry {
 			"display_file": func(e *log.Entry) (file string) {
 
 				file = e.File
-				fmt.Println("HERE")
 				if email.fileDisplay == log.Lshortfile {
 
 					for i := len(file) - 1; i > 0; i-- {
