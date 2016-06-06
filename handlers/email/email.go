@@ -2,6 +2,7 @@ package email
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	stdlog "log"
 	"os"
@@ -15,7 +16,7 @@ import (
 // FormatFunc is the function that the workers use to create
 // a new Formatter per worker allowing reusable go routine safe
 // variable to be used within your Formatter function.
-type FormatFunc func() Formatter
+type FormatFunc func(email *Email) Formatter
 
 // Formatter is the function used to format the Email entry
 type Formatter func(e *log.Entry) *gomail.Message
@@ -64,7 +65,7 @@ type Email struct {
 // New returns a new instance of the email logger
 func New(host string, port int, username string, password string, from string, to []string) *Email {
 
-	e := &Email{
+	return &Email{
 		buffer:          0,
 		numWorkers:      1,
 		timestampFormat: log.DefaultTimeFormat,
@@ -77,11 +78,8 @@ func New(host string, port int, username string, password string, from string, t
 		from:            from,
 		to:              to,
 		keepalive:       time.Second * 30,
+		formatFunc:      defaultFormatFunc,
 	}
-
-	e.formatFunc = e.defaultFormatFunc
-
-	return e
 }
 
 // SetKeepAliveTimout tells Email how long to keep the smtp connection
@@ -117,6 +115,16 @@ func (email *Email) SetBuffersAndWorkers(size uint, workers uint) {
 	email.numWorkers = workers
 }
 
+// From returns the Email's From address
+func (email *Email) From() string {
+	return email.from
+}
+
+// To returns the Email's To address
+func (email *Email) To() []string {
+	return email.to
+}
+
 // SetTimestampFormat sets Email's timestamp output format
 // Default is : "2006-01-02T15:04:05.000000000Z07:00"
 func (email *Email) SetTimestampFormat(format string) {
@@ -146,8 +154,9 @@ func (email *Email) Run() chan<- *log.Entry {
 	email.template = template.Must(template.New("email").Funcs(
 		template.FuncMap{
 			"display_file": func(e *log.Entry) (file string) {
-				file = e.File
 
+				file = e.File
+				fmt.Println("HERE")
 				if email.fileDisplay == log.Lshortfile {
 
 					for i := len(file) - 1; i > 0; i-- {
@@ -159,6 +168,7 @@ func (email *Email) Run() chan<- *log.Entry {
 				} else {
 					file = file[len(email.gopath):]
 				}
+
 				return
 			},
 			"ts": func(e *log.Entry) (ts string) {
@@ -176,7 +186,7 @@ func (email *Email) Run() chan<- *log.Entry {
 	return ch
 }
 
-func (email *Email) defaultFormatFunc() Formatter {
+func defaultFormatFunc(email *Email) Formatter {
 	var err error
 	b := new(bytes.Buffer)
 	message := gomail.NewMessage()
@@ -201,10 +211,11 @@ func (email *Email) handleLog(entries <-chan *log.Entry) {
 	var s gomail.SendCloser
 	var err error
 	var open bool
+	var alreadyTriedSending bool
 	var message *gomail.Message
 	var count uint8
 
-	formatter := email.formatFunc()
+	formatter := email.formatFunc(email)
 
 	d := gomail.NewDialer(email.host, email.port, email.username, email.password)
 
@@ -212,6 +223,7 @@ func (email *Email) handleLog(entries <-chan *log.Entry) {
 		select {
 		case e = <-entries:
 			count = 0
+			alreadyTriedSending = false
 			message = formatter(e)
 
 		REOPEN:
@@ -236,14 +248,16 @@ func (email *Email) handleLog(entries <-chan *log.Entry) {
 		RESEND:
 			count++
 			if err = gomail.Send(s, message); err != nil {
+
 				log.WithFields(log.F("error", err)).Warn("ERROR sending to smtp server, retrying")
 
-				if count == 3 {
+				if count == 3 && !alreadyTriedSending {
 					// maybe we got disconnected...
+					alreadyTriedSending = true
 					open = false
 					s.Close()
 					goto REOPEN
-				} else if count > 3 {
+				} else if alreadyTriedSending {
 					// we reopened and tried 2 more times, can;t say we didn't try
 					log.WithFields(log.F("error", err)).Alert("ERROR sending log via EMAIL, RETRY and REOPEN failed")
 					e.Consumed()
@@ -252,6 +266,7 @@ func (email *Email) handleLog(entries <-chan *log.Entry) {
 
 				goto RESEND
 			}
+
 			e.Consumed()
 
 		case <-time.After(email.keepalive):
