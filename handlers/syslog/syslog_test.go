@@ -55,7 +55,7 @@ func TestSyslogLogger(t *testing.T) {
 		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
-	sLog.DisplayColor(false)
+	sLog.SetDisplayColor(false)
 	sLog.SetBuffersAndWorkers(3, 3)
 	sLog.SetTimestampFormat("MST")
 	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
@@ -162,7 +162,7 @@ func TestSyslogLoggerColor(t *testing.T) {
 		t.Errorf("Expected '%v' Got '%s'", nil, err)
 	}
 
-	sLog.DisplayColor(true)
+	sLog.SetDisplayColor(true)
 	sLog.SetBuffersAndWorkers(3, 3)
 	sLog.SetTimestampFormat("MST")
 
@@ -292,10 +292,10 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
-	sLog.DisplayColor(true)
+	sLog.SetDisplayColor(true)
 	sLog.SetBuffersAndWorkers(3, 0)
 	sLog.SetTimestampFormat("2006")
-	sLog.SetFormatFunc(func() Formatter {
+	sLog.SetFormatFunc(func(s *Syslog) Formatter {
 		return func(e *log.Entry) []byte {
 			return []byte(e.Message)
 		}
@@ -327,7 +327,7 @@ func TestSetFilename(t *testing.T) {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
-	sLog.DisplayColor(false)
+	sLog.SetDisplayColor(false)
 	sLog.SetBuffersAndWorkers(3, 1)
 	sLog.SetTimestampFormat("MST")
 	sLog.SetFilenameDisplay(log.Llongfile)
@@ -357,7 +357,7 @@ func TestSetFilenameColor(t *testing.T) {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
-	sLog.DisplayColor(true)
+	sLog.SetDisplayColor(true)
 	sLog.SetBuffersAndWorkers(3, 1)
 	sLog.SetTimestampFormat("MST")
 	sLog.SetFilenameDisplay(log.Llongfile)

@@ -16,7 +16,7 @@ import (
 // FormatFunc is the function that the workers use to create
 // a new Formatter per worker allowing reusable go routine safe
 // variable to be used within your Formatter function.
-type FormatFunc func() Formatter
+type FormatFunc func(h *HTTP) Formatter
 
 // Formatter is the function used to format the HTTP entry
 type Formatter func(e *log.Entry) []byte
@@ -51,7 +51,7 @@ func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error)
 		return nil, err
 	}
 
-	h := &HTTP{
+	return &HTTP{
 		buffer:          0,
 		remoteHost:      remoteHost,
 		numWorkers:      1,
@@ -60,16 +60,18 @@ func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error)
 		header:          header,
 		method:          method,
 		fileDisplay:     log.Lshortfile,
-	}
-
-	h.formatFunc = h.defaultFormatFunc
-
-	return h, nil
+		formatFunc:      defaultFormatFunc,
+	}, nil
 }
 
 // SetFilenameDisplay tells HTTP the filename, when present, how to display
 func (h *HTTP) SetFilenameDisplay(fd log.FilenameDisplay) {
 	h.fileDisplay = fd
+}
+
+// FilenameDisplay returns Console's current filename display setting
+func (h *HTTP) FilenameDisplay() log.FilenameDisplay {
+	return h.fileDisplay
 }
 
 // SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
@@ -92,6 +94,16 @@ func (h *HTTP) SetBuffersAndWorkers(size uint, workers uint) {
 // Default is : "2006-01-02T15:04:05.000000000Z07:00"
 func (h *HTTP) SetTimestampFormat(format string) {
 	h.timestampFormat = format
+}
+
+// TimestampFormat returns HTTP's current timestamp output format
+func (h *HTTP) TimestampFormat() string {
+	return h.timestampFormat
+}
+
+// GOPATH returns the GOPATH calculated by HTTP
+func (h *HTTP) GOPATH() string {
+	return h.gopath
 }
 
 // SetFormatFunc sets FormatFunc each worker will call to get
@@ -121,19 +133,22 @@ func (h *HTTP) Run() chan<- *log.Entry {
 	return ch
 }
 
-func (h *HTTP) defaultFormatFunc() Formatter {
+func defaultFormatFunc(h *HTTP) Formatter {
 
 	var b []byte
 	var file string
 	var lvl string
 	var i int
+	gopath := h.GOPATH()
+	tsFormat := h.TimestampFormat()
+	fnameDisplay := h.FilenameDisplay()
 
 	return func(e *log.Entry) []byte {
 		b = b[0:0]
 
 		if e.Line == 0 {
 
-			b = append(b, e.Timestamp.Format(h.timestampFormat)...)
+			b = append(b, e.Timestamp.Format(tsFormat)...)
 			b = append(b, space)
 
 			lvl = e.Level.String()
@@ -149,7 +164,7 @@ func (h *HTTP) defaultFormatFunc() Formatter {
 		} else {
 			file = e.File
 
-			if h.fileDisplay == log.Lshortfile {
+			if fnameDisplay == log.Lshortfile {
 
 				for i = len(file) - 1; i > 0; i-- {
 					if file[i] == '/' {
@@ -158,10 +173,10 @@ func (h *HTTP) defaultFormatFunc() Formatter {
 					}
 				}
 			} else {
-				file = file[len(h.gopath):]
+				file = file[len(gopath):]
 			}
 
-			b = append(b, e.Timestamp.Format(h.timestampFormat)...)
+			b = append(b, e.Timestamp.Format(tsFormat)...)
 			b = append(b, space)
 
 			lvl = e.Level.String()
@@ -223,7 +238,7 @@ func (h *HTTP) handleLog(entries <-chan *log.Entry) {
 	var b []byte
 	var reader *bytes.Reader
 
-	formatter := h.formatFunc()
+	formatter := h.formatFunc(h)
 
 	req, _ := stdhttp.NewRequest(h.method, h.remoteHost, nil)
 	req.Header = h.header

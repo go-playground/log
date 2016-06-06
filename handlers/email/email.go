@@ -124,6 +124,11 @@ func (email *Email) To() []string {
 	return email.to
 }
 
+// Template returns the Email's template
+func (email *Email) Template() *template.Template {
+	return email.template
+}
+
 // SetTimestampFormat sets Email's timestamp output format
 // Default is : "2006-01-02T15:04:05.000000000Z07:00"
 func (email *Email) SetTimestampFormat(format string) {
@@ -187,13 +192,14 @@ func (email *Email) Run() chan<- *log.Entry {
 func defaultFormatFunc(email *Email) Formatter {
 	var err error
 	b := new(bytes.Buffer)
+	template := email.Template()
 	message := gomail.NewMessage()
 	message.SetHeader("From", email.from)
 	message.SetHeader("To", email.to...)
 
 	return func(e *log.Entry) *gomail.Message {
 		b.Reset()
-		if err = email.template.ExecuteTemplate(b, "email", e); err != nil {
+		if err = template.ExecuteTemplate(b, "email", e); err != nil {
 			log.WithFields(log.F("error", err)).Error("Error parsing Email handler template")
 		}
 

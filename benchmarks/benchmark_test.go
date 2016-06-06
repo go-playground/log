@@ -28,26 +28,6 @@ var _jane = user{
 	CreatedAt: time.Date(1980, 1, 1, 12, 0, 0, 0, time.UTC),
 }
 
-const (
-	newLine               = byte('\n')
-	defaultTS             = "2006-01-02T15:04:05.000000000Z07:00"
-	colorFields           = "%s %s%6s%s %-25s"
-	colorNoFields         = "%s %s%6s%s %s"
-	colorKeyValue         = " %s%s%s=%v"
-	colorFieldsCaller     = "%s %s%6s%s %s:%d %-25s"
-	colorNoFieldsCaller   = "%s %s%6s%s %s:%d %s"
-	noColorFields         = "%s %6s %-25s"
-	noColorNoFields       = "%s %6s %s"
-	noColorKeyValue       = " %s=%v"
-	noColorFieldsCaller   = "%s %6s %s:%d %-25s"
-	noColorNoFieldsCaller = "%s %6s %s:%d %s"
-	equals                = byte('=')
-	v                     = "%v"
-	base10                = 10
-	space                 = byte(' ')
-	colon                 = byte(':')
-)
-
 // NOTE: log is a singleton, which means handlers need to be
 // setup only once otherwise each test just adds another log
 // handler and results are cumulative... makes benchmarking
@@ -56,7 +36,7 @@ const (
 func TestMain(m *testing.M) {
 
 	cLog := console.New()
-	cLog.DisplayColor(false)
+	cLog.SetDisplayColor(false)
 	cLog.SetWriter(ioutil.Discard)
 	cLog.SetBuffersAndWorkers(3, 3)
 

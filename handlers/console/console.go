@@ -14,7 +14,7 @@ import (
 // FormatFunc is the function that the workers use to create
 // a new Formatter per worker allowing reusable go routine safe
 // variable to be used within your Formatter function.
-type FormatFunc func() Formatter
+type FormatFunc func(c *Console) Formatter
 
 // Formatter is the function used to format the Redis entry
 type Formatter func(e *log.Entry) []byte
@@ -58,7 +58,7 @@ var defaultColors = [...]log.ANSIEscSeq{
 
 // New returns a new instance of the console logger
 func New() *Console {
-	c := &Console{
+	return &Console{
 		buffer:          0,
 		numWorkers:      1,
 		colors:          defaultColors,
@@ -66,16 +66,18 @@ func New() *Console {
 		timestampFormat: log.DefaultTimeFormat,
 		displayColor:    true,
 		fileDisplay:     log.Lshortfile,
+		formatFunc:      defaultFormatFunc,
 	}
-
-	c.formatFunc = c.defaultFormatFunc
-
-	return c
 }
 
 // SetFilenameDisplay tells Console the filename, when present, how to display
 func (c *Console) SetFilenameDisplay(fd log.FilenameDisplay) {
 	c.fileDisplay = fd
+}
+
+// FilenameDisplay returns Console's current filename display setting
+func (c *Console) FilenameDisplay() log.FilenameDisplay {
+	return c.fileDisplay
 }
 
 // RedirectSTDLogOutput tells Console to redirect the std Logger output
@@ -84,16 +86,36 @@ func (c *Console) RedirectSTDLogOutput(b bool) {
 	c.redirStdOutput = b
 }
 
-// DisplayColor tells Console to output in color or not
+// SetDisplayColor tells Console to output in color or not
 // Default is : true
-func (c *Console) DisplayColor(color bool) {
+func (c *Console) SetDisplayColor(color bool) {
 	c.displayColor = color
+}
+
+// DisplayColor returns if logging color or not
+func (c *Console) DisplayColor() bool {
+	return c.displayColor
+}
+
+// GetDisplayColor returns the color for the given log level
+func (c *Console) GetDisplayColor(level log.Level) log.ANSIEscSeq {
+	return c.colors[level]
 }
 
 // SetTimestampFormat sets Console's timestamp output format
 // Default is : "2006-01-02T15:04:05.000000000Z07:00"
 func (c *Console) SetTimestampFormat(format string) {
 	c.timestampFormat = format
+}
+
+// TimestampFormat returns Console's current timestamp output format
+func (c *Console) TimestampFormat() string {
+	return c.timestampFormat
+}
+
+// GOPATH returns the GOPATH calculated by Console
+func (c *Console) GOPATH() string {
+	return c.gopath
 }
 
 // SetWriter sets Console's wriiter
@@ -182,7 +204,7 @@ func (c *Console) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
 	// var b io.WriterTo
 	var b []byte
-	formatter := c.formatFunc()
+	formatter := c.formatFunc(c)
 
 	for e = range entries {
 
@@ -194,24 +216,28 @@ func (c *Console) handleLog(entries <-chan *log.Entry) {
 	}
 }
 
-func (c *Console) defaultFormatFunc() Formatter {
+func defaultFormatFunc(c *Console) Formatter {
 
 	var b []byte
 	var file string
 	var lvl string
 	var i int
 
-	if c.displayColor {
+	gopath := c.GOPATH()
+	tsFormat := c.TimestampFormat()
+	fnameDisplay := c.FilenameDisplay()
+
+	if c.DisplayColor() {
 
 		var color log.ANSIEscSeq
 
 		return func(e *log.Entry) []byte {
 			b = b[0:0]
-			color = c.colors[e.Level]
+			color = c.GetDisplayColor(e.Level)
 
 			if e.Line == 0 {
 
-				b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+				b = append(b, e.Timestamp.Format(tsFormat)...)
 				b = append(b, space)
 				b = append(b, color...)
 
@@ -228,7 +254,7 @@ func (c *Console) defaultFormatFunc() Formatter {
 			} else {
 				file = e.File
 
-				if c.fileDisplay == log.Lshortfile {
+				if fnameDisplay == log.Lshortfile {
 
 					for i = len(file) - 1; i > 0; i-- {
 						if file[i] == '/' {
@@ -237,10 +263,10 @@ func (c *Console) defaultFormatFunc() Formatter {
 						}
 					}
 				} else {
-					file = file[len(c.gopath):]
+					file = file[len(gopath):]
 				}
 
-				b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+				b = append(b, e.Timestamp.Format(tsFormat)...)
 				b = append(b, space)
 				b = append(b, color...)
 
@@ -308,7 +334,7 @@ func (c *Console) defaultFormatFunc() Formatter {
 
 		if e.Line == 0 {
 
-			b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+			b = append(b, e.Timestamp.Format(tsFormat)...)
 			b = append(b, space)
 
 			lvl = e.Level.String()
@@ -324,7 +350,7 @@ func (c *Console) defaultFormatFunc() Formatter {
 		} else {
 			file = e.File
 
-			if c.fileDisplay == log.Lshortfile {
+			if fnameDisplay == log.Lshortfile {
 
 				for i = len(file) - 1; i > 0; i-- {
 					if file[i] == '/' {
@@ -333,10 +359,10 @@ func (c *Console) defaultFormatFunc() Formatter {
 					}
 				}
 			} else {
-				file = file[len(c.gopath):]
+				file = file[len(gopath):]
 			}
 
-			b = append(b, e.Timestamp.Format(c.timestampFormat)...)
+			b = append(b, e.Timestamp.Format(tsFormat)...)
 			b = append(b, space)
 
 			lvl = e.Level.String()

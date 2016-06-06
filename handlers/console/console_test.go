@@ -26,7 +26,7 @@ func TestConsoleLogger(t *testing.T) {
 
 	cLog := New()
 	cLog.SetWriter(buff)
-	cLog.DisplayColor(false)
+	cLog.SetDisplayColor(false)
 	cLog.SetBuffersAndWorkers(3, 0)
 	cLog.SetTimestampFormat("MST")
 	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
@@ -121,7 +121,7 @@ func TestConsoleLoggerColor(t *testing.T) {
 
 	cLog := New()
 	cLog.SetWriter(buff)
-	cLog.DisplayColor(true)
+	cLog.SetDisplayColor(true)
 	cLog.SetBuffersAndWorkers(3, 3)
 	cLog.SetTimestampFormat("MST")
 
@@ -216,7 +216,7 @@ func TestCustomFormatFunc(t *testing.T) {
 	cLog.SetWriter(buff)
 	cLog.SetTimestampFormat("2006")
 	cLog.SetBuffersAndWorkers(3, 2)
-	cLog.SetFormatFunc(func() Formatter {
+	cLog.SetFormatFunc(func(c *Console) Formatter {
 
 		var b []byte
 
@@ -241,7 +241,7 @@ func TestSetFilename(t *testing.T) {
 
 	cLog := New()
 	cLog.SetWriter(buff)
-	cLog.DisplayColor(false)
+	cLog.SetDisplayColor(false)
 	cLog.SetBuffersAndWorkers(3, 1)
 	cLog.SetTimestampFormat("MST")
 	cLog.SetFilenameDisplay(log.Llongfile)
@@ -260,7 +260,7 @@ func TestSetFilenameColor(t *testing.T) {
 
 	cLog := New()
 	cLog.SetWriter(buff)
-	cLog.DisplayColor(true)
+	cLog.SetDisplayColor(true)
 	cLog.SetBuffersAndWorkers(3, 1)
 	cLog.SetTimestampFormat("MST")
 	cLog.SetFilenameDisplay(log.Llongfile)
@@ -280,7 +280,7 @@ func TestConsoleSTDLogCapturing(t *testing.T) {
 
 	cLog := New()
 	cLog.SetWriter(buff)
-	cLog.DisplayColor(false)
+	cLog.SetDisplayColor(false)
 	cLog.SetBuffersAndWorkers(3, 3)
 	cLog.SetTimestampFormat("MST")
 	cLog.RedirectSTDLogOutput(true)

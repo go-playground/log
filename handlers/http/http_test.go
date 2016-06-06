@@ -124,7 +124,7 @@ func TestBadValues(t *testing.T) {
 		t.Fatalf("Expected '<nil>' Got '%s'", err)
 	}
 
-	hLog.SetFormatFunc(func() Formatter {
+	hLog.SetFormatFunc(func(h *HTTP) Formatter {
 		return func(e *log.Entry) []byte {
 			return []byte(e.Message)
 		}

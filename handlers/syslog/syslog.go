@@ -13,7 +13,7 @@ import (
 // FormatFunc is the function that the workers use to create
 // a new Formatter per worker allowing reusable go routine safe
 // variable to be used within your Formatter function.
-type FormatFunc func() Formatter
+type FormatFunc func(s *Syslog) Formatter
 
 // Formatter is the function used to format the Redis entry
 type Formatter func(e *log.Entry) []byte
@@ -68,9 +68,8 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 		displayColor:    false,
 		timestampFormat: log.DefaultTimeFormat,
 		fileDisplay:     log.Lshortfile,
+		formatFunc:      defaultFormatFunc,
 	}
-
-	s.formatFunc = s.defaultFormatFunc
 
 	if s.writer, err = syslog.Dial(network, raddr, priority, tag); err != nil {
 		return nil, err
@@ -84,16 +83,41 @@ func (s *Syslog) SetFilenameDisplay(fd log.FilenameDisplay) {
 	s.fileDisplay = fd
 }
 
-// DisplayColor tells Syslog to output in color or not
+// FilenameDisplay returns Syslog's current filename display setting
+func (s *Syslog) FilenameDisplay() log.FilenameDisplay {
+	return s.fileDisplay
+}
+
+// SetDisplayColor tells Syslog to output in color or not
 // Default is : true
-func (s *Syslog) DisplayColor(color bool) {
+func (s *Syslog) SetDisplayColor(color bool) {
 	s.displayColor = color
+}
+
+// DisplayColor returns if logging color or not
+func (s *Syslog) DisplayColor() bool {
+	return s.displayColor
+}
+
+// GetDisplayColor returns the color for the given log level
+func (s *Syslog) GetDisplayColor(level log.Level) log.ANSIEscSeq {
+	return s.colors[level]
 }
 
 // SetTimestampFormat sets Syslog's timestamp output format
 // Default is : 2006-01-02T15:04:05.000000000Z07:00
 func (s *Syslog) SetTimestampFormat(format string) {
 	s.timestampFormat = format
+}
+
+// TimestampFormat returns Syslog's current timestamp output format
+func (s *Syslog) TimestampFormat() string {
+	return s.timestampFormat
+}
+
+// GOPATH returns the GOPATH calculated by Syslog
+func (s *Syslog) GOPATH() string {
+	return s.gopath
 }
 
 // SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
@@ -147,7 +171,7 @@ func (s *Syslog) handleLog(entries <-chan *log.Entry) {
 	var e *log.Entry
 	var line string
 
-	formatter := s.formatFunc()
+	formatter := s.formatFunc(s)
 
 	for e = range entries {
 
@@ -174,24 +198,27 @@ func (s *Syslog) handleLog(entries <-chan *log.Entry) {
 	}
 }
 
-func (s *Syslog) defaultFormatFunc() Formatter {
+func defaultFormatFunc(s *Syslog) Formatter {
 
 	var b []byte
 	var file string
 	var lvl string
 	var i int
+	gopath := s.GOPATH()
+	tsFormat := s.TimestampFormat()
+	fnameDisplay := s.FilenameDisplay()
 
-	if s.displayColor {
+	if s.DisplayColor() {
 
 		var color log.ANSIEscSeq
 
 		return func(e *log.Entry) []byte {
 			b = b[0:0]
-			color = s.colors[e.Level]
+			color = s.GetDisplayColor(e.Level)
 
 			if e.Line == 0 {
 
-				b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+				b = append(b, e.Timestamp.Format(tsFormat)...)
 				b = append(b, space)
 				b = append(b, color...)
 
@@ -208,7 +235,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 			} else {
 				file = e.File
 
-				if s.fileDisplay == log.Lshortfile {
+				if fnameDisplay == log.Lshortfile {
 
 					for i = len(file) - 1; i > 0; i-- {
 						if file[i] == '/' {
@@ -217,10 +244,10 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 						}
 					}
 				} else {
-					file = file[len(s.gopath):]
+					file = file[len(gopath):]
 				}
 
-				b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+				b = append(b, e.Timestamp.Format(tsFormat)...)
 				b = append(b, space)
 				b = append(b, color...)
 
@@ -286,7 +313,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 
 		if e.Line == 0 {
 
-			b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+			b = append(b, e.Timestamp.Format(tsFormat)...)
 			b = append(b, space)
 
 			lvl = e.Level.String()
@@ -302,7 +329,7 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 		} else {
 			file = e.File
 
-			if s.fileDisplay == log.Lshortfile {
+			if fnameDisplay == log.Lshortfile {
 
 				for i = len(file) - 1; i > 0; i-- {
 					if file[i] == '/' {
@@ -311,10 +338,10 @@ func (s *Syslog) defaultFormatFunc() Formatter {
 					}
 				}
 			} else {
-				file = file[len(s.gopath):]
+				file = file[len(gopath):]
 			}
 
-			b = append(b, e.Timestamp.Format(s.timestampFormat)...)
+			b = append(b, e.Timestamp.Format(tsFormat)...)
 			b = append(b, space)
 
 			lvl = e.Level.String()

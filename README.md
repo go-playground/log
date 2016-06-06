@@ -1,6 +1,6 @@
 ## log
 <img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">
-![Project status](https://img.shields.io/badge/version-2.3-green.svg)
+![Project status](https://img.shields.io/badge/version-3.0.0-green.svg)
 [![Build Status](https://semaphoreci.com/api/v1/joeybloggs/log/branches/master/badge.svg)](https://semaphoreci.com/joeybloggs/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -18,7 +18,7 @@ Features
 - [x] Logger is simple, only logic to create the log entry and send it off to the handlers and they take it from there.
 - [x] Sends the log entry to the handlers asynchronously, but waits for all to complete; meaning all your handlers can be dealing with the log entry at the same time, but log will wait until all have completed before moving on.
 - [x] Ability to specify which log levels get sent to each handler
-- [x] Built-in console + syslog
+- [x] Built-in console, syslog, http and email handlers
 - [x] Handlers are simple to write + easy to register
 - [x] Logger is a singleton ( one of the few instances a singleton is desired ) so the root package registers which handlers are used and any libraries just follow suit.
 
@@ -203,12 +203,12 @@ make one log library better than another!
 go test -cpu=4 -bench=. -benchmem=true
 
 PASS
-BenchmarkLogConsoleTenFieldsParallel-4	 1000000	      1930 ns/op	    1113 B/op	      35 allocs/op
-BenchmarkLogConsoleSimpleParallel-4   	 3000000	       450 ns/op	      88 B/op	       4 allocs/op
-BenchmarkLogrusText10Fields-4         	  300000	      3943 ns/op	    4291 B/op	      63 allocs/op
-BenchmarkLogrusTextSimple-4           	 2000000	       633 ns/op	     672 B/op	      15 allocs/op
-BenchmarkLog1510Fields-4              	  100000	     16375 ns/op	    4378 B/op	      92 allocs/op
-BenchmarkLog15Simple-4                	 1000000	      1982 ns/op	     320 B/op	       9 allocs/op
+BenchmarkLogConsoleTenFieldsParallel-4	 1000000	      1985 ns/op	    1113 B/op	      35 allocs/op
+BenchmarkLogConsoleSimpleParallel-4   	 3000000	       455 ns/op	      88 B/op	       4 allocs/op
+BenchmarkLogrusText10Fields-4         	  300000	      4179 ns/op	    4291 B/op	      63 allocs/op
+BenchmarkLogrusTextSimple-4           	 2000000	       655 ns/op	     672 B/op	      15 allocs/op
+BenchmarkLog1510Fields-4              	  100000	     16376 ns/op	    4378 B/op	      92 allocs/op
+BenchmarkLog15Simple-4                	 1000000	      1983 ns/op	     320 B/op	       9 allocs/op
 ok  	github.com/go-playground/log/benchmarks	10.716s
 ```
 
