@@ -65,8 +65,8 @@ type Email struct {
 func New(host string, port int, username string, password string, from string, to []string) *Email {
 
 	return &Email{
-		buffer:          0,
-		numWorkers:      1,
+		buffer:          3,
+		numWorkers:      3,
 		timestampFormat: log.DefaultTimeFormat,
 		fileDisplay:     log.Lshortfile,
 		templateHTML:    defaultTemplate,

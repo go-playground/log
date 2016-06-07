@@ -62,8 +62,8 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 	var err error
 
 	s := &Syslog{
-		buffer:          0,
-		numWorkers:      1,
+		buffer:          3,
+		numWorkers:      3,
 		colors:          defaultColors,
 		displayColor:    false,
 		timestampFormat: log.DefaultTimeFormat,

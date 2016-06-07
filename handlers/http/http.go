@@ -40,6 +40,12 @@ type HTTP interface {
 	GOPATH() string
 	SetFormatFunc(fn FormatFunc)
 	Run() chan<- *log.Entry
+	FormatFunc() FormatFunc
+	Method() string
+	RemoteHost() string
+	Headers() stdhttp.Header
+	Buffers() uint
+	Workers() uint
 }
 
 // HTTP is an instance of the http logger
@@ -49,7 +55,6 @@ type internalHTTP struct {
 	remoteHost      string
 	formatFunc      FormatFunc
 	timestampFormat string
-	httpClient      stdhttp.Client
 	header          stdhttp.Header
 	method          string
 	gopath          string
@@ -66,11 +71,10 @@ func New(remoteHost string, method string, header stdhttp.Header) (HTTP, error) 
 	}
 
 	return &internalHTTP{
-		buffer:          0,
+		buffer:          3,
+		numWorkers:      3,
 		remoteHost:      remoteHost,
-		numWorkers:      1,
 		timestampFormat: log.DefaultTimeFormat,
-		httpClient:      stdhttp.Client{},
 		header:          header,
 		method:          method,
 		fileDisplay:     log.Lshortfile,
@@ -126,6 +130,36 @@ func (h *internalHTTP) SetFormatFunc(fn FormatFunc) {
 	h.formatFunc = fn
 }
 
+// FormatFunc returns FormatFunc registered with HTTP
+func (h *internalHTTP) FormatFunc() FormatFunc {
+	return h.formatFunc
+}
+
+// Method returns http method registered with HTTP
+func (h *internalHTTP) Method() string {
+	return h.method
+}
+
+// RemoteHost returns the remote host registered to HTTP
+func (h *internalHTTP) RemoteHost() string {
+	return h.remoteHost
+}
+
+// Headers returns the http headers registered to HTTP
+func (h *internalHTTP) Headers() stdhttp.Header {
+	return h.header
+}
+
+// Buffers returns the http buffer count registered to HTTP
+func (h *internalHTTP) Buffers() uint {
+	return h.buffer
+}
+
+// Workers returns the http worker count registered to HTTP
+func (h *internalHTTP) Workers() uint {
+	return h.numWorkers
+}
+
 // Run starts the logger consuming on the returned channed
 func (h *internalHTTP) Run() chan<- *log.Entry {
 
@@ -139,10 +173,10 @@ func (h *internalHTTP) Run() chan<- *log.Entry {
 		}
 	}
 
-	ch := make(chan *log.Entry, h.buffer)
+	ch := make(chan *log.Entry, h.Buffers())
 
-	for i := 0; i <= int(h.numWorkers); i++ {
-		go h.handleLog(ch)
+	for i := 0; i <= int(h.Workers()); i++ {
+		go HandleLog(h, ch)
 	}
 	return ch
 }
@@ -247,15 +281,18 @@ func defaultFormatFunc(h HTTP) Formatter {
 	}
 }
 
-func (h *internalHTTP) handleLog(entries <-chan *log.Entry) {
+// HandleLog is the default http log handler
+func HandleLog(h HTTP, entries <-chan *log.Entry) {
 	var e *log.Entry
 	var b []byte
 	var reader *bytes.Reader
 
-	formatter := h.formatFunc(h)
+	formatter := h.FormatFunc()(h)
+	remoteHost := h.RemoteHost()
+	httpClient := stdhttp.Client{}
 
-	req, _ := stdhttp.NewRequest(h.method, h.remoteHost, nil)
-	req.Header = h.header
+	req, _ := stdhttp.NewRequest(h.Method(), remoteHost, nil)
+	req.Header = h.Headers()
 
 	for e = range entries {
 
@@ -265,14 +302,15 @@ func (h *internalHTTP) handleLog(entries <-chan *log.Entry) {
 		req.Body = ioutil.NopCloser(reader)
 		req.ContentLength = int64(reader.Len())
 
-		resp, err := h.httpClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
-			fmt.Printf("**** WARNING Could not post data to %s: %v\n", h.remoteHost, err)
+			fmt.Printf("**** WARNING Could not post data to %s: %v\n", remoteHost, err)
 			goto END
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 299 {
-			fmt.Printf("WARNING Received HTTP %d during POST request to %s\n", resp.StatusCode, h.remoteHost)
+			bt, _ := ioutil.ReadAll(resp.Body)
+			fmt.Printf("WARNING Received HTTP %d during POST request to %s body: %s\n", resp.StatusCode, remoteHost, string(bt))
 		}
 
 	END:

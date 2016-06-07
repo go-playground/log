@@ -59,8 +59,8 @@ var defaultColors = [...]log.ANSIEscSeq{
 // New returns a new instance of the console logger
 func New() *Console {
 	return &Console{
-		buffer:          0,
-		numWorkers:      1,
+		buffer:          3,
+		numWorkers:      3,
 		colors:          defaultColors,
 		writer:          os.Stderr,
 		timestampFormat: log.DefaultTimeFormat,
