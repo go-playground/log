@@ -182,6 +182,9 @@ func WithFields(fields ...Field) LeveledLogger {
 func StackTrace() LeveledLogger {
 	trace := make([]byte, 1<<16)
 	n := runtime.Stack(trace, true)
+	if n > 7000 {
+		n = 7000
+	}
 	return newEntry(DebugLevel, "", []Field{F("stack trace", string(trace[:n])+"\n")}, skipLevel)
 }
 
