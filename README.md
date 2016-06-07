@@ -18,7 +18,7 @@ Features
 - [x] Logger is simple, only logic to create the log entry and send it off to the handlers and they take it from there.
 - [x] Sends the log entry to the handlers asynchronously, but waits for all to complete; meaning all your handlers can be dealing with the log entry at the same time, but log will wait until all have completed before moving on.
 - [x] Ability to specify which log levels get sent to each handler
-- [x] Built-in console, syslog, http and email handlers
+- [x] Built-in console, syslog, http, HipChat and email handlers
 - [x] Handlers are simple to write + easy to register
 - [x] Logger is a singleton ( one of the few instances a singleton is desired ) so the root package registers which handlers are used and any libraries just follow suit.
 
@@ -181,9 +181,17 @@ Log Level Definitions
 
 **FatalLevel** - Should be corrected immediately, but indicates failure in a primary system, an example is a loss of a backup ISP connection. ( same as SYSLOG CRITICAL )
 
-More Handlers
+Handlers
 -------------
 Pull requests for new handlers are welcome, please provide test coverage is all I ask.
+
+| Handler | Description | Docs |
+| ------- | ---- | ----------- |
+| console | Allows for log messages to be sent to a any writer, default os.Stderr | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/console?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/console) |
+| syslog | Allows for log messages to be sent via syslog. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/syslog?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/syslog) |
+| http | Allows for log messages to be sent via http. Can use the HTTP handler as a base for creating other handlers requiring http transmission. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http) |
+| email | Allows for log messages to be sent via email. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/email?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/email) |
+| hipchat | Allows for log messages to be sent to a hipchat room. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat) |
 
 Package Versioning
 ----------
