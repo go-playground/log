@@ -171,7 +171,7 @@ func TestBadDial(t *testing.T) {
 }
 
 func TestBadEmailTemplate(t *testing.T) {
-	badTemplate := `{{ .NonExistantField }}` // referencing non-existant field
+	badTemplate := `{{ .NonExistentField }}` // referencing non-existent field
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
 	email.SetEmailTemplate(badTemplate)
 	log.RegisterHandler(email, log.InfoLevel)
@@ -183,8 +183,6 @@ func TestBadSend(t *testing.T) {
 
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
 	log.RegisterHandler(email, log.InfoLevel)
-
-	var msg string
 
 	server, err := net.Listen("tcp", ":3041")
 	if err != nil {
@@ -212,7 +210,7 @@ func TestBadSend(t *testing.T) {
 				bufout:  bufio.NewWriter(conn),
 			}
 
-			msg = handleClient(c, true)
+			handleClient(c, true)
 		}
 	}()
 

@@ -88,7 +88,7 @@ func (email *Email) SetKeepAliveTimout(keepAlive time.Duration) {
 	email.keepalive = keepAlive
 }
 
-// SetEmailTemplate sets Email's html tempalte to be used for email body
+// SetEmailTemplate sets Email's html template to be used for email body
 func (email *Email) SetEmailTemplate(htmlTemplate string) {
 	email.templateHTML = htmlTemplate
 }

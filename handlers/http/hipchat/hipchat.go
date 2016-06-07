@@ -173,7 +173,7 @@ func (hc *HipChat) GetDisplayColor(level log.Level) string {
 	return hc.colors[level]
 }
 
-// SetEmailTemplate sets Email's html tempalte to be used for email body
+// SetEmailTemplate sets Email's html template to be used for email body
 func (hc *HipChat) SetEmailTemplate(htmlTemplate string) {
 	hc.templateHTML = htmlTemplate
 }
