@@ -304,13 +304,13 @@ func HandleLog(h HTTP, entries <-chan *log.Entry) {
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			fmt.Printf("**** WARNING Could not post data to %s: %v\n", remoteHost, err)
+			log.Error("Could not post data to %s: %v\n", remoteHost, err)
 			goto END
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 299 {
 			bt, _ := ioutil.ReadAll(resp.Body)
-			fmt.Printf("WARNING Received HTTP %d during POST request to %s body: %s\n", resp.StatusCode, remoteHost, string(bt))
+			log.Error("Received HTTP %d during POST request to %s body: %s\n", resp.StatusCode, remoteHost, string(bt))
 		}
 
 	END:

@@ -51,7 +51,7 @@ func TestHTTPLogger(t *testing.T) {
 	hLog.SetBuffersAndWorkers(0, 0)
 	hLog.SetTimestampFormat("MST")
 	log.SetCallerInfoLevels(log.WarnLevel, log.ErrorLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
-	log.RegisterHandler(hLog, log.AllLevels...)
+	log.RegisterHandler(hLog, log.DebugLevel, log.TraceLevel, log.InfoLevel, log.NoticeLevel, log.WarnLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
 
 	for i, tt := range tests {
 
@@ -129,7 +129,7 @@ func TestBadValues(t *testing.T) {
 			return []byte(e.Message)
 		}
 	})
-	log.RegisterHandler(hLog, log.AllLevels...)
+	log.RegisterHandler(hLog, log.DebugLevel, log.TraceLevel, log.InfoLevel, log.NoticeLevel, log.WarnLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
 
 	log.Debug("debug")
 }
@@ -154,18 +154,18 @@ func TestSetFilenameDisplay(t *testing.T) {
 
 	hLog, err := New(server.URL, "POST", header)
 	if err != nil {
-		log.Fatalf("Error initializing HTTP recieved '%s'", err)
+		t.Fatalf("Error initializing HTTP recieved '%s'", err)
 	}
 
 	hLog.SetBuffersAndWorkers(0, 1)
 	hLog.SetTimestampFormat("MST")
 	hLog.SetFilenameDisplay(log.Llongfile)
 
-	log.RegisterHandler(hLog, log.AllLevels...)
+	log.RegisterHandler(hLog, log.DebugLevel, log.TraceLevel, log.InfoLevel, log.NoticeLevel, log.WarnLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
 
-	log.Error("error")
-	if msg != "UTC  ERROR github.com/go-playground/log/handlers/http/http_test.go:166 error" {
-		t.Errorf("Expected '%s' Got '%s'", "UTC  ERROR github.com/go-playground/log/handlers/http/http_test.go:166 error", msg)
+	log.Alert("alert")
+	if msg != "UTC  ALERT github.com/go-playground/log/handlers/http/http_test.go:166 alert" {
+		t.Errorf("Expected '%s' Got '%s'", "UTC  ALERT github.com/go-playground/log/handlers/http/http_test.go:166 alert", msg)
 	}
 }
 
@@ -208,12 +208,12 @@ func getTestHTTPLoggerTests() []test {
 			flds: nil,
 			want: "UTC   WARN http_test.go:76 warn",
 		},
-		{
-			lvl:  log.ErrorLevel,
-			msg:  "error",
-			flds: nil,
-			want: "UTC  ERROR http_test.go:78 error",
-		},
+		// {
+		// 	lvl:  log.ErrorLevel,
+		// 	msg:  "error",
+		// 	flds: nil,
+		// 	want: "UTC  ERROR http_test.go:78 error",
+		// },
 		{
 			lvl:  log.AlertLevel,
 			msg:  "alert",
