@@ -118,11 +118,15 @@ func TestEmailHandler(t *testing.T) {
 
 	defer server.Close()
 
+	proceed := make(chan struct{})
+	defer close(proceed)
+
 	go func() {
 		for {
 			conn, err := server.Accept()
 			if err != nil {
-				t.Errorf("Expected <nil> Got '%s'", err)
+				msg = ""
+				break
 			}
 
 			if conn == nil {
@@ -138,10 +142,14 @@ func TestEmailHandler(t *testing.T) {
 			}
 
 			msg = handleClient(c, false)
+
+			proceed <- struct{}{}
 		}
 	}()
 
 	log.Debug("debug")
+
+	<-proceed
 
 	for i, tt := range tests {
 		if !strings.Contains(msg, tt.expected) {
@@ -154,6 +162,8 @@ func TestEmailHandler(t *testing.T) {
 	email.SetFilenameDisplay(log.Lshortfile)
 
 	log.Debug("debug")
+
+	<-proceed
 
 	for i, tt := range tests {
 		if !strings.Contains(msg, tt.expected) {
@@ -195,7 +205,7 @@ func TestBadSend(t *testing.T) {
 		for {
 			conn, err := server.Accept()
 			if err != nil {
-				t.Errorf("Expected <nil> Got '%s'", err)
+				break
 			}
 
 			if conn == nil {
@@ -220,12 +230,14 @@ func TestBadSend(t *testing.T) {
 func testFormatFunc(email *Email) Formatter {
 	var err error
 	b := new(bytes.Buffer)
-	message := gomail.NewMessage()
-	message.SetHeader("From", email.From())
-	message.SetHeader("To", email.To()...)
 
 	return func(e *log.Entry) *gomail.Message {
 		b.Reset()
+
+		message := gomail.NewMessage()
+		message.SetHeader("From", email.From())
+		message.SetHeader("To", email.To()...)
+
 		if err = email.template.ExecuteTemplate(b, "email", e); err != nil {
 			log.WithFields(log.F("error", err)).Error("Error parsing Email handler template")
 		}

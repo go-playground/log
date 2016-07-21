@@ -1,11 +1,13 @@
 package syslog
 
 import (
+	"crypto/tls"
 	"fmt"
 	stdlog "log"
-	"log/syslog"
 	"os"
 	"strconv"
+
+	syslog "github.com/RackSec/srslog"
 
 	"github.com/go-playground/log"
 )
@@ -56,8 +58,10 @@ var (
 )
 
 // New returns a new instance of the syslog logger
-// example: syslog.New("udp", "localhost:514", syslog.LOG_DEBUG, "")
-func New(network string, raddr string, priority syslog.Priority, tag string) (*Syslog, error) {
+// example: syslog.New("udp", "localhost:514", syslog.LOG_DEBUG, "", nil)
+// NOTE: tlsConfig param is optional and only applies when networks in "tcp+tls"
+// see TestSyslogTLS func tion int syslog_test.go for an example usage of tlsConfig parameter
+func New(network string, raddr string, tag string, tlsConfig *tls.Config) (*Syslog, error) {
 
 	var err error
 
@@ -71,7 +75,14 @@ func New(network string, raddr string, priority syslog.Priority, tag string) (*S
 		formatFunc:      defaultFormatFunc,
 	}
 
-	if s.writer, err = syslog.Dial(network, raddr, priority, tag); err != nil {
+	// if non-TLS
+	if tlsConfig == nil {
+		s.writer, err = syslog.Dial(network, raddr, syslog.LOG_INFO, tag)
+	} else {
+		s.writer, err = syslog.DialWithTLSConfig(network, raddr, syslog.LOG_INFO, tag, tlsConfig)
+	}
+
+	if err != nil {
 		return nil, err
 	}
 

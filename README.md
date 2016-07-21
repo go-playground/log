@@ -1,6 +1,6 @@
 ## log
 <img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">
-![Project status](https://img.shields.io/badge/version-3.1.1-green.svg)
+![Project status](https://img.shields.io/badge/version-4.0.0-green.svg)
 [![Build Status](https://semaphoreci.com/api/v1/joeybloggs/log/branches/master/badge.svg)](https://semaphoreci.com/joeybloggs/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -188,7 +188,7 @@ Pull requests for new handlers are welcome, please provide test coverage is all 
 | Handler | Description | Docs |
 | ------- | ---- | ----------- |
 | console | Allows for log messages to be sent to a any writer, default os.Stderr | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/console?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/console) |
-| syslog | Allows for log messages to be sent via syslog. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/syslog?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/syslog) |
+| syslog | Allows for log messages to be sent via syslog, includes TLS support. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/syslog?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/syslog) |
 | http | Allows for log messages to be sent via http. Can use the HTTP handler as a base for creating other handlers requiring http transmission. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http) |
 | email | Allows for log messages to be sent via email. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/email?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/email) |
 | hipchat | Allows for log messages to be sent to a hipchat room. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat) |

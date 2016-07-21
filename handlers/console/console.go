@@ -210,7 +210,6 @@ func (c *Console) handleLog(entries <-chan *log.Entry) {
 
 		b = formatter(e)
 		c.writer.Write(b)
-		// b.WriteTo(c.writer)
 
 		e.Consumed()
 	}

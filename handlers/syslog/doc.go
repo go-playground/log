@@ -3,7 +3,9 @@ Package syslog allows for log messages to be sent via syslog.
 
 Example
 
-NOTE: currently syslog uses the std library's syslog
+NOTE: syslog uses github.com/RackSec/srslog as the stdlib syslog
+      is no longer being maintained or added to as of this discussion
+      https://github.com/golang/go/issues/13449#issuecomment-161204716
 
     package main
 

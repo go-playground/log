@@ -1,0 +1,3 @@
+vendors:
+- path: github.com/RackSec/srslog
+  rev: 259aed10dfa74ea2961eddd1d9847619f6e98837

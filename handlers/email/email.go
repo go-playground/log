@@ -5,6 +5,7 @@ import (
 	"html/template"
 	stdlog "log"
 	"os"
+	"sync"
 	"time"
 
 	"gopkg.in/gomail.v2"
@@ -59,6 +60,7 @@ type Email struct {
 	from            string
 	to              []string
 	keepalive       time.Duration
+	m               sync.Mutex
 }
 
 // New returns a new instance of the email logger
@@ -192,10 +194,19 @@ func (email *Email) Run() chan<- *log.Entry {
 func defaultFormatFunc(email *Email) Formatter {
 	var err error
 	b := new(bytes.Buffer)
+
+	// apparently there is a race condition when I was using
+	// email.to... below in the SetHeader for whatever reason
+	// so copying the "to" values solves the issue
+	// I wonder if it's a flase positive in the race detector.....
+	to := make([]string, len(email.to), len(email.to))
+	copy(to, email.to)
+
 	template := email.Template()
 	message := gomail.NewMessage()
+
 	message.SetHeader("From", email.from)
-	message.SetHeader("To", email.to...)
+	message.SetHeader("To", to...)
 
 	return func(e *log.Entry) *gomail.Message {
 		b.Reset()
