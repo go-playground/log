@@ -206,8 +206,8 @@ func (e *Entry) WithFields(fields ...Field) LeveledLogger {
 func (e *Entry) StackTrace() LeveledLogger {
 	trace := make([]byte, 1<<16)
 	n := runtime.Stack(trace, true)
-	if n > 7000 {
-		n = 7000
+	if n > stackTraceLimit {
+		n = stackTraceLimit
 	}
 	e.Fields = append(e.Fields, F("stack trace", string(trace[:n])+"\n"))
 	return e

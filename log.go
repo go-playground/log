@@ -45,10 +45,11 @@ const (
 
 // Logger is the default instance of the log package
 var (
-	once      sync.Once
-	Logger    *logger
-	exitFunc  = os.Exit
-	skipLevel = 2
+	once            sync.Once
+	Logger          *logger
+	exitFunc        = os.Exit
+	skipLevel       = 2
+	stackTraceLimit = 7000
 )
 
 func init() {
@@ -255,8 +256,8 @@ func (l *logger) WithFields(fields ...Field) LeveledLogger {
 func (l *logger) StackTrace() LeveledLogger {
 	trace := make([]byte, 1<<16)
 	n := runtime.Stack(trace, true)
-	if n > 7000 {
-		n = 7000
+	if n > stackTraceLimit {
+		n = stackTraceLimit
 	}
 	return newEntry(DebugLevel, "", []Field{F("stack trace", string(trace[:n])+"\n")}, skipLevel)
 }

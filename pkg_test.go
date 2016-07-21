@@ -22,7 +22,7 @@ import (
 //
 
 func TestConsoleLogger2(t *testing.T) {
-
+	stackTraceLimit = 1000
 	tests := getLogTests()
 	buff := new(bytes.Buffer)
 
