@@ -6,6 +6,7 @@ import (
 	stdlog "log"
 	"os"
 	"strconv"
+	"strings"
 
 	syslog "github.com/RackSec/srslog"
 
@@ -349,7 +350,9 @@ func defaultFormatFunc(s *Syslog) Formatter {
 					}
 				}
 			} else {
-				file = file[len(gopath):]
+				if strings.HasPrefix(file, gopath) {
+					file = file[len(gopath):]
+				}
 			}
 
 			b = append(b, e.Timestamp.Format(tsFormat)...)
