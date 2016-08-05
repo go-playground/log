@@ -7,6 +7,7 @@ import (
 	stdlog "log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/go-playground/log"
 )
@@ -358,7 +359,12 @@ func defaultFormatFunc(c *Console) Formatter {
 					}
 				}
 			} else {
-				file = file[len(gopath):]
+
+				// additional check, just in case user does
+				// have a $GOPATH but code isnt under it.
+				if strings.HasPrefix(file, gopath) {
+					file = file[len(gopath):]
+				}
 			}
 
 			b = append(b, e.Timestamp.Format(tsFormat)...)

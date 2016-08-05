@@ -5,6 +5,7 @@ import (
 	"html/template"
 	stdlog "log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -171,7 +172,12 @@ func (email *Email) Run() chan<- *log.Entry {
 						}
 					}
 				} else {
-					file = file[len(email.gopath):]
+
+					// additional check, just in case user does
+					// have a $GOPATH but code isnt under it.
+					if strings.HasPrefix(file, email.gopath) {
+						file = file[len(email.gopath):]
+					}
 				}
 
 				return
