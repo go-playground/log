@@ -174,7 +174,7 @@ func (email *Email) Run() chan<- *log.Entry {
 				} else {
 
 					// additional check, just in case user does
-					// have a $GOPATH but code isnt under it.
+					// have a $GOPATH but code isn't under it.
 					if strings.HasPrefix(file, email.gopath) {
 						file = file[len(email.gopath):]
 					}

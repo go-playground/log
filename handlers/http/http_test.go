@@ -46,7 +46,7 @@ func TestHTTPLogger(t *testing.T) {
 
 	hLog, err := New(server.URL, "POST", header)
 	if err != nil {
-		log.Fatalf("Error initializing HTTP recieved '%s'", err)
+		log.Fatalf("Error initializing HTTP received '%s'", err)
 	}
 	hLog.SetBuffersAndWorkers(0, 0)
 	hLog.SetTimestampFormat("MST")
@@ -154,7 +154,7 @@ func TestSetFilenameDisplay(t *testing.T) {
 
 	hLog, err := New(server.URL, "POST", header)
 	if err != nil {
-		t.Fatalf("Error initializing HTTP recieved '%s'", err)
+		t.Fatalf("Error initializing HTTP received '%s'", err)
 	}
 
 	hLog.SetBuffersAndWorkers(0, 1)

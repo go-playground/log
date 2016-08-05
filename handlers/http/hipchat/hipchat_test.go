@@ -54,7 +54,7 @@ func TestHipChat(t *testing.T) {
 
 	hc, err := New(APIv2, server.URL+"/", "application/json", authToken)
 	if err != nil {
-		log.Fatalf("Error initializing hipchat recieved '%s'", err)
+		log.Fatalf("Error initializing hipchat received '%s'", err)
 	}
 
 	hc.SetBuffersAndWorkers(0, 0)
@@ -75,7 +75,7 @@ func TestHipChat(t *testing.T) {
 
 	hc2, err := New(APIv2, server.URL, "application/json", authToken)
 	if err != nil {
-		log.Fatalf("Error initializing hipchat recieved '%s'", err)
+		log.Fatalf("Error initializing hipchat received '%s'", err)
 	}
 
 	hc2.SetBuffersAndWorkers(1, 1)
@@ -123,7 +123,7 @@ func TestBadTemplate(t *testing.T) {
 
 	hc, err := New(APIv2, server.URL, "application/json", authToken)
 	if err != nil {
-		log.Fatalf("Error initializing hipchat recieved '%s'", err)
+		log.Fatalf("Error initializing hipchat received '%s'", err)
 	}
 
 	hc.SetBuffersAndWorkers(1, 1)

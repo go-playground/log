@@ -211,7 +211,7 @@ func (hc *HipChat) Run() chan<- *log.Entry {
 				} else {
 
 					// additional check, just in case user does
-					// have a $GOPATH but code isnt under it.
+					// have a $GOPATH but code isn't under it.
 					if strings.HasPrefix(file, hc.GOPATH()) {
 						file = file[len(hc.GOPATH()):]
 					}

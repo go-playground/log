@@ -224,7 +224,7 @@ func defaultFormatFunc(h HTTP) Formatter {
 			} else {
 
 				// additional check, just in case user does
-				// have a $GOPATH but code isnt under it.
+				// have a $GOPATH but code isn't under it.
 				if strings.HasPrefix(file, gopath) {
 					file = file[len(gopath):]
 				}
