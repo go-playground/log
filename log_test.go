@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/go-playground/ansi"
 )
 
 // NOTES:
@@ -23,9 +25,7 @@ import (
 func TestConsoleLogger1(t *testing.T) {
 	stackTraceLimit = 1000
 	tests := getLogTests1()
-
 	buff := new(bytes.Buffer)
-
 	th := &testHandler{
 		writer: buff,
 	}
@@ -396,29 +396,29 @@ func TestFatal(t *testing.T) {
 
 func TestColors(t *testing.T) {
 
-	fmt.Printf("%sBlack%s\n", Black, Reset)
-	fmt.Printf("%sDarkGray%s\n", DarkGray, Reset)
-	fmt.Printf("%sBlue%s\n", Blue, Reset)
-	fmt.Printf("%sLightBlue%s\n", LightBlue, Reset)
-	fmt.Printf("%sGreen%s\n", Green, Reset)
-	fmt.Printf("%sLightGreen%s\n", LightGreen, Reset)
-	fmt.Printf("%sCyan%s\n", Cyan, Reset)
-	fmt.Printf("%sLightCyan%s\n", LightCyan, Reset)
-	fmt.Printf("%sRed%s\n", Red, Reset)
-	fmt.Printf("%sLightRed%s\n", LightRed, Reset)
-	fmt.Printf("%sMagenta%s\n", Magenta, Reset)
-	fmt.Printf("%sLightMagenta%s\n", LightMagenta, Reset)
-	fmt.Printf("%sBrown%s\n", Brown, Reset)
-	fmt.Printf("%sYellow%s\n", Yellow, Reset)
-	fmt.Printf("%sLightGray%s\n", LightGray, Reset)
-	fmt.Printf("%sWhite%s\n", White, Reset)
+	fmt.Printf("%sBlack%s\n", ansi.Black, ansi.Reset)
+	fmt.Printf("%sDarkGray%s\n", ansi.DarkGray, ansi.Reset)
+	fmt.Printf("%sBlue%s\n", ansi.Blue, ansi.Reset)
+	fmt.Printf("%sLightBlue%s\n", ansi.LightBlue, ansi.Reset)
+	fmt.Printf("%sGreen%s\n", ansi.Green, ansi.Reset)
+	fmt.Printf("%sLightGreen%s\n", ansi.LightGreen, ansi.Reset)
+	fmt.Printf("%sCyan%s\n", ansi.Cyan, ansi.Reset)
+	fmt.Printf("%sLightCyan%s\n", ansi.LightCyan, ansi.Reset)
+	fmt.Printf("%sRed%s\n", ansi.Red, ansi.Reset)
+	fmt.Printf("%sLightRed%s\n", ansi.LightRed, ansi.Reset)
+	fmt.Printf("%sMagenta%s\n", ansi.Magenta, ansi.Reset)
+	fmt.Printf("%sLightMagenta%s\n", ansi.LightMagenta, ansi.Reset)
+	fmt.Printf("%sBrown%s\n", ansi.Brown, ansi.Reset)
+	fmt.Printf("%sYellow%s\n", ansi.Yellow, ansi.Reset)
+	fmt.Printf("%sLightGray%s\n", ansi.LightGray, ansi.Reset)
+	fmt.Printf("%sWhite%s\n", ansi.White, ansi.Reset)
 
-	fmt.Printf("%s%sUnderscoreRed%s\n", Red, Underscore, Reset)
-	fmt.Printf("%s%sBlinkRed%s\n", Red, Blink, Reset)
-	fmt.Printf("%s%s%sBlinkUnderscoreRed%s\n", Red, Blink, Underscore, Reset)
+	fmt.Printf("%s%sUnderscoreRed%s\n", ansi.Red, ansi.Underline, ansi.Reset)
+	fmt.Printf("%s%sBlinkRed%s\n", ansi.Red, ansi.Blink, ansi.Reset)
+	fmt.Printf("%s%s%sBlinkUnderscoreRed%s\n", ansi.Red, ansi.Blink, ansi.Underline, ansi.Reset)
 
-	fmt.Printf("%s%sRedInverse%s\n", Red, Inverse, Reset)
-	fmt.Printf("%sGreenInverse%s\n", Green+Inverse, Reset)
+	fmt.Printf("%s%sRedInverse%s\n", ansi.Red, ansi.Inverse, ansi.Reset)
+	fmt.Printf("%sGreenInverse%s\n", ansi.Green+ansi.Inverse, ansi.Reset)
 }
 
 func getLogTests1() []test {

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-playground/ansi"
 	"github.com/go-playground/log"
 )
 
@@ -34,7 +35,7 @@ const (
 type Console struct {
 	buffer          uint
 	numWorkers      uint
-	colors          [9]log.ANSIEscSeq
+	colors          [9]ansi.EscSeq
 	writer          io.Writer
 	formatFunc      FormatFunc
 	timestampFormat string
@@ -45,16 +46,16 @@ type Console struct {
 }
 
 // Colors mapping.
-var defaultColors = [...]log.ANSIEscSeq{
-	log.DebugLevel:  log.Green,
-	log.TraceLevel:  log.White,
-	log.InfoLevel:   log.Blue,
-	log.NoticeLevel: log.LightCyan,
-	log.WarnLevel:   log.Yellow,
-	log.ErrorLevel:  log.LightRed,
-	log.PanicLevel:  log.Red,
-	log.AlertLevel:  log.Red + log.Underscore,
-	log.FatalLevel:  log.Red + log.Underscore + log.Blink,
+var defaultColors = [...]ansi.EscSeq{
+	log.DebugLevel:  ansi.Green,
+	log.TraceLevel:  ansi.White,
+	log.InfoLevel:   ansi.Blue,
+	log.NoticeLevel: ansi.LightCyan,
+	log.WarnLevel:   ansi.Yellow,
+	log.ErrorLevel:  ansi.LightRed,
+	log.PanicLevel:  ansi.Red,
+	log.AlertLevel:  ansi.Red + ansi.Underline,
+	log.FatalLevel:  ansi.Red + ansi.Underline + ansi.Blink,
 }
 
 // New returns a new instance of the console logger
@@ -99,7 +100,7 @@ func (c *Console) DisplayColor() bool {
 }
 
 // GetDisplayColor returns the color for the given log level
-func (c *Console) GetDisplayColor(level log.Level) log.ANSIEscSeq {
+func (c *Console) GetDisplayColor(level log.Level) ansi.EscSeq {
 	return c.colors[level]
 }
 
@@ -229,7 +230,7 @@ func defaultFormatFunc(c *Console) Formatter {
 
 	if c.DisplayColor() {
 
-		var color log.ANSIEscSeq
+		var color ansi.EscSeq
 
 		return func(e *log.Entry) []byte {
 			b = b[0:0]
@@ -247,7 +248,7 @@ func defaultFormatFunc(c *Console) Formatter {
 					b = append(b, space)
 				}
 				b = append(b, lvl...)
-				b = append(b, log.Reset...)
+				b = append(b, ansi.Reset...)
 				b = append(b, space)
 				b = append(b, e.Message...)
 
@@ -277,7 +278,7 @@ func defaultFormatFunc(c *Console) Formatter {
 				}
 
 				b = append(b, lvl...)
-				b = append(b, log.Reset...)
+				b = append(b, ansi.Reset...)
 				b = append(b, space)
 				b = append(b, file...)
 				b = append(b, colon)
@@ -290,7 +291,7 @@ func defaultFormatFunc(c *Console) Formatter {
 				b = append(b, space)
 				b = append(b, color...)
 				b = append(b, f.Key...)
-				b = append(b, log.Reset...)
+				b = append(b, ansi.Reset...)
 				b = append(b, equals)
 
 				switch f.Value.(type) {

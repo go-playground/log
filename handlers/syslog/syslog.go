@@ -10,6 +10,7 @@ import (
 
 	syslog "github.com/RackSec/srslog"
 
+	"github.com/go-playground/ansi"
 	"github.com/go-playground/log"
 )
 
@@ -34,7 +35,7 @@ const (
 type Syslog struct {
 	buffer          uint
 	numWorkers      uint
-	colors          [9]log.ANSIEscSeq
+	colors          [9]ansi.EscSeq
 	writer          *syslog.Writer
 	formatFunc      FormatFunc
 	timestampFormat string
@@ -45,16 +46,16 @@ type Syslog struct {
 
 var (
 	// Colors mapping.
-	defaultColors = [...]log.ANSIEscSeq{
-		log.DebugLevel:  log.Green,
-		log.TraceLevel:  log.White,
-		log.InfoLevel:   log.Blue,
-		log.NoticeLevel: log.LightCyan,
-		log.WarnLevel:   log.Yellow,
-		log.ErrorLevel:  log.LightRed,
-		log.PanicLevel:  log.Red,
-		log.AlertLevel:  log.Red + log.Underscore,
-		log.FatalLevel:  log.Red + log.Underscore + log.Blink,
+	defaultColors = [...]ansi.EscSeq{
+		log.DebugLevel:  ansi.Green,
+		log.TraceLevel:  ansi.White,
+		log.InfoLevel:   ansi.Blue,
+		log.NoticeLevel: ansi.LightCyan,
+		log.WarnLevel:   ansi.Yellow,
+		log.ErrorLevel:  ansi.LightRed,
+		log.PanicLevel:  ansi.Red,
+		log.AlertLevel:  ansi.Red + ansi.Underline,
+		log.FatalLevel:  ansi.Red + ansi.Underline + ansi.Blink,
 	}
 )
 
@@ -112,7 +113,7 @@ func (s *Syslog) DisplayColor() bool {
 }
 
 // GetDisplayColor returns the color for the given log level
-func (s *Syslog) GetDisplayColor(level log.Level) log.ANSIEscSeq {
+func (s *Syslog) GetDisplayColor(level log.Level) ansi.EscSeq {
 	return s.colors[level]
 }
 
@@ -222,7 +223,7 @@ func defaultFormatFunc(s *Syslog) Formatter {
 
 	if s.DisplayColor() {
 
-		var color log.ANSIEscSeq
+		var color ansi.EscSeq
 
 		return func(e *log.Entry) []byte {
 			b = b[0:0]
@@ -240,7 +241,7 @@ func defaultFormatFunc(s *Syslog) Formatter {
 					b = append(b, space)
 				}
 				b = append(b, lvl...)
-				b = append(b, log.Reset...)
+				b = append(b, ansi.Reset...)
 				b = append(b, space)
 				b = append(b, e.Message...)
 
@@ -270,7 +271,7 @@ func defaultFormatFunc(s *Syslog) Formatter {
 				}
 
 				b = append(b, lvl...)
-				b = append(b, log.Reset...)
+				b = append(b, ansi.Reset...)
 				b = append(b, space)
 				b = append(b, file...)
 				b = append(b, colon)
@@ -283,7 +284,7 @@ func defaultFormatFunc(s *Syslog) Formatter {
 				b = append(b, space)
 				b = append(b, color...)
 				b = append(b, f.Key...)
-				b = append(b, log.Reset...)
+				b = append(b, ansi.Reset...)
 				b = append(b, equals)
 
 				switch f.Value.(type) {
