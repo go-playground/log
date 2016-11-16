@@ -408,9 +408,9 @@ func TestColors(t *testing.T) {
 	fmt.Printf("%sLightRed%s\n", ansi.LightRed, ansi.Reset)
 	fmt.Printf("%sMagenta%s\n", ansi.Magenta, ansi.Reset)
 	fmt.Printf("%sLightMagenta%s\n", ansi.LightMagenta, ansi.Reset)
-	fmt.Printf("%sBrown%s\n", ansi.Brown, ansi.Reset)
-	fmt.Printf("%sYellow%s\n", ansi.Yellow, ansi.Reset)
-	fmt.Printf("%sLightGray%s\n", ansi.LightGray, ansi.Reset)
+	fmt.Printf("%sBrown%s\n", ansi.Yellow, ansi.Reset)
+	fmt.Printf("%sYellow%s\n", ansi.LightYellow, ansi.Reset)
+	fmt.Printf("%sLightGray%s\n", ansi.Gray, ansi.Reset)
 	fmt.Printf("%sWhite%s\n", ansi.White, ansi.Reset)
 
 	fmt.Printf("%s%sUnderscoreRed%s\n", ansi.Red, ansi.Underline, ansi.Reset)
