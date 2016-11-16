@@ -51,7 +51,7 @@ var defaultColors = [...]ansi.EscSeq{
 	log.TraceLevel:  ansi.White,
 	log.InfoLevel:   ansi.Blue,
 	log.NoticeLevel: ansi.LightCyan,
-	log.WarnLevel:   ansi.Yellow,
+	log.WarnLevel:   ansi.LightYellow,
 	log.ErrorLevel:  ansi.LightRed,
 	log.PanicLevel:  ansi.Red,
 	log.AlertLevel:  ansi.Red + ansi.Underline,
