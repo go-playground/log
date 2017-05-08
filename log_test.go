@@ -369,9 +369,9 @@ func TestEntry(t *testing.T) {
 func TestFatal(t *testing.T) {
 	var i int
 
-	exitFunc = func(code int) {
+	Logger.SetExitFunc(func(code int) {
 		i = code
-	}
+	})
 
 	Logger.Fatal("fatal")
 	if i != 1 {
