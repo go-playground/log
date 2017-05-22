@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -29,10 +30,9 @@ func TestConsoleLogger2(t *testing.T) {
 	th := &testHandler{
 		writer: buff,
 	}
-
 	SetCallerInfoLevels(WarnLevel, ErrorLevel, PanicLevel, AlertLevel, FatalLevel)
 	RegisterHandler(th, AllLevels...)
-
+	SetExitFunc(os.Exit)
 	if bl := HasHandlers(); !bl {
 		t.Errorf("test HasHandlers: Expected '%t' Got '%t'", true, bl)
 	}

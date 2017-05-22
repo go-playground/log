@@ -235,10 +235,12 @@ func getTestHTTPLoggerTests() []test {
 				log.F("key", uint16(3)),
 				log.F("key", uint32(4)),
 				log.F("key", uint64(5)),
+				log.F("key", float32(5.33)),
+				log.F("key", float64(5.34)),
 				log.F("key", true),
 				log.F("key", struct{ value string }{"struct"}),
 			},
-			want: "UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}",
+			want: "UTC  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=5.33 key=5.34 key=true key={struct}",
 		},
 		{
 			lvl:  log.TraceLevel,
