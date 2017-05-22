@@ -276,6 +276,10 @@ func defaultFormatFunc(h HTTP) Formatter {
 				b = strconv.AppendUint(b, uint64(f.Value.(uint32)), base10)
 			case uint64:
 				b = strconv.AppendUint(b, f.Value.(uint64), base10)
+			case float32:
+				b = strconv.AppendFloat(b, float64(f.Value.(float32)), 'f', -1, 32)
+			case float64:
+				b = strconv.AppendFloat(b, f.Value.(float64), 'f', -1, 64)
 			case bool:
 				b = strconv.AppendBool(b, f.Value.(bool))
 			default:

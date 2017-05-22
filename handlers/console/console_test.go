@@ -820,10 +820,12 @@ func getConsoleLoggerColorTests() []test {
 				log.F("key", uint16(3)),
 				log.F("key", uint32(4)),
 				log.F("key", uint64(5)),
+				log.F("key", float32(5.33)),
+				log.F("key", float64(5.34)),
 				log.F("key", true),
 				log.F("key", struct{ value string }{"struct"}),
 			},
-			want: "UTC [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=true [32mkey[0m={struct}\n",
+			want: "UTC [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=5.33 [32mkey[0m=5.34 [32mkey[0m=true [32mkey[0m={struct}\n",
 		},
 	}
 }

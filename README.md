@@ -1,5 +1,5 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-4.2.0-green.svg)
+<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-4.3.0-green.svg)
 [![Build Status](https://semaphoreci.com/api/v1/joeybloggs/log/branches/master/badge.svg)](https://semaphoreci.com/joeybloggs/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -204,20 +204,17 @@ things for you the community.
 
 Benchmarks
 ----------
-###### Run on MacBook Pro (Retina, 15-inch, Late 2013) 2.6 GHz Intel Core i7 16 GB 1600 MHz DDR3 using Go version go1.6.2 darwin/amd64
+###### Run on i5-7600 16 GB DDR4-2400 using Go version go1.8 linux/amd64
 NOTE: only putting benchmarks at others request, by no means does the number of allocations 
 make one log library better than another!
 ```go
-go test -cpu=4 -bench=. -benchmem=true
-
-PASS
-BenchmarkLogConsoleTenFieldsParallel-4	 1000000	      1985 ns/op	    1113 B/op	      35 allocs/op
-BenchmarkLogConsoleSimpleParallel-4   	 3000000	       455 ns/op	      88 B/op	       4 allocs/op
-BenchmarkLogrusText10Fields-4         	  300000	      4179 ns/op	    4291 B/op	      63 allocs/op
-BenchmarkLogrusTextSimple-4           	 2000000	       655 ns/op	     672 B/op	      15 allocs/op
-BenchmarkLog1510Fields-4              	  100000	     16376 ns/op	    4378 B/op	      92 allocs/op
-BenchmarkLog15Simple-4                	 1000000	      1983 ns/op	     320 B/op	       9 allocs/op
-ok  	github.com/go-playground/log/benchmarks	10.716s
+go test --bench=. -benchmem=true
+BenchmarkLogConsoleTenFieldsParallel-4           1000000              1294 ns/op            1065 B/op         32 allocs/op
+BenchmarkLogConsoleSimpleParallel-4              3000000               549 ns/op             104 B/op          5 allocs/op
+BenchmarkLogrusText10Fields-4                     500000              2079 ns/op            2179 B/op         39 allocs/op
+BenchmarkLogrusTextSimple-4                      3000000               402 ns/op             312 B/op         14 allocs/op
+BenchmarkLog1510Fields-4                          200000             10915 ns/op            4362 B/op         91 allocs/op
+BenchmarkLog15Simple-4                           1000000              1292 ns/op             320 B/op          9 allocs/op
 ```
 
 Special Thanks
