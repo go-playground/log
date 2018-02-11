@@ -10,7 +10,7 @@ const (
 
 var (
 	logFields   []Field
-	logHandlers = make(map[Level][]Handler)
+	logHandlers = map[Level][]Handler{}
 )
 
 // Field is a single Field key and value
