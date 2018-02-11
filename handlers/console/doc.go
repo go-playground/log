@@ -5,7 +5,7 @@ Example
 
 simple console
 
-	package main
+    package main
 
     import (
         "errors"
@@ -32,21 +32,21 @@ simple console
 
         err := errors.New("the is an error")
         // logging with fields can be used with any of the above
-        log.WithError(err).WithFields(log.Fields{"key": "value"}).Info("test info")
+        log.WithError(err).WithFields(log.F("key", "value")).Info("test info")
 
         // predefined global fields
         log.WithDefaultFields(log.Fields{
-            "program": "test",
-            "version": "0.1.3",
-        })
+            {"program", "test"},
+            {"version", "0.1.3"},
+        }...)
 
         log.WithField("key", "value").Info("testing default fields")
 
         // or request scoped default fields
-        logger := log.WithFields(log.Fields{
-            "request": "req",
-            "scoped":  "sco",
-        })
+        logger := log.WithFields(
+            log.F("request", "req"),
+            log.F("scoped", "sco"),
+        )
 
         logger.WithField("key", "value").Info("test")
     }
