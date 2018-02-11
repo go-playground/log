@@ -50,18 +50,18 @@ func BenchmarkLogConsoleTenFieldsParallel(b *testing.B) {
 	// log setup in TestMain
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			log.WithFields(log.Fields{
-				"int":               1,
-				"int64":             int64(1),
-				"float":             3.0,
-				"string":            "four!",
-				"bool":              true,
-				"time":              time.Unix(0, 0),
-				"error":             errExample.Error(),
-				"duration":          time.Second,
-				"user-defined type": _jane,
-				"another string":    "done!",
-			}).Info("Go fast.")
+			log.WithFields(
+				log.F("int", 1),
+				log.F("int64", int64(1)),
+				log.F("float", 3.0),
+				log.F("string", "four!"),
+				log.F("bool", true),
+				log.F("time", time.Unix(0, 0)),
+				log.F("error", errExample.Error()),
+				log.F("duration", time.Second),
+				log.F("user-defined type", _jane),
+				log.F("another string", "done!"),
+			).Info("Go fast.")
 		}
 
 	})

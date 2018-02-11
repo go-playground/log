@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -10,7 +9,7 @@ import (
 )
 
 // Fields is the type to send to WithFields
-type Fields map[string]interface{}
+type Fields []Field
 
 // Entry defines a single log entry
 type Entry struct {
@@ -42,28 +41,17 @@ func newEntryWithFields(fields []Field) Entry {
 	return e
 }
 
-// WithFields returns a new log entry with the supplied fields appended
-func (e Entry) WithFields(fields Fields) Entry {
-	ne := newEntry(e)
-	for k, v := range fields {
-		ne.Fields = append(ne.Fields, Field{Key: k, Value: v})
-	}
-	return ne
-}
-
-// WithFieldsOrdered returns a new log entry with the supplied fields appended
-// but the fields are guranteed to remain in the order they are logged, unlike
-// WithFields that accepts a map of values
-func (e Entry) WithFieldsOrdered(fields ...Field) Entry {
-	ne := newEntry(e)
-	ne.Fields = append(ne.Fields, fields...)
-	return ne
-}
-
 // WithField returns a new log entry with the supplied field.
 func (e Entry) WithField(key string, value interface{}) Entry {
 	ne := newEntry(e)
 	ne.Fields = append(ne.Fields, Field{Key: key, Value: value})
+	return ne
+}
+
+// WithFields returns a new log entry with the supplied fields appended
+func (e Entry) WithFields(fields ...Field) Entry {
+	ne := newEntry(e)
+	ne.Fields = append(ne.Fields, fields...)
 	return ne
 }
 
@@ -164,7 +152,7 @@ func (e Entry) Panic(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = PanicLevel
 	handleEntry(e)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // Panicf logs a panic log entry with formatting
@@ -172,7 +160,7 @@ func (e Entry) Panicf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = PanicLevel
 	handleEntry(e)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // Alert logs an alert log entry
@@ -194,7 +182,7 @@ func (e Entry) Fatal(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = FatalLevel
 	handleEntry(e)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // Fatalf logs a fatal log entry with formatting
@@ -202,7 +190,7 @@ func (e Entry) Fatalf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = FatalLevel
 	handleEntry(e)
-	os.Exit(1)
+	exitFunc(1)
 }
 
 // Error logs an error log entry

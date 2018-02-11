@@ -1,6 +1,9 @@
 package log
 
-import "time"
+import (
+	"os"
+	"time"
+)
 
 const (
 	// DefaultTimeFormat is the default time format when parsing Time values.
@@ -11,12 +14,21 @@ const (
 var (
 	logFields   []Field
 	logHandlers = map[Level][]Handler{}
+	exitFunc    = os.Exit
 )
 
 // Field is a single Field key and value
 type Field struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
+}
+
+// SetExitFunc sets the provided function as the exit function used in Fatal(),
+// Fatalf(), Panic() and Panicf(). This is primarily used when wrapping this library,
+// you can set this to to enable testing (with coverage) of your Fatal() and Fatalf()
+// methods.
+func SetExitFunc(fn func(code int)) {
+	exitFunc = fn
 }
 
 func handleEntry(e Entry) {
@@ -26,6 +38,12 @@ func handleEntry(e Entry) {
 	for _, h := range logHandlers[e.Level] {
 		h.Log(e)
 	}
+}
+
+// F creates a new Field using the supplied key + value.
+// it is shorthand for defining field manually
+func F(key string, value interface{}) Field {
+	return Field{Key: key, Value: value}
 }
 
 // AddHandler adds a new log handler and accepts which log levels that
@@ -38,25 +56,8 @@ func AddHandler(h Handler, levels ...Level) {
 }
 
 // WithDefaultFields adds fields to the underlying logger instance
-func WithDefaultFields(fields Fields) {
-	for k, v := range fields {
-		logFields = append(logFields, Field{Key: k, Value: v})
-	}
-}
-
-// WithDefaultFieldsSorted adds fields to the underlying logger instance
-// but the fields are guranteed to remain in the order they are logged
-func WithDefaultFieldsSorted(fields ...Field) {
+func WithDefaultFields(fields ...Field) {
 	logFields = append(logFields, fields...)
-}
-
-// WithFields returns a new log entry with the supplied fields appended
-func WithFields(fields Fields) Entry {
-	ne := newEntryWithFields(logFields)
-	for k, v := range fields {
-		ne.Fields = append(ne.Fields, Field{Key: k, Value: v})
-	}
-	return ne
 }
 
 // WithField returns a new log entry with the supplied field.
@@ -66,10 +67,8 @@ func WithField(key string, value interface{}) Entry {
 	return ne
 }
 
-// WithFieldsOrdered returns a new log entry with the supplied fields appended
-// but the fields are guranteed to remain in the order they are logged, unlike
-// WithFields that accepts a map of values
-func WithFieldsOrdered(fields ...Field) Entry {
+// WithFields returns a new log entry with the supplied fields appended
+func WithFields(fields ...Field) Entry {
 	ne := newEntryWithFields(logFields)
 	ne.Fields = append(ne.Fields, fields...)
 	return ne
