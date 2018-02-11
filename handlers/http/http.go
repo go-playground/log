@@ -25,7 +25,6 @@ const (
 	colon  = byte(':')
 	base10 = 10
 	v      = "%v"
-	gopath = "GOPATH"
 )
 
 // HTTP is an instance of the http logger

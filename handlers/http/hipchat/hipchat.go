@@ -103,9 +103,6 @@ const (
 	method          = "POST"
 	defaultTemplate = `<p><b>{{ .Level.String }}</b></p>
         <p>{{ ts . }}</p>
-        {{ if ne .Line 0 }}
-            {{ display_file . }}:{{ .Line }}
-        {{ end }}
         <p><b>{{ .Message }}</b></p>
         {{ range $f := .Fields }}
             <p><b>{{ $f.Key }}</b>: {{ $f.Value }}</p>
@@ -167,7 +164,7 @@ func New(api APIVersion, remoteHost string, contentType string, authToken string
 func (hc *HipChat) SetTemplate(htmlTemplate string) {
 	hc.template = template.Must(template.New("hipchat").Funcs(
 		template.FuncMap{
-			"ts": func(e *log.Entry) (ts string) {
+			"ts": func(e log.Entry) (ts string) {
 				ts = e.Timestamp.Format(hc.TimestampFormat())
 				return
 			},

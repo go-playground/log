@@ -3,7 +3,6 @@ package email
 import (
 	"bytes"
 	"html/template"
-	"sync"
 
 	"gopkg.in/gomail.v2"
 
@@ -19,20 +18,13 @@ type FormatFunc func(email *Email) Formatter
 type Formatter func(e log.Entry) *gomail.Message
 
 const (
-	gopath          = "GOPATH"
 	contentType     = "text/html"
 	defaultTemplate = `<!DOCTYPE html>
 <html>
     <body>
         <h2>{{ .Message }}</h2>
-        {{ if ne .ApplicationID "" }}
-            <h4>{{ .ApplicationID }}</h4>
-        {{ end }}
         <p>{{ .Level.String }}</p>
         <p>{{ ts . }}</p>
-        {{ if ne .Line 0 }}
-            {{ display_file . }}:{{ .Line }}
-        {{ end }}
         {{ range $f := .Fields }}
             <p><b>{{ $f.Key }}</b>: {{ $f.Value }}</p>
         {{ end }}
@@ -44,7 +36,6 @@ const (
 type Email struct {
 	formatter       Formatter
 	timestampFormat string
-	gopath          string
 	template        *template.Template
 	host            string
 	port            int
@@ -52,7 +43,6 @@ type Email struct {
 	password        string
 	from            string
 	to              []string
-	m               sync.Mutex
 }
 
 // New returns a new instance of the email logger
@@ -66,7 +56,7 @@ func New(host string, port int, username string, password string, from string, t
 		from:            from,
 		to:              to,
 	}
-	e.SetEmailTemplate(defaultTemplate)
+	e.SetTemplate(defaultTemplate)
 	e.formatter = defaultFormatFunc(e)
 	return e
 }
@@ -76,7 +66,7 @@ func (email *Email) SetTemplate(htmlTemplate string) {
 	// parse email htmlTemplate, will panic if fails
 	email.template = template.Must(template.New("email").Funcs(
 		template.FuncMap{
-			"ts": func(e *log.Entry) (ts string) {
+			"ts": func(e log.Entry) (ts string) {
 				ts = e.Timestamp.Format(email.timestampFormat)
 				return
 			},
@@ -112,14 +102,13 @@ func (email *Email) SetFormatFunc(fn FormatFunc) {
 }
 
 func defaultFormatFunc(email *Email) Formatter {
-	var err error
 	b := new(bytes.Buffer)
 
 	// apparently there is a race condition when I was using
 	// email.to... below in the SetHeader for whatever reason
 	// so copying the "to" values solves the issue
 	// I wonder if it's a flase positive in the race detector.....
-	to := make([]string, len(email.to), len(email.to))
+	to := make([]string, len(email.to))
 	copy(to, email.to)
 
 	template := email.Template()
@@ -130,10 +119,7 @@ func defaultFormatFunc(email *Email) Formatter {
 
 	return func(e log.Entry) *gomail.Message {
 		b.Reset()
-		if err = template.ExecuteTemplate(b, "email", e); err != nil {
-			log.WithField("error", err).Error("Error parsing Email handler template")
-		}
-
+		_ = template.ExecuteTemplate(b, "email", e)
 		message.SetHeader("Subject", e.Message)
 		message.SetBody(contentType, b.String())
 		return message
@@ -191,5 +177,6 @@ func (email *Email) Log(e log.Entry) {
 			}
 			goto RESEND
 		}
+		break
 	}
 }

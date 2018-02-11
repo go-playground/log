@@ -15,11 +15,10 @@ simple email
     func main() {
 
         email := email.New("smtp.gmail.com", 587, "username", "password", "from@email.com", []string{"to@email.com"})
-        email.SetFilenameDisplay(log.Llongfile)
 
-        log.RegisterHandler(email, log.WarnLevel, log.AlertLevel, log.PanicLevel)
+        log.AddHandler(email, log.WarnLevel, log.AlertLevel, log.PanicLevel)
 
-        log.WithFields(log.F("error", "something went wrong")).StackTrace().Alert("ALERT!")
+        log.WithField("omg", "something went wrong").Alert("ALERT!")
     }
 */
 package email
