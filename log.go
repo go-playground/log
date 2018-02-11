@@ -1,41 +1,6 @@
 package log
 
-import (
-	"fmt"
-	"os"
-	"runtime"
-	"sync"
-	"time"
-)
-
-// FilenameDisplay is the type of file display output
-type FilenameDisplay uint8
-
-// FilenameDisplay options
-const (
-	Lshortfile FilenameDisplay = iota
-	Llongfile
-)
-
-// HandlerChannels is an array of handler channels
-type HandlerChannels []chan<- *Entry
-
-// LevelHandlerChannels is a group of Handler channels mapped by Level
-type LevelHandlerChannels map[Level]HandlerChannels
-
-// DurationFormatFunc is the function called for parsing Trace Duration
-type DurationFormatFunc func(time.Duration) string
-
-type logger struct {
-	fieldPool        *sync.Pool
-	entryPool        *sync.Pool
-	tracePool        *sync.Pool
-	channels         LevelHandlerChannels
-	durationFunc     DurationFormatFunc
-	timeFormat       string
-	appID            string
-	callerInfoLevels [9]bool
-}
+import "time"
 
 const (
 	// DefaultTimeFormat is the default time format when parsing Time values.
@@ -43,336 +8,184 @@ const (
 	DefaultTimeFormat = "2006-01-02T15:04:05.000000000Z07:00"
 )
 
-// Logger is the default instance of the log package
 var (
-	once            sync.Once
-	Logger          *logger
-	exitFunc        = os.Exit
-	skipLevel       = 2
-	stackTraceLimit = 7000
+	logFields   []Field
+	logHandlers = make(map[Level][]Handler)
 )
 
-func init() {
-	once.Do(func() {
-		Logger = &logger{
-			fieldPool: &sync.Pool{New: func() interface{} {
-				return Field{}
-			}},
-			tracePool: &sync.Pool{New: func() interface{} {
-				return new(TraceEntry)
-			}},
-			channels:     make(LevelHandlerChannels),
-			durationFunc: func(d time.Duration) string { return d.String() },
-			timeFormat:   DefaultTimeFormat,
-			callerInfoLevels: [9]bool{
-				true,
-				false,
-				false,
-				false,
-				true,
-				true,
-				true,
-				true,
-				true,
-			},
-		}
-
-		Logger.entryPool = &sync.Pool{New: func() interface{} {
-			return &Entry{
-				wg:            new(sync.WaitGroup),
-				ApplicationID: Logger.getApplicationID(),
-			}
-		}}
-	})
+// Field is a single Field key and value
+type Field struct {
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
 }
 
-// LeveledLogger interface for logging by level
-type LeveledLogger interface {
-	Debug(v ...interface{})
-	Trace(v ...interface{}) Traceable
-	Info(v ...interface{})
-	Notice(v ...interface{})
-	Warn(v ...interface{})
-	Error(v ...interface{})
-	Panic(v ...interface{})
-	Alert(v ...interface{})
-	Fatal(v ...interface{})
-	Debugf(msg string, v ...interface{})
-	Tracef(msg string, v ...interface{}) Traceable
-	Infof(msg string, v ...interface{})
-	Noticef(msg string, v ...interface{})
-	Warnf(msg string, v ...interface{})
-	Errorf(msg string, v ...interface{})
-	Panicf(msg string, v ...interface{})
-	Alertf(msg string, v ...interface{})
-	Fatalf(msg string, v ...interface{})
-	WithFields(...Field) LeveledLogger
-	StackTrace() LeveledLogger
-}
-
-var _ LeveledLogger = Logger
-
-// Debug level formatted message.
-func (l *logger) Debug(v ...interface{}) {
-	e := newEntry(DebugLevel, fmt.Sprint(v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Trace starts a trace & returns Traceable object to End + log.
-// Example defer log.Trace(...).End()
-func (l *logger) Trace(v ...interface{}) Traceable {
-
-	t := l.tracePool.Get().(*TraceEntry)
-	t.entry = newEntry(TraceLevel, fmt.Sprint(v...), make([]Field, 0), skipLevel)
-	t.start = time.Now().UTC()
-
-	return t
-}
-
-// Info level formatted message.
-func (l *logger) Info(v ...interface{}) {
-	e := newEntry(InfoLevel, fmt.Sprint(v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Notice level formatted message.
-func (l *logger) Notice(v ...interface{}) {
-	e := newEntry(NoticeLevel, fmt.Sprint(v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Warn level formatted message.
-func (l *logger) Warn(v ...interface{}) {
-	e := newEntry(WarnLevel, fmt.Sprint(v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Error level formatted message.
-func (l *logger) Error(v ...interface{}) {
-	e := newEntry(ErrorLevel, fmt.Sprint(v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Panic logs an Panic level formatted message and then panics
-func (l *logger) Panic(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	e := newEntry(PanicLevel, s, nil, skipLevel)
-	l.HandleEntry(e)
-	panic(s)
-}
-
-// Alert logs an Alert level formatted message and then panics
-func (l *logger) Alert(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	e := newEntry(AlertLevel, s, nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Fatal level formatted message, followed by an exit.
-func (l *logger) Fatal(v ...interface{}) {
-	e := newEntry(FatalLevel, fmt.Sprint(v...), nil, skipLevel)
-	l.HandleEntry(e)
-	exitFunc(1)
-}
-
-// Debugf level formatted message.
-func (l *logger) Debugf(msg string, v ...interface{}) {
-	e := newEntry(DebugLevel, fmt.Sprintf(msg, v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Tracef starts a trace & returns Traceable object to End + log
-func (l *logger) Tracef(msg string, v ...interface{}) Traceable {
-
-	t := l.tracePool.Get().(*TraceEntry)
-	t.entry = newEntry(TraceLevel, fmt.Sprintf(msg, v...), make([]Field, 0), skipLevel)
-	t.start = time.Now().UTC()
-
-	return t
-}
-
-// Infof level formatted message.
-func (l *logger) Infof(msg string, v ...interface{}) {
-	e := newEntry(InfoLevel, fmt.Sprintf(msg, v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Noticef level formatted message.
-func (l *logger) Noticef(msg string, v ...interface{}) {
-	e := newEntry(NoticeLevel, fmt.Sprintf(msg, v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Warnf level formatted message.
-func (l *logger) Warnf(msg string, v ...interface{}) {
-	e := newEntry(WarnLevel, fmt.Sprintf(msg, v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Errorf level formatted message.
-func (l *logger) Errorf(msg string, v ...interface{}) {
-	e := newEntry(ErrorLevel, fmt.Sprintf(msg, v...), nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Panicf logs an Panic level formatted message and then panics
-func (l *logger) Panicf(msg string, v ...interface{}) {
-	s := fmt.Sprintf(msg, v...)
-	e := newEntry(PanicLevel, s, nil, skipLevel)
-	l.HandleEntry(e)
-	panic(s)
-}
-
-// Alertf logs an Alert level formatted message and then panics
-func (l *logger) Alertf(msg string, v ...interface{}) {
-	s := fmt.Sprintf(msg, v...)
-	e := newEntry(AlertLevel, s, nil, skipLevel)
-	l.HandleEntry(e)
-}
-
-// Fatalf level formatted message, followed by an exit.
-func (l *logger) Fatalf(msg string, v ...interface{}) {
-	e := newEntry(FatalLevel, fmt.Sprintf(msg, v...), nil, skipLevel)
-	l.HandleEntry(e)
-	exitFunc(1)
-}
-
-// F creates a new field key + value entry
-func (l *logger) F(key string, value interface{}) Field {
-
-	fld := Logger.fieldPool.Get().(Field)
-	fld.Key = key
-	fld.Value = value
-
-	return fld
-}
-
-// WithFields returns a log Entry with fields set
-func (l *logger) WithFields(fields ...Field) LeveledLogger {
-	return newEntry(InfoLevel, "", fields, skipLevel)
-}
-
-// StackTrace creates a new log Entry with pre-populated field with stack trace.
-func (l *logger) StackTrace() LeveledLogger {
-	trace := make([]byte, 1<<16)
-	n := runtime.Stack(trace, true)
-	if n > stackTraceLimit {
-		n = stackTraceLimit
+func handleEntry(e Entry) {
+	if !e.start.IsZero() {
+		e = e.WithField("duration", time.Since(e.start))
 	}
-	return newEntry(DebugLevel, "", []Field{F("stack trace", string(trace[:n])+"\n")}, skipLevel)
+	for _, h := range logHandlers[e.Level] {
+		h.Log(e)
+	}
 }
 
-func (l *logger) HandleEntry(e *Entry) {
-
-	// gather info if WarnLevel, ErrorLevel, PanicLevel, AlertLevel, FatalLevel or
-	// gathering info for all levels, but only if no line info already exists; we could
-	// be doing central logging.
-	if e.Line == 0 && l.callerInfoLevels[e.Level] {
-		_, e.File, e.Line, _ = runtime.Caller(e.calldepth)
-	}
-
-	//																											  ---------
-	//																								|----------> | console |
-	// Addding this check for when you are doing centralized logging                                |             ---------
-	// i.e. -----------------               -----------------                                 -------------       --------
-	//     | app log handler | -- json --> | central log app | -- unmarshal json to Entry -> | log handler | --> | syslog |
-	//      -----------------               -----------------                                 -------------       --------
-	//      																						|             ---------
-	//      																						|----------> | DataDog |
-	//      																									  ---------
-	if e.wg == nil {
-		e.wg = new(sync.WaitGroup)
-	}
-
-	channels, ok := l.channels[e.Level]
-	if ok {
-
-		e.wg.Add(len(channels))
-
-		for _, ch := range channels {
-			ch <- e
-		}
-
-		e.wg.Wait()
-	}
-
-	// reclaim entry + fields
-	for _, f := range e.Fields {
-		l.fieldPool.Put(f)
-	}
-
-	l.entryPool.Put(e)
-}
-
-// RegisterHandler adds a new Log Handler and specifies what log levels
-// the handler will be passed log entries for
-func (l *logger) RegisterHandler(handler Handler, levels ...Level) {
-
-	ch := handler.Run()
-
+// AddHandler adds a new log handler and accepts which log levels that
+// handler will be triggered for
+func AddHandler(h Handler, levels ...Level) {
 	for _, level := range levels {
-
-		channels, ok := l.channels[level]
-		if !ok {
-			channels = make(HandlerChannels, 0)
-		}
-
-		l.channels[level] = append(channels, ch)
-	}
-
-}
-
-// RegisterDurationFunc registers a custom duration function for Trace events
-func (l *logger) RegisterDurationFunc(fn DurationFormatFunc) {
-	l.durationFunc = fn
-}
-
-// SetTimeFormat sets the time format used for Trace events
-func (l *logger) SetTimeFormat(format string) {
-	l.timeFormat = format
-}
-
-// SetApplicationID tells the logger to set a constant application key
-// that will be set on all log Entry objects. log does not care what it is,
-// the application name, app name + hostname.... that's up to you
-// it is needed by many logging platforms for separating logs by application
-// and even by application server in a distributed app.
-func (l *logger) SetApplicationID(id string) {
-	l.appID = id
-}
-
-// SetCallerInfoLevels tells the logger to gather and set file and line number
-// information on Entry objects for the provided log levels.
-// By defaut all but TraceLevel, InfoLevel and NoticeLevel are set to gather information.
-func (l *logger) SetCallerInfoLevels(levels ...Level) {
-	for i := 0; i < len(l.callerInfoLevels); i++ {
-		l.callerInfoLevels[i] = false
-	}
-
-	for i := 0; i < len(levels); i++ {
-		l.callerInfoLevels[int(levels[i])] = true
+		handler := append(logHandlers[level], h)
+		logHandlers[level] = handler
 	}
 }
 
-// SetCallerSkipDiff adds the provided diff to the caller SkipLevel values.
-// This is used when wrapping this library, you can set this to increase the
-// skip values passed to Caller that retrieves the file + line number info.
-func (l *logger) SetCallerSkipDiff(diff uint8) {
-	skipLevel += int(diff)
+// WithDefaultFields adds fields to the underlying logger instance
+func WithDefaultFields(fields Fields) {
+	for k, v := range fields {
+		logFields = append(logFields, Field{Key: k, Value: v})
+	}
 }
 
-// SetExitFunc sets the provided function as the exit function used in Fatal()
-// and Fatalf(). This is primarily used when wrapping this library, you can set
-// this to to enable testing (with coverage) of your Fatal() and Fatalf() methods.
-func (l *logger) SetExitFunc(fn func(code int)) {
-	exitFunc = fn
+// WithDefaultFieldsSorted adds fields to the underlying logger instance
+// but the fields are guranteed to remain in the order they are logged
+func WithDefaultFieldsSorted(fields ...Field) {
+	logFields = append(logFields, fields...)
 }
 
-// HasHandlers returns if any handlers have been registered.
-func (l *logger) HasHandlers() bool {
-	return len(l.channels) != 0
+// WithFields returns a new log entry with the supplied fields appended
+func WithFields(fields Fields) Entry {
+	ne := newEntryWithFields(logFields)
+	for k, v := range fields {
+		ne.Fields = append(ne.Fields, Field{Key: k, Value: v})
+	}
+	return ne
 }
 
-func (l *logger) getApplicationID() string {
-	return l.appID
+// WithField returns a new log entry with the supplied field.
+func WithField(key string, value interface{}) Entry {
+	ne := newEntryWithFields(logFields)
+	ne.Fields = append(ne.Fields, Field{Key: key, Value: value})
+	return ne
+}
+
+// WithFieldsOrdered returns a new log entry with the supplied fields appended
+// but the fields are guranteed to remain in the order they are logged, unlike
+// WithFields that accepts a map of values
+func WithFieldsOrdered(fields ...Field) Entry {
+	ne := newEntryWithFields(logFields)
+	ne.Fields = append(ne.Fields, fields...)
+	return ne
+}
+
+// WithTrace withh add duration of how long the between this function call and
+// the susequent log
+func WithTrace() Entry {
+	ne := newEntryWithFields(logFields)
+	ne.start = time.Now()
+	return ne
+}
+
+// WithError add a minimal stack trace to the log Entry
+func WithError(err error) Entry {
+	ne := newEntryWithFields(logFields)
+	return ne.withError(err)
+}
+
+// Debug logs a debug entry
+func Debug(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Debug(v...)
+}
+
+// Debugf logs a debug entry with formatting
+func Debugf(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Debugf(s, v...)
+}
+
+// Info logs a normal. information, entry
+func Info(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Info(v...)
+}
+
+// Infof logs a normal. information, entry with formatiing
+func Infof(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Infof(s, v...)
+}
+
+// Notice logs a notice log entry
+func Notice(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Notice(v...)
+}
+
+// Noticef logs a notice log entry with formatting
+func Noticef(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Noticef(s, v...)
+}
+
+// Warn logs a warn log entry
+func Warn(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Warn(v...)
+}
+
+// Warnf logs a warn log entry with formatting
+func Warnf(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Warnf(s, v...)
+}
+
+// Panic logs a panic log entry
+func Panic(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Panic(v...)
+}
+
+// Panicf logs a panic log entry with formatting
+func Panicf(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Panicf(s, v...)
+}
+
+// Alert logs an alert log entry
+func Alert(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Alert(v...)
+}
+
+// Alertf logs an alert log entry with formatting
+func Alertf(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Alertf(s, v...)
+}
+
+// Fatal logs a fatal log entry
+func Fatal(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Fatal(v...)
+}
+
+// Fatalf logs a fatal log entry with formatting
+func Fatalf(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Fatalf(s, v...)
+}
+
+// Error logs an error log entry
+func Error(v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Error(v...)
+}
+
+// Errorf logs an error log entry with formatting
+func Errorf(s string, v ...interface{}) {
+	e := newEntryWithFields(logFields)
+	e.Errorf(s, v...)
+}
+
+// Handler is an interface that log handlers need to comply with
+type Handler interface {
+	Log(Entry)
 }
