@@ -20,6 +20,7 @@ Features
 - [x] Built-in console, syslog, http, HipChat, json and email handlers
 - [x] Handlers are simple to write + easy to register
 - [x] Logger is a singleton ( one of the few instances a singleton is desired ) so the root package registers which handlers are used and any libraries just follow suit.
+- [x] Convenient context helpers `GetContext` & `SetContext`
 
 Installation
 -----------

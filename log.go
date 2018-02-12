@@ -1,6 +1,7 @@
 package log
 
 import (
+	"context"
 	"os"
 	"time"
 )
@@ -15,6 +16,11 @@ var (
 	logFields   []Field
 	logHandlers = map[Level][]Handler{}
 	exitFunc    = os.Exit
+	ctxIdent    = &struct {
+		name string
+	}{
+		name: "log",
+	}
 )
 
 // Field is a single Field key and value
@@ -29,6 +35,21 @@ type Field struct {
 // methods.
 func SetExitFunc(fn func(code int)) {
 	exitFunc = fn
+}
+
+// SetContext sets a log entry into the provided context
+func SetContext(ctx context.Context, e Entry) context.Context {
+	return context.WithValue(ctx, ctxIdent, e)
+}
+
+// GetContext returns the log Entry found in the context,
+// or a new Default log Entry if none is found
+func GetContext(ctx context.Context) Entry {
+	v := ctx.Value(ctxIdent)
+	if v == nil {
+		return newEntryWithFields(nil)
+	}
+	return v.(Entry)
 }
 
 func handleEntry(e Entry) {

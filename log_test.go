@@ -2,6 +2,7 @@ package log
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -35,7 +36,6 @@ func (th *testHandler) Log(e Entry) {
 	}
 
 	s += "\n"
-
 	if _, err := th.writer.Write([]byte(s)); err != nil {
 		panic(err)
 	}
@@ -910,5 +910,23 @@ func getLogTests1() []test {
 			},
 			want: "DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n",
 		},
+	}
+}
+
+func TestContext(t *testing.T) {
+
+	e := GetContext(context.Background())
+	if e.Message != "" {
+		t.Errorf("Got '%s' Expected '%s'", e.Message, "")
+	}
+
+	l := WithField("key", "value")
+	ctx := SetContext(context.Background(), l)
+	e = GetContext(ctx)
+	if l.Fields[0].Key != e.Fields[0].Key {
+		t.Errorf("Got '%s' Expected '%s'", e.Fields[0].Key, "key")
+	}
+	if l.Fields[0].Value != e.Fields[0].Value {
+		t.Errorf("Got '%s' Expected '%s'", e.Fields[0].Value, "value")
 	}
 }

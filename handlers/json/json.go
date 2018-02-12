@@ -12,7 +12,7 @@ import (
 // Handler implementation.
 type Handler struct {
 	*jsn.Encoder
-	mu sync.Mutex
+	m sync.Mutex
 }
 
 // New handler.
@@ -24,7 +24,7 @@ func New(w io.Writer) *Handler {
 
 // Log handles the log entry
 func (h *Handler) Log(e log.Entry) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.m.Lock()
 	h.Encoder.Encode(e)
+	h.m.Unlock()
 }
