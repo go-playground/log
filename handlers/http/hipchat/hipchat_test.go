@@ -52,13 +52,13 @@ func TestHipChat(t *testing.T) {
 	}))
 	defer server.Close()
 
-	hc, err := New(APIv2, server.URL+"/", "application/json", authToken)
+	hc, err := New(APIv2, server.URL+"/", "application/json", authToken, "")
 	if err != nil {
 		log.Fatalf("Error initializing hipchat received '%s'", err)
 	}
 
 	hc.SetBuffersAndWorkers(0, 0)
-	hc.SetTimestampFormat("MST")
+	hc.SetTimestampFormat("")
 	hc.SetEmailTemplate(defaultTemplate)
 	hc.SetFilenameDisplay(log.Llongfile)
 	log.RegisterHandler(hc, log.DebugLevel)

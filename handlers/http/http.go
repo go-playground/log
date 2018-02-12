@@ -7,6 +7,7 @@ import (
 	stdhttp "net/http"
 	"net/url"
 	"strconv"
+	"sync"
 
 	"github.com/go-playground/log"
 )
@@ -22,7 +23,6 @@ type Formatter func(e log.Entry) []byte
 const (
 	space  = byte(' ')
 	equals = byte('=')
-	colon  = byte(':')
 	base10 = 10
 	v      = "%v"
 )
@@ -31,10 +31,12 @@ const (
 type HTTP struct {
 	remoteHost      string
 	formatter       Formatter
+	formatFunc      FormatFunc
 	timestampFormat string
 	header          stdhttp.Header
 	method          string
 	client          stdhttp.Client
+	once            sync.Once
 }
 
 // New returns a new instance of the http logger
@@ -49,8 +51,8 @@ func New(remoteHost string, method string, header stdhttp.Header) (*HTTP, error)
 		header:          header,
 		method:          method,
 		client:          stdhttp.Client{},
+		formatFunc:      defaultFormatFunc,
 	}
-	h.formatter = defaultFormatFunc(h)
 	return h, nil
 }
 
@@ -68,7 +70,7 @@ func (h *HTTP) TimestampFormat() string {
 // SetFormatFunc sets FormatFunc each worker will call to get
 // a Formatter func
 func (h *HTTP) SetFormatFunc(fn FormatFunc) {
-	h.formatter = fn(h)
+	h.formatFunc = fn
 }
 
 // Method returns http method registered with HTTP
@@ -152,6 +154,9 @@ func defaultFormatFunc(h *HTTP) Formatter {
 
 // Log handles the log entry
 func (h *HTTP) Log(e log.Entry) {
+	h.once.Do(func() {
+		h.formatter = h.formatFunc(h)
+	})
 	remoteHost := h.RemoteHost()
 	req, _ := stdhttp.NewRequest(h.Method(), remoteHost, nil)
 	req.Header = h.Headers()

@@ -175,7 +175,6 @@ func (hc *HipChat) SetTemplate(htmlTemplate string) {
 func formatFunc(hc *HipChat) http.FormatFunc {
 	return func(h *http.HTTP) http.Formatter {
 		var bt []byte
-		var err error
 
 		b := new(bytes.Buffer)
 		body := new(Body)
@@ -188,9 +187,7 @@ func formatFunc(hc *HipChat) http.FormatFunc {
 			body.From = hc.application
 			body.Color = hc.colors[e.Level]
 
-			if err = hc.template.ExecuteTemplate(b, "hipchat", e); err != nil {
-				log.WithField("error", err).Error("Error parsing HipChat handler template")
-			}
+			_ = hc.template.ExecuteTemplate(b, "hipchat", e)
 			body.Message = b.String()
 
 			// shouldn't be possible to fail here
