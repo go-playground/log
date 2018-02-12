@@ -4,7 +4,6 @@ import (
 	"bytes"
 	stdlog "log"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -170,10 +169,7 @@ func TestConsoleLoggerColor(t *testing.T) {
 }
 
 func TestConsoleSTDLogCapturing(t *testing.T) {
-
-	var m sync.Mutex
 	buff := new(bytes.Buffer)
-
 	cLog := New(true)
 	cLog.SetDisplayColor(false)
 	cLog.SetTimestampFormat("MST")
@@ -182,11 +178,9 @@ func TestConsoleSTDLogCapturing(t *testing.T) {
 
 	stdlog.Println("STD LOG message")
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
-	m.Lock()
 	s := buff.String()
-	m.Unlock()
 
 	expected := "STD LOG message"
 
