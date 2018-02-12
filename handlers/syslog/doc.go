@@ -23,12 +23,10 @@ NOTE: syslog uses github.com/RackSec/srslog as the stdlib syslog
             // handle error
         }
 
-        sysLog.SetFilenameDisplay(log.Llongfile)
-
-        log.RegisterHandler(sysLog, log.AllLevels...)
+        log.AddHandler(sysLog, log.AllLevels...)
 
         // Trace
-        defer log.Trace("trace").End()
+        defer log.WithTrace().Info("took this long")
 
         log.Debug("debug")
         log.Info("info")
@@ -40,7 +38,7 @@ NOTE: syslog uses github.com/RackSec/srslog as the stdlib syslog
         // log.Fatal("fatal") // this will call os.Exit(1)
 
         // logging with fields can be used with any of the above
-        log.WithFields(log.F("key", "value")).Info("test info")
+        log.WithField("key", "value").Info("test info")
     }
 */
 package syslog

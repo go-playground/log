@@ -19,7 +19,7 @@ simple console
         log.AddHandler(cLog, log.AllLevels...)
 
         // Trace
-        defer log.WithTrace().Info("time to run")
+        defer log.WithTrace().Info("took this long")
 
         log.Debug("debug")
         log.Info("info")

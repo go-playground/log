@@ -3,6 +3,7 @@ package email
 import (
 	"bytes"
 	"html/template"
+	"sync"
 
 	"gopkg.in/gomail.v2"
 
@@ -35,6 +36,7 @@ const (
 // Email is an instance of the email logger
 type Email struct {
 	formatter       Formatter
+	formatFunc      FormatFunc
 	timestampFormat string
 	template        *template.Template
 	host            string
@@ -43,6 +45,7 @@ type Email struct {
 	password        string
 	from            string
 	to              []string
+	once            sync.Once
 }
 
 // New returns a new instance of the email logger
@@ -55,9 +58,9 @@ func New(host string, port int, username string, password string, from string, t
 		password:        password,
 		from:            from,
 		to:              to,
+		formatFunc:      defaultFormatFunc,
 	}
 	e.SetTemplate(defaultTemplate)
-	e.formatter = defaultFormatFunc(e)
 	return e
 }
 
@@ -98,7 +101,7 @@ func (email *Email) SetTimestampFormat(format string) {
 // SetFormatFunc sets FormatFunc each worker will call to get
 // a Formatter func
 func (email *Email) SetFormatFunc(fn FormatFunc) {
-	email.formatter = fn(email)
+	email.formatFunc = fn
 }
 
 func defaultFormatFunc(email *Email) Formatter {
@@ -128,6 +131,9 @@ func defaultFormatFunc(email *Email) Formatter {
 
 // Log handles the log entry
 func (email *Email) Log(e log.Entry) {
+	email.once.Do(func() {
+		email.formatter = email.formatFunc(email)
+	})
 	var s gomail.SendCloser
 	var err error
 	var open bool

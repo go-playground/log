@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strconv"
+	"sync"
 
 	syslog "github.com/RackSec/srslog"
 
@@ -22,7 +23,6 @@ type Formatter func(e log.Entry) []byte
 const (
 	space  = byte(' ')
 	equals = byte('=')
-	colon  = byte(':')
 	base10 = 10
 	v      = "%v"
 )
@@ -32,8 +32,10 @@ type Syslog struct {
 	colors          [8]ansi.EscSeq
 	writer          *syslog.Writer
 	formatter       Formatter
+	formatFunc      FormatFunc
 	timestampFormat string
 	displayColor    bool
+	once            sync.Once
 }
 
 var (
@@ -60,8 +62,8 @@ func New(network string, raddr string, tag string, tlsConfig *tls.Config) (*Sysl
 		colors:          defaultColors,
 		displayColor:    false,
 		timestampFormat: log.DefaultTimeFormat,
+		formatFunc:      defaultFormatFunc,
 	}
-	s.SetFormatFunc(defaultFormatFunc)
 
 	// if non-TLS
 	if tlsConfig == nil {
@@ -106,11 +108,10 @@ func (s *Syslog) TimestampFormat() string {
 // SetFormatFunc sets FormatFunc each worker will call to get
 // a Formatter func
 func (s *Syslog) SetFormatFunc(fn FormatFunc) {
-	s.formatter = fn(s)
+	s.formatFunc = fn
 }
 
 func defaultFormatFunc(s *Syslog) Formatter {
-
 	var b []byte
 	var lvl string
 	var i int
@@ -238,6 +239,9 @@ func defaultFormatFunc(s *Syslog) Formatter {
 
 // Log handles the log entry
 func (s *Syslog) Log(e log.Entry) {
+	s.once.Do(func() {
+		s.formatter = s.formatFunc(s)
+	})
 	line := string(s.formatter(e))
 
 	switch e.Level {
