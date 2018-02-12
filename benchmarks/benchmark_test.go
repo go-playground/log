@@ -31,16 +31,10 @@ var _jane = user{
 // annoying because you have to manipulate the TestMain before
 // running the benchmark you want.
 func TestMain(m *testing.M) {
-
 	cLog := console.New(false)
 	cLog.SetDisplayColor(false)
 	cLog.SetWriter(ioutil.Discard)
 	log.AddHandler(cLog, log.AllLevels...)
-
-	// logrus.SetFormatter(&logrus.TextFormatter{})
-	// logrus.SetOutput(ioutil.Discard)
-	// logrus.SetLevel(logrus.InfoLevel)
-
 	os.Exit(m.Run())
 }
 
@@ -78,67 +72,3 @@ func BenchmarkLogConsoleSimpleParallel(b *testing.B) {
 
 	})
 }
-
-// func BenchmarkLogrusText10Fields(b *testing.B) {
-
-// 	b.ResetTimer()
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			logrus.WithFields(logrus.Fields{
-// 				"int":               1,
-// 				"int64":             int64(1),
-// 				"float":             3.0,
-// 				"string":            "four!",
-// 				"bool":              true,
-// 				"time":              time.Unix(0, 0),
-// 				"error":             errExample.Error(),
-// 				"duration":          time.Second,
-// 				"user-defined type": _jane,
-// 				"another string":    "done!",
-// 			}).Info("Go fast.")
-// 		}
-// 	})
-// }
-
-// func BenchmarkLogrusTextSimple(b *testing.B) {
-
-// 	b.ResetTimer()
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			logrus.Info("Go fast.")
-// 		}
-// 	})
-// }
-
-// func BenchmarkLog1510Fields(b *testing.B) {
-// 	logger := log15.New()
-// 	logger.SetHandler(log15.StreamHandler(ioutil.Discard, log15.TerminalFormat()))
-// 	b.ResetTimer()
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			logger.Info("Go fast.",
-// 				"int", 1,
-// 				"int64", int64(1),
-// 				"float", 3.0,
-// 				"string", "four!",
-// 				"bool", true,
-// 				"time", time.Unix(0, 0),
-// 				"error", errExample.Error(),
-// 				"duration", time.Second,
-// 				"user-defined type", _jane,
-// 				"another string", "done!",
-// 			)
-// 		}
-// 	})
-// }
-
-// func BenchmarkLog15Simple(b *testing.B) {
-// 	logger := log15.New()
-// 	logger.SetHandler(log15.StreamHandler(ioutil.Discard, log15.TerminalFormat()))
-// 	b.ResetTimer()
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			logger.Info("Go fast.")
-// 		}
-// 	})
-// }
