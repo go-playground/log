@@ -1,5 +1,5 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-4.3.0-green.svg)
+<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-5.0.0-green.svg)
 [![Build Status](https://semaphoreci.com/api/v1/joeybloggs/log/branches/master/badge.svg)](https://semaphoreci.com/joeybloggs/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -7,20 +7,20 @@
 ![License](https://img.shields.io/dub/l/vibe-d.svg)
 [![Gitter](https://badges.gitter.im/go-playground/log.svg)](https://gitter.im/go-playground/log?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Log is a simple,highly configurable, Structured Logging that is a near drop in replacement for the std library log
+Log is a simple, highly configurable, Structured Logging library
 
 Why another logging library?
 ----------------------------
-There's allot of great stuff out there, but also thought a log library could be made easier to use, more efficient by reusing objects and more performant using channels.
+There's allot of great stuff out there, but also thought a log library could be made more configurable using per handler log levels.
 
 Features
 --------
 - [x] Logger is simple, only logic to create the log entry and send it off to the handlers and they take it from there.
-- [x] Sends the log entry to the handlers asynchronously, but waits for all to complete; meaning all your handlers can be dealing with the log entry at the same time, but log will wait until all have completed before moving on.
 - [x] Ability to specify which log levels get sent to each handler
-- [x] Built-in console, syslog, http, HipChat and email handlers
+- [x] Built-in console, syslog, http, HipChat, json and email handlers
 - [x] Handlers are simple to write + easy to register
 - [x] Logger is a singleton ( one of the few instances a singleton is desired ) so the root package registers which handlers are used and any libraries just follow suit.
+- [x] Convenient context helpers `GetContext` & `SetContext`
 
 Installation
 -----------
@@ -28,19 +28,8 @@ Installation
 Use go get 
 
 ```go
-go get github.com/go-playground/log
+go get -u github.com/go-playground/log
 ``` 
-
-Replacing std log
------------------
-change import from
-```go
-import "log"
-```
-to
-```go
-import "github.com/go-playground/log"
-```
 
 Usage
 ------
@@ -49,18 +38,18 @@ import the log package, setup at least one handler
 package main
 
 import (
+	"errors"
+
 	"github.com/go-playground/log"
 	"github.com/go-playground/log/handlers/console"
 )
 
 func main() {
-
-	cLog := console.New()
-
-	log.RegisterHandler(cLog, log.AllLevels...)
+	cLog := console.New(true)
+	log.AddHandler(cLog, log.AllLevels...)
 
 	// Trace
-	defer log.Trace("trace").End()
+	defer log.WithTrace().Info("time to run")
 
 	log.Debug("debug")
 	log.Info("info")
@@ -71,8 +60,25 @@ func main() {
 	log.Alert("alert")
 	// log.Fatal("fatal") // this will call os.Exit(1)
 
+	err := errors.New("the is an error")
 	// logging with fields can be used with any of the above
-	log.WithFields(log.F("key", "value")).Info("test info")
+	log.WithError(err).WithFields(log.F("key", "value")).Info("test info")
+
+	// predefined global fields
+	log.WithDefaultFields(log.Fields{
+		{"program", "test"},
+		{"version", "0.1.3"},
+	}...)
+
+	log.WithField("key", "value").Info("testing default fields")
+
+	// or request scoped default fields
+	logger := log.WithFields(
+		log.F("request", "req"),
+		log.F("scoped", "sco"),
+	)
+
+	logger.WithField("key", "value").Info("test")
 }
 ```
 
@@ -90,61 +96,40 @@ import (
 // CustomHandler is your custom handler
 type CustomHandler struct {
 	// whatever properties you need
-	buffer uint // channel buffer
 }
 
-// Run starts the logger consuming on the returned channed
-func (c *CustomHandler) Run() chan<- *log.Entry {
+// Log accepts log entries to be processed
+func (c *CustomHandler) Log(e log.Entry) {
 
-	// in a big high traffic app, set a higher buffer
-	ch := make(chan *log.Entry, c.buffer)
+	// below prints to os.Stderr but could marshal to JSON
+	// and send to central logging server
+	//																						       ---------
+	// 				                                                                 |----------> | console |
+	//                                                                               |             ---------
+	// i.e. -----------------               -----------------     Unmarshal    -------------       --------
+	//     | app log handler | -- json --> | central log app | --    to    -> | log handler | --> | syslog |
+	//      -----------------               -----------------       Entry      -------------       --------
+	//      																         |             ---------
+	//                                  									         |----------> | DataDog |
+	//          																	        	   ---------
+	b := new(bytes.Buffer)
+	b.Reset()
+	b.WriteString(e.Message)
 
-	// can run as many consumers on the channel as you want,
-	// depending on the buffer size or your needs
-	go func(entries <-chan *log.Entry) {
-
-		// below prints to os.Stderr but could marshal to JSON
-		// and send to central logging server
-		//																						       ---------
-		// 				                                                                 |----------> | console |
-		//                                                                               |             ---------
-		// i.e. -----------------               -----------------     Unmarshal    -------------       --------
-		//     | app log handler | -- json --> | central log app | --    to    -> | log handler | --> | syslog |
-		//      -----------------               -----------------       Entry      -------------       --------
-		//      																         |             ---------
-		//                                  									         |----------> | DataDog |
-		//          																	        	   ---------
-		var e *log.Entry
-		b := new(bytes.Buffer)
-
-		for e = range entries {
-
-			b.Reset()
-			b.WriteString(e.Message)
-
-			for _, f := range e.Fields {
-				fmt.Fprintf(b, " %s=%v", f.Key, f.Value)
-			}
-
-			fmt.Println(b.String())
-			e.Consumed() // done writing the entry
-		}
-
-	}(ch)
-
-	return ch
+	for _, f := range e.Fields {
+		fmt.Fprintf(b, " %s=%v", f.Key, f.Value)
+	}
+	fmt.Println(b.String())
 }
 
 func main() {
 
-	cLog := &CustomHandler{
-		buffer: 0,
-	}
+	cLog := new(CustomHandler)
 
-	log.RegisterHandler(cLog, log.AllLevels...)
+	log.AddHandler(cLog, log.AllLevels...)
 
 	// Trace
-	defer log.Trace("trace").End()
+	defer log.WithTrace().Info("took this long")
 
 	log.Debug("debug")
 	log.Info("info")
@@ -156,7 +141,7 @@ func main() {
 	// log.Fatal("fatal") // this will call os.Exit(1)
 
 	// logging with fields can be used with any of the above
-	log.WithFields(log.F("key", "value")).Info("test info")
+	log.WithField("key", "value").Info("test info")
 }
 ```
 
@@ -164,8 +149,6 @@ Log Level Definitions
 ---------------------
 
 **DebugLevel** - Info useful to developers for debugging the application, not useful during operations.
-
-**TraceLevel** - Info useful to developers for debugging the application and reporting on possible bottlenecks.
 
 **InfoLevel** - Normal operational messages - may be harvested for reporting, measuring throughput, etc. - no action required.
 
@@ -185,13 +168,14 @@ Handlers
 -------------
 Pull requests for new handlers are welcome, please provide test coverage is all I ask.
 
-| Handler | Description | Docs |
-| ------- | ---- | ----------- |
-| console | Allows for log messages to be sent to a any writer, default os.Stderr | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/console?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/console) |
-| syslog | Allows for log messages to be sent via syslog, includes TLS support. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/syslog?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/syslog) |
-| http | Allows for log messages to be sent via http. Can use the HTTP handler as a base for creating other handlers requiring http transmission. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http) |
-| email | Allows for log messages to be sent via email. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/email?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/email) |
-| hipchat | Allows for log messages to be sent to a hipchat room. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat) |
+| Handler | Description                                                                                                                              | Docs                                                                                                                                                              |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| console | Allows for log messages to be sent to a any writer, default os.Stderr                                                                    | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/console?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/console)           |
+| syslog  | Allows for log messages to be sent via syslog, includes TLS support.                                                                     | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/syslog?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/syslog)             |
+| http    | Allows for log messages to be sent via http. Can use the HTTP handler as a base for creating other handlers requiring http transmission. | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http)                 |
+| email   | Allows for log messages to be sent via email.                                                                                            | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/email?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/email)               |
+| hipchat | Allows for log messages to be sent to a hipchat room.                                                                                    | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/http/hipchat) |
+| json    | Allows for log messages to be sent to any wrtier in json format.                                                                         | [![GoDoc](https://godoc.org/github.com/go-playground/log/handlers/json?status.svg)](https://godoc.org/github.com/go-playground/log/handlers/json)                 |
 
 Package Versioning
 ----------
@@ -204,17 +188,16 @@ things for you the community.
 
 Benchmarks
 ----------
-###### Run on i5-7600 16 GB DDR4-2400 using Go version go1.8 linux/amd64
+###### Run on Macbook Pro 15-inch 2017 using go version go1.9.4 darwin/amd64
 NOTE: only putting benchmarks at others request, by no means does the number of allocations 
 make one log library better than another!
 ```go
 go test --bench=. -benchmem=true
-BenchmarkLogConsoleTenFieldsParallel-4           1000000              1294 ns/op            1065 B/op         32 allocs/op
-BenchmarkLogConsoleSimpleParallel-4              3000000               549 ns/op             104 B/op          5 allocs/op
-BenchmarkLogrusText10Fields-4                     500000              2079 ns/op            2179 B/op         39 allocs/op
-BenchmarkLogrusTextSimple-4                      3000000               402 ns/op             312 B/op         14 allocs/op
-BenchmarkLog1510Fields-4                          200000             10915 ns/op            4362 B/op         91 allocs/op
-BenchmarkLog15Simple-4                           1000000              1292 ns/op             320 B/op          9 allocs/op
+goos: darwin
+goarch: amd64
+pkg: github.com/go-playground/log/benchmarks
+BenchmarkLogConsoleTenFieldsParallel-8           2000000               946 ns/op            1376 B/op         16 allocs/op
+BenchmarkLogConsoleSimpleParallel-8              5000000               296 ns/op             200 B/op          4 allocs/op
 ```
 
 Special Thanks

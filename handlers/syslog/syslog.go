@@ -3,10 +3,8 @@ package syslog
 import (
 	"crypto/tls"
 	"fmt"
-	stdlog "log"
-	"os"
 	"strconv"
-	"strings"
+	"sync"
 
 	syslog "github.com/RackSec/srslog"
 
@@ -20,35 +18,30 @@ import (
 type FormatFunc func(s *Syslog) Formatter
 
 // Formatter is the function used to format the Redis entry
-type Formatter func(e *log.Entry) []byte
+type Formatter func(e log.Entry) []byte
 
 const (
 	space  = byte(' ')
 	equals = byte('=')
-	colon  = byte(':')
 	base10 = 10
 	v      = "%v"
-	gopath = "GOPATH"
 )
 
 // Syslog is an instance of the syslog logger
 type Syslog struct {
-	buffer          uint
-	numWorkers      uint
-	colors          [9]ansi.EscSeq
+	colors          [8]ansi.EscSeq
 	writer          *syslog.Writer
+	formatter       Formatter
 	formatFunc      FormatFunc
 	timestampFormat string
-	gopath          string
-	fileDisplay     log.FilenameDisplay
 	displayColor    bool
+	once            sync.Once
 }
 
 var (
 	// Colors mapping.
 	defaultColors = [...]ansi.EscSeq{
 		log.DebugLevel:  ansi.Green,
-		log.TraceLevel:  ansi.White,
 		log.InfoLevel:   ansi.Blue,
 		log.NoticeLevel: ansi.LightCyan,
 		log.WarnLevel:   ansi.LightYellow,
@@ -64,16 +57,11 @@ var (
 // NOTE: tlsConfig param is optional and only applies when networks in "tcp+tls"
 // see TestSyslogTLS func tion int syslog_test.go for an example usage of tlsConfig parameter
 func New(network string, raddr string, tag string, tlsConfig *tls.Config) (*Syslog, error) {
-
 	var err error
-
 	s := &Syslog{
-		buffer:          3,
-		numWorkers:      3,
 		colors:          defaultColors,
 		displayColor:    false,
 		timestampFormat: log.DefaultTimeFormat,
-		fileDisplay:     log.Lshortfile,
 		formatFunc:      defaultFormatFunc,
 	}
 
@@ -87,18 +75,7 @@ func New(network string, raddr string, tag string, tlsConfig *tls.Config) (*Sysl
 	if err != nil {
 		return nil, err
 	}
-
 	return s, nil
-}
-
-// SetFilenameDisplay tells Syslog the filename, when present, how to display
-func (s *Syslog) SetFilenameDisplay(fd log.FilenameDisplay) {
-	s.fileDisplay = fd
-}
-
-// FilenameDisplay returns Syslog's current filename display setting
-func (s *Syslog) FilenameDisplay() log.FilenameDisplay {
-	return s.fileDisplay
 }
 
 // SetDisplayColor tells Syslog to output in color or not
@@ -128,157 +105,39 @@ func (s *Syslog) TimestampFormat() string {
 	return s.timestampFormat
 }
 
-// GOPATH returns the GOPATH calculated by Syslog
-func (s *Syslog) GOPATH() string {
-	return s.gopath
-}
-
-// SetBuffersAndWorkers sets the channels buffer size and number of concurrent workers.
-// These settings should be thought about together, hence setting both in the same function.
-func (s *Syslog) SetBuffersAndWorkers(size uint, workers uint) {
-	s.buffer = size
-
-	if workers == 0 {
-		// just in case no log registered yet
-		stdlog.Println("Invalid number of workers specified, setting to 1")
-		log.Warn("Invalid number of workers specified, setting to 1")
-
-		workers = 1
-	}
-
-	s.numWorkers = workers
-}
-
 // SetFormatFunc sets FormatFunc each worker will call to get
 // a Formatter func
 func (s *Syslog) SetFormatFunc(fn FormatFunc) {
 	s.formatFunc = fn
 }
 
-// Run starts the logger consuming on the returned channed
-func (s *Syslog) Run() chan<- *log.Entry {
-
-	// pre-setup
-	if s.fileDisplay == log.Llongfile {
-		// gather $GOPATH for use in stripping off of full name
-		// if not found still ok as will be blank
-		s.gopath = os.Getenv(gopath)
-		if len(s.gopath) != 0 {
-			s.gopath += string(os.PathSeparator) + "src" + string(os.PathSeparator)
-		}
-	}
-
-	// in a big high traffic app, set a higher buffer
-	ch := make(chan *log.Entry, s.buffer)
-
-	for i := 0; i <= int(s.numWorkers); i++ {
-		go s.handleLog(ch)
-	}
-
-	return ch
-}
-
-// handleLog consumes and logs any Entry's passed to the channel
-func (s *Syslog) handleLog(entries <-chan *log.Entry) {
-
-	var e *log.Entry
-	var line string
-
-	formatter := s.formatFunc(s)
-
-	for e = range entries {
-
-		line = string(formatter(e))
-
-		switch e.Level {
-		case log.DebugLevel:
-			s.writer.Debug(line)
-		case log.TraceLevel, log.InfoLevel:
-			s.writer.Info(line)
-		case log.NoticeLevel:
-			s.writer.Notice(line)
-		case log.WarnLevel:
-			s.writer.Warning(line)
-		case log.ErrorLevel:
-			s.writer.Err(line)
-		case log.PanicLevel, log.AlertLevel:
-			s.writer.Alert(line)
-		case log.FatalLevel:
-			s.writer.Crit(line)
-		}
-
-		e.Consumed()
-	}
-}
-
 func defaultFormatFunc(s *Syslog) Formatter {
-
 	var b []byte
-	var file string
 	var lvl string
 	var i int
-	gopath := s.GOPATH()
 	tsFormat := s.TimestampFormat()
-	fnameDisplay := s.FilenameDisplay()
 
 	if s.DisplayColor() {
 
 		var color ansi.EscSeq
 
-		return func(e *log.Entry) []byte {
+		return func(e log.Entry) []byte {
 			b = b[0:0]
 			color = s.GetDisplayColor(e.Level)
 
-			if e.Line == 0 {
+			b = append(b, e.Timestamp.Format(tsFormat)...)
+			b = append(b, space)
+			b = append(b, color...)
 
-				b = append(b, e.Timestamp.Format(tsFormat)...)
+			lvl = e.Level.String()
+
+			for i = 0; i < 6-len(lvl); i++ {
 				b = append(b, space)
-				b = append(b, color...)
-
-				lvl = e.Level.String()
-
-				for i = 0; i < 6-len(lvl); i++ {
-					b = append(b, space)
-				}
-				b = append(b, lvl...)
-				b = append(b, ansi.Reset...)
-				b = append(b, space)
-				b = append(b, e.Message...)
-
-			} else {
-				file = e.File
-
-				if fnameDisplay == log.Lshortfile {
-
-					for i = len(file) - 1; i > 0; i-- {
-						if file[i] == '/' {
-							file = file[i+1:]
-							break
-						}
-					}
-				} else {
-					file = file[len(gopath):]
-				}
-
-				b = append(b, e.Timestamp.Format(tsFormat)...)
-				b = append(b, space)
-				b = append(b, color...)
-
-				lvl = e.Level.String()
-
-				for i = 0; i < 6-len(lvl); i++ {
-					b = append(b, space)
-				}
-
-				b = append(b, lvl...)
-				b = append(b, ansi.Reset...)
-				b = append(b, space)
-				b = append(b, file...)
-				b = append(b, colon)
-				b = strconv.AppendInt(b, int64(e.Line), base10)
-				b = append(b, space)
-				b = append(b, e.Message...)
 			}
+			b = append(b, lvl...)
+			b = append(b, ansi.Reset...)
+			b = append(b, space)
+			b = append(b, e.Message...)
 
 			for _, f := range e.Fields {
 				b = append(b, space)
@@ -325,61 +184,20 @@ func defaultFormatFunc(s *Syslog) Formatter {
 		}
 	}
 
-	return func(e *log.Entry) []byte {
+	return func(e log.Entry) []byte {
 		b = b[0:0]
+		b = append(b, e.Timestamp.Format(tsFormat)...)
+		b = append(b, space)
 
-		if e.Line == 0 {
+		lvl = e.Level.String()
 
-			b = append(b, e.Timestamp.Format(tsFormat)...)
+		for i = 0; i < 6-len(lvl); i++ {
 			b = append(b, space)
-
-			lvl = e.Level.String()
-
-			for i = 0; i < 6-len(lvl); i++ {
-				b = append(b, space)
-			}
-
-			b = append(b, lvl...)
-			b = append(b, space)
-			b = append(b, e.Message...)
-
-		} else {
-			file = e.File
-
-			if fnameDisplay == log.Lshortfile {
-
-				for i = len(file) - 1; i > 0; i-- {
-					if file[i] == '/' {
-						file = file[i+1:]
-						break
-					}
-				}
-			} else {
-
-				// additional check, just in case user does
-				// have a $GOPATH but code isn't under it.
-				if strings.HasPrefix(file, gopath) {
-					file = file[len(gopath):]
-				}
-			}
-
-			b = append(b, e.Timestamp.Format(tsFormat)...)
-			b = append(b, space)
-
-			lvl = e.Level.String()
-
-			for i = 0; i < 6-len(lvl); i++ {
-				b = append(b, space)
-			}
-
-			b = append(b, lvl...)
-			b = append(b, space)
-			b = append(b, file...)
-			b = append(b, colon)
-			b = strconv.AppendInt(b, int64(e.Line), base10)
-			b = append(b, space)
-			b = append(b, e.Message...)
 		}
+
+		b = append(b, lvl...)
+		b = append(b, space)
+		b = append(b, e.Message...)
 
 		for _, f := range e.Fields {
 			b = append(b, space)
@@ -415,7 +233,31 @@ func defaultFormatFunc(s *Syslog) Formatter {
 				b = append(b, fmt.Sprintf(v, f.Value)...)
 			}
 		}
-
 		return b
+	}
+}
+
+// Log handles the log entry
+func (s *Syslog) Log(e log.Entry) {
+	s.once.Do(func() {
+		s.formatter = s.formatFunc(s)
+	})
+	line := string(s.formatter(e))
+
+	switch e.Level {
+	case log.DebugLevel:
+		s.writer.Debug(line)
+	case log.InfoLevel:
+		s.writer.Info(line)
+	case log.NoticeLevel:
+		s.writer.Notice(line)
+	case log.WarnLevel:
+		s.writer.Warning(line)
+	case log.ErrorLevel:
+		s.writer.Err(line)
+	case log.PanicLevel, log.AlertLevel:
+		s.writer.Alert(line)
+	case log.FatalLevel:
+		s.writer.Crit(line)
 	}
 }

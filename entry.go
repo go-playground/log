@@ -2,221 +2,207 @@ package log
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
-const (
-	keyVal = " %s=%v"
-	cutset = "\r\n\t "
-)
+// Fields is the type to send to WithFields
+type Fields []Field
 
-// Entry represents a single log entry.
+// Entry defines a single log entry
 type Entry struct {
-	wg            *sync.WaitGroup
-	calldepth     int
-	ApplicationID string    `json:"appId"`
-	Level         Level     `json:"level"`
-	Timestamp     time.Time `json:"timestamp"`
-	Message       string    `json:"message"`
-	Fields        []Field   `json:"fields"`
-	File          string    `json:"file"`
-	Line          int       `json:"line"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+	Fields    []Field   `json:"fields"`
+	Level     Level     `json:"level"`
+	start     time.Time
 }
 
-func newEntry(level Level, message string, fields []Field, calldepth int) *Entry {
-
-	entry := Logger.entryPool.Get().(*Entry)
-	entry.Line = 0
-	entry.File = entry.File[0:0]
-	entry.calldepth = calldepth
-	entry.Level = level
-	entry.Message = strings.TrimRight(message, cutset) // need to trim for adding fields later in handlers + why send uneeded whitespace
-	entry.Fields = fields
-	entry.Timestamp = time.Now().UTC()
-
-	return entry
-}
-
-var _ LeveledLogger = new(Entry)
-
-// Debug level message.
-func (e *Entry) Debug(v ...interface{}) {
-	e.Level = DebugLevel
-	e.Message = fmt.Sprint(v...)
-	Logger.HandleEntry(e)
-}
-
-// Trace starts a trace & returns Traceable object to End + log
-func (e *Entry) Trace(v ...interface{}) Traceable {
-
-	e.Level = TraceLevel
-	e.Message = fmt.Sprint(v...)
-
-	t := Logger.tracePool.Get().(*TraceEntry)
-	t.entry = e
-	t.start = time.Now().UTC()
-
-	return t
-}
-
-// Info level message.
-func (e *Entry) Info(v ...interface{}) {
-	e.Level = InfoLevel
-	e.Message = fmt.Sprint(v...)
-	Logger.HandleEntry(e)
-}
-
-// Notice level formatted message.
-func (e *Entry) Notice(v ...interface{}) {
-	e.Level = NoticeLevel
-	e.Message = fmt.Sprint(v...)
-	Logger.HandleEntry(e)
-}
-
-// Warn level message.
-func (e *Entry) Warn(v ...interface{}) {
-	e.Level = WarnLevel
-	e.Message = fmt.Sprint(v...)
-	Logger.HandleEntry(e)
-}
-
-// Error level message.
-func (e *Entry) Error(v ...interface{}) {
-	e.Level = ErrorLevel
-	e.Message = fmt.Sprint(v...)
-	Logger.HandleEntry(e)
-}
-
-// Panic logs an Error level formatted message and then panics
-func (e *Entry) Panic(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	e.Level = PanicLevel
-	e.Message = s
-	Logger.HandleEntry(e)
-
-	for _, f := range e.Fields {
-		s += fmt.Sprintf(keyVal, f.Key, f.Value)
+func newEntry(e Entry) Entry {
+	ne := Entry{
+		Fields:    make([]Field, 0, len(e.Fields)),
+		Timestamp: time.Now(),
+		Message:   e.Message,
+		Level:     e.Level,
+		start:     e.start,
 	}
-
-	panic(s)
+	ne.Fields = append(ne.Fields, e.Fields...)
+	return ne
 }
 
-// Alert level message.
-func (e *Entry) Alert(v ...interface{}) {
-	e.Level = AlertLevel
-	e.Message = fmt.Sprint(v...)
-	Logger.HandleEntry(e)
-}
-
-// Fatal level message, followed by an exit.
-func (e *Entry) Fatal(v ...interface{}) {
-	e.Level = FatalLevel
-	e.Message = fmt.Sprint(v...)
-	Logger.HandleEntry(e)
-	exitFunc(1)
-}
-
-// Debugf level formatted message.
-func (e *Entry) Debugf(msg string, v ...interface{}) {
-	e.Level = DebugLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-}
-
-// Tracef starts a trace & returns Traceable object to End + log
-func (e *Entry) Tracef(msg string, v ...interface{}) Traceable {
-
-	e.Level = TraceLevel
-	e.Message = fmt.Sprintf(msg, v...)
-
-	t := Logger.tracePool.Get().(*TraceEntry)
-	t.entry = e
-	t.start = time.Now().UTC()
-
-	return t
-}
-
-// Infof level formatted message.
-func (e *Entry) Infof(msg string, v ...interface{}) {
-	e.Level = InfoLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-}
-
-// Noticef level formatted message.
-func (e *Entry) Noticef(msg string, v ...interface{}) {
-	e.Level = NoticeLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-}
-
-// Warnf level formatted message.
-func (e *Entry) Warnf(msg string, v ...interface{}) {
-	e.Level = WarnLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-}
-
-// Errorf level formatted message.
-func (e *Entry) Errorf(msg string, v ...interface{}) {
-	e.Level = ErrorLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-}
-
-// Panicf logs an Error level formatted message and then panics
-func (e *Entry) Panicf(msg string, v ...interface{}) {
-	s := fmt.Sprintf(msg, v...)
-	e.Level = PanicLevel
-	e.Message = s
-	Logger.HandleEntry(e)
-
-	for _, f := range e.Fields {
-		s += fmt.Sprintf(keyVal, f.Key, f.Value)
+func newEntryWithFields(fields []Field) Entry {
+	e := Entry{
+		Fields:    make([]Field, 0, len(fields)),
+		Timestamp: time.Now(),
 	}
-
-	panic(s)
-}
-
-// Alertf level formatted message.
-func (e *Entry) Alertf(msg string, v ...interface{}) {
-	e.Level = AlertLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-}
-
-// Fatalf level formatted message, followed by an exit.
-func (e *Entry) Fatalf(msg string, v ...interface{}) {
-	e.Level = FatalLevel
-	e.Message = fmt.Sprintf(msg, v...)
-	Logger.HandleEntry(e)
-	exitFunc(1)
-}
-
-// WithFields adds the provided fieldsto the current entry
-func (e *Entry) WithFields(fields ...Field) LeveledLogger {
 	e.Fields = append(e.Fields, fields...)
 	return e
 }
 
-// StackTrace adds a field with stack trace to the current log Entry.
-func (e *Entry) StackTrace() LeveledLogger {
-	trace := make([]byte, 1<<16)
-	n := runtime.Stack(trace, true)
-	if n > stackTraceLimit {
-		n = stackTraceLimit
-	}
-	e.Fields = append(e.Fields, F("stack trace", string(trace[:n])+"\n"))
+// WithField returns a new log entry with the supplied field.
+func (e Entry) WithField(key string, value interface{}) Entry {
+	ne := newEntry(e)
+	ne.Fields = append(ne.Fields, Field{Key: key, Value: value})
+	return ne
+}
+
+// WithFields returns a new log entry with the supplied fields appended
+func (e Entry) WithFields(fields ...Field) Entry {
+	ne := newEntry(e)
+	ne.Fields = append(ne.Fields, fields...)
+	return ne
+}
+
+// WithTrace withh add duration of how long the between this function call and
+// the susequent log
+func (e Entry) WithTrace() Entry {
+	e.start = time.Now()
 	return e
 }
 
-// Consumed lets the Entry and subsequently the Logger
-// instance know that it has been used by a handler
-func (e *Entry) Consumed() {
-	if e.wg != nil {
-		e.wg.Done()
+// WithError add a minimal stack trace to the log Entry
+func (e Entry) WithError(err error) Entry {
+	return e.withError(err)
+}
+
+// WithError add a minimal stack trace to the log Entry
+func (e Entry) withError(err error) Entry {
+	ne := newEntry(e)
+	ne.Fields = append(ne.Fields, Field{Key: "error", Value: err.Error()})
+
+	var frame errors.Frame
+
+	if s, ok := err.(stackTracer); ok {
+		frame = s.StackTrace()[0]
+	} else {
+		frame = errors.WithStack(err).(stackTracer).StackTrace()[2:][0]
 	}
+
+	name := fmt.Sprintf("%n", frame)
+	file := fmt.Sprintf("%+s", frame)
+	line := fmt.Sprintf("%d", frame)
+	parts := strings.Split(file, "\n\t")
+	if len(parts) > 1 {
+		file = parts[1]
+	}
+	ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%s", name, file, line)})
+	return ne
+}
+
+// Debug logs a debug entry
+func (e Entry) Debug(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = DebugLevel
+	handleEntry(e)
+}
+
+// Debugf logs a debug entry with formatting
+func (e Entry) Debugf(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = DebugLevel
+	handleEntry(e)
+}
+
+// Info logs a normal. information, entry
+func (e Entry) Info(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = InfoLevel
+	handleEntry(e)
+}
+
+// Infof logs a normal. information, entry with formatting
+func (e Entry) Infof(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = InfoLevel
+	handleEntry(e)
+}
+
+// Notice logs a notice log entry
+func (e Entry) Notice(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = NoticeLevel
+	handleEntry(e)
+}
+
+// Noticef logs a notice log entry with formatting
+func (e Entry) Noticef(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = NoticeLevel
+	handleEntry(e)
+}
+
+// Warn logs a warn log entry
+func (e Entry) Warn(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = WarnLevel
+	handleEntry(e)
+}
+
+// Warnf logs a warn log entry with formatting
+func (e Entry) Warnf(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = WarnLevel
+	handleEntry(e)
+}
+
+// Panic logs a panic log entry
+func (e Entry) Panic(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = PanicLevel
+	handleEntry(e)
+	exitFunc(1)
+}
+
+// Panicf logs a panic log entry with formatting
+func (e Entry) Panicf(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = PanicLevel
+	handleEntry(e)
+	exitFunc(1)
+}
+
+// Alert logs an alert log entry
+func (e Entry) Alert(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = AlertLevel
+	handleEntry(e)
+}
+
+// Alertf logs an alert log entry with formatting
+func (e Entry) Alertf(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = AlertLevel
+	handleEntry(e)
+}
+
+// Fatal logs a fatal log entry
+func (e Entry) Fatal(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = FatalLevel
+	handleEntry(e)
+	exitFunc(1)
+}
+
+// Fatalf logs a fatal log entry with formatting
+func (e Entry) Fatalf(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = FatalLevel
+	handleEntry(e)
+	exitFunc(1)
+}
+
+// Error logs an error log entry
+func (e Entry) Error(v ...interface{}) {
+	e.Message = fmt.Sprint(v...)
+	e.Level = ErrorLevel
+	handleEntry(e)
+}
+
+// Errorf logs an error log entry with formatting
+func (e Entry) Errorf(s string, v ...interface{}) {
+	e.Message = fmt.Sprintf(s, v...)
+	e.Level = ErrorLevel
+	handleEntry(e)
 }

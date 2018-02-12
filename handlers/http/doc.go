@@ -24,12 +24,10 @@ NOTE: you can use the HTTP handler as a base for creating other handlers
             // handle error, most likely URL parsing error
         }
 
-        h.SetFilenameDisplay(log.Llongfile)
-
-        log.RegisterHandler(h, log.AllLevels...)
+        log.AddHandler(h, log.AllLevels...)
 
         // Trace
-        defer log.Trace("trace").End()
+        defer log.WithTrace().Info("took this long")
 
         log.Debug("debug")
         log.Info("info")
@@ -41,7 +39,7 @@ NOTE: you can use the HTTP handler as a base for creating other handlers
         // log.Fatal("fatal") // this will call os.Exit(1)
 
         // logging with fields can be used with any of the above
-        log.WithFields(log.F("key", "value")).Info("test info")
+        log.WithField("key", "value").Info("test info")
     }
 */
 package http

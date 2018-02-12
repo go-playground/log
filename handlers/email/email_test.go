@@ -101,13 +101,10 @@ func TestEmailHandler(t *testing.T) {
 	}
 
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
-	email.SetBuffersAndWorkers(1, 0)
 	email.SetTimestampFormat("MST")
-	email.SetKeepAliveTimout(time.Second * 0)
-	email.SetEmailTemplate(defaultTemplate)
-	email.SetFilenameDisplay(log.Llongfile)
+	email.SetTemplate(defaultTemplate)
 	// email.SetFormatFunc(testFormatFunc)
-	log.RegisterHandler(email, log.InfoLevel, log.DebugLevel)
+	log.AddHandler(email, log.InfoLevel, log.DebugLevel)
 
 	var msg string
 
@@ -156,26 +153,12 @@ func TestEmailHandler(t *testing.T) {
 			t.Errorf("Index %d Expected '%s' Got '%s'", i, tt.expected, msg)
 		}
 	}
-
-	// this is normally not safe, but in these tests won't cause any issue
-	// flipping during runtime.
-	email.SetFilenameDisplay(log.Lshortfile)
-
-	log.Debug("debug")
-
-	<-proceed
-
-	for i, tt := range tests {
-		if !strings.Contains(msg, tt.expected) {
-			t.Errorf("Index %d Expected '%s' Got '%s'", i, tt.expected, msg)
-		}
-	}
 }
 
 func TestBadDial(t *testing.T) {
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
 	email.SetFormatFunc(testFormatFunc)
-	log.RegisterHandler(email, log.InfoLevel)
+	log.AddHandler(email, log.InfoLevel)
 
 	log.Info("info test")
 }
@@ -183,8 +166,8 @@ func TestBadDial(t *testing.T) {
 func TestBadEmailTemplate(t *testing.T) {
 	badTemplate := `{{ .NonExistentField }}` // referencing non-existent field
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
-	email.SetEmailTemplate(badTemplate)
-	log.RegisterHandler(email, log.InfoLevel)
+	email.SetTemplate(badTemplate)
+	log.AddHandler(email, log.InfoLevel)
 
 	log.Info("info test")
 }
@@ -192,7 +175,7 @@ func TestBadEmailTemplate(t *testing.T) {
 func TestBadSend(t *testing.T) {
 
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
-	log.RegisterHandler(email, log.InfoLevel)
+	log.AddHandler(email, log.InfoLevel)
 
 	server, err := net.Listen("tcp", ":3041")
 	if err != nil {
@@ -231,7 +214,7 @@ func testFormatFunc(email *Email) Formatter {
 	var err error
 	b := new(bytes.Buffer)
 
-	return func(e *log.Entry) *gomail.Message {
+	return func(e log.Entry) *gomail.Message {
 		b.Reset()
 
 		message := gomail.NewMessage()

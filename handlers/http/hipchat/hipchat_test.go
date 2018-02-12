@@ -29,7 +29,7 @@ func TestHipChat(t *testing.T) {
 	tests := []string{
 		"\"color\":\"green\"",
 		"\"notify\":true",
-		"hipchat_test.go:",
+		"debug test",
 	}
 
 	var msg string
@@ -52,16 +52,14 @@ func TestHipChat(t *testing.T) {
 	}))
 	defer server.Close()
 
-	hc, err := New(APIv2, server.URL+"/", "application/json", authToken)
+	hc, err := New(APIv2, server.URL+"/", "application/json", authToken, "")
 	if err != nil {
 		log.Fatalf("Error initializing hipchat received '%s'", err)
 	}
 
-	hc.SetBuffersAndWorkers(0, 0)
-	hc.SetTimestampFormat("MST")
-	hc.SetEmailTemplate(defaultTemplate)
-	hc.SetFilenameDisplay(log.Llongfile)
-	log.RegisterHandler(hc, log.DebugLevel)
+	hc.SetTimestampFormat("")
+	hc.SetTemplate(defaultTemplate)
+	log.AddHandler(hc, log.DebugLevel)
 
 	log.Debug("debug test")
 
@@ -71,18 +69,14 @@ func TestHipChat(t *testing.T) {
 		}
 	}
 
-	hc.GOPATH()
-
-	hc2, err := New(APIv2, server.URL, "application/json", authToken)
+	hc2, err := New(APIv2, server.URL, "application/json", authToken, "")
 	if err != nil {
 		log.Fatalf("Error initializing hipchat received '%s'", err)
 	}
 
-	hc2.SetBuffersAndWorkers(1, 1)
-	hc2.SetTimestampFormat("MST")
-	hc2.SetEmailTemplate(defaultTemplate)
-	hc2.SetFilenameDisplay(log.Lshortfile)
-	log.RegisterHandler(hc2, log.DebugLevel)
+	hc2.SetTimestampFormat("")
+	hc2.SetTemplate(defaultTemplate)
+	log.AddHandler(hc2, log.DebugLevel)
 
 	log.Debug("debug test")
 
@@ -121,16 +115,14 @@ func TestBadTemplate(t *testing.T) {
 	}))
 	defer server.Close()
 
-	hc, err := New(APIv2, server.URL, "application/json", authToken)
+	hc, err := New(APIv2, server.URL, "application/json", authToken, "")
 	if err != nil {
 		log.Fatalf("Error initializing hipchat received '%s'", err)
 	}
 
-	hc.SetBuffersAndWorkers(1, 1)
-	hc.SetTimestampFormat("MST")
-	hc.SetEmailTemplate("{{.NonExistantField}}")
-	hc.SetFilenameDisplay(log.Llongfile)
-	log.RegisterHandler(hc, log.DebugLevel)
+	hc.SetTimestampFormat("")
+	hc.SetTemplate("{{.NonExistantField}}")
+	log.AddHandler(hc, log.DebugLevel)
 
 	log.Debug("debug test")
 
@@ -143,13 +135,13 @@ func TestBadTemplate(t *testing.T) {
 
 func TestBadURL(t *testing.T) {
 	expected := "parse @#$%?auth_test=true: invalid URL escape \"%?a\""
-	_, err := New(APIv2, "@#$%", "application/json", authToken)
+	_, err := New(APIv2, "@#$%", "application/json", authToken, "")
 	if err == nil || err.Error() != expected {
 		log.Fatalf("Expected '%s' Got '%s'", err, expected)
 	}
 
 	expected = "Get ?auth_test=true: unsupported protocol scheme \"\""
-	_, err = New(APIv2, "", "application/json", authToken)
+	_, err = New(APIv2, "", "application/json", authToken, "")
 	if err == nil || err.Error() != expected {
 		log.Fatalf("Expected '%s' Got '%s'", err, expected)
 	}
@@ -163,7 +155,7 @@ func TestNotAccepted(t *testing.T) {
 	defer server.Close()
 
 	expected := "HipChat authorization failed\n "
-	_, err := New(APIv2, server.URL, "application/json", authToken)
+	_, err := New(APIv2, server.URL, "application/json", authToken, "")
 	if err == nil || err.Error() != expected {
 		log.Fatalf("Error Expected '%s' Got '%s'", expected, err.Error())
 	}

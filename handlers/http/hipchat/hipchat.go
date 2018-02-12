@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	stdhttp "net/http"
-	"os"
 	"strings"
 
 	"github.com/go-playground/log"
@@ -90,7 +89,6 @@ type Body struct {
 // Colors mapping.
 var defaultColors = [...]string{
 	log.DebugLevel:  "green",
-	log.TraceLevel:  "gray",
 	log.InfoLevel:   "purple",
 	log.NoticeLevel: "purple",
 	log.WarnLevel:   "yellow",
@@ -105,9 +103,6 @@ const (
 	method          = "POST"
 	defaultTemplate = `<p><b>{{ .Level.String }}</b></p>
         <p>{{ ts . }}</p>
-        {{ if ne .Line 0 }}
-            {{ display_file . }}:{{ .Line }}
-        {{ end }}
         <p><b>{{ .Message }}</b></p>
         {{ range $f := .Fields }}
             <p><b>{{ $f.Key }}</b>: {{ $f.Value }}</p>
@@ -116,19 +111,17 @@ const (
 
 // HipChat object
 type HipChat struct {
-	http.HTTP
-	colors       [9]string
-	template     *template.Template
-	templateHTML string
-	gopath       string
-	api          APIVersion
+	*http.HTTP
+	colors      [8]string
+	template    *template.Template
+	gopath      string
+	api         APIVersion
+	application string
 }
 
 // New returns a new instance of the HipChat logger
-func New(api APIVersion, remoteHost string, contentType string, authToken string) (*HipChat, error) {
-
+func New(api APIVersion, remoteHost string, contentType string, authToken string, application string) (*HipChat, error) {
 	// test here https://developer.atlassian.com/hipchat/guide/hipchat-rest-api that api token has access
-
 	authToken = "Bearer " + authToken
 
 	client := &stdhttp.Client{}
@@ -137,7 +130,6 @@ func New(api APIVersion, remoteHost string, contentType string, authToken string
 	if err != nil {
 		return nil, err
 	}
-
 	req.Header.Add("Authorization", authToken)
 
 	resp, err := client.Do(req)
@@ -154,125 +146,54 @@ func New(api APIVersion, remoteHost string, contentType string, authToken string
 	header.Set("Content-Type", contentType)
 	header.Set("Authorization", authToken)
 
+	hc := &HipChat{
+		colors:      defaultColors,
+		api:         api,
+		application: application,
+	}
+
 	// not checking error because url.Parse() is the only thin that can fail,
 	// and we've already checked above that it was OK sending the test request
-	h, _ := http.New(strings.TrimRight(remoteHost, "/")+"/notification", method, header)
-
-	h.SetFormatFunc(defaultFormatFunc)
-
-	return &HipChat{
-		HTTP:         h,
-		colors:       defaultColors,
-		templateHTML: defaultTemplate,
-		api:          api,
-	}, nil
+	hc.HTTP, _ = http.New(strings.TrimRight(remoteHost, "/")+"/notification", method, header)
+	hc.HTTP.SetFormatFunc(formatFunc(hc))
+	hc.SetTemplate(defaultTemplate)
+	return hc, nil
 }
 
-// GetDisplayColor returns the color for the given log level
-func (hc *HipChat) GetDisplayColor(level log.Level) string {
-	return hc.colors[level]
-}
-
-// SetEmailTemplate sets Email's html template to be used for email body
-func (hc *HipChat) SetEmailTemplate(htmlTemplate string) {
-	hc.templateHTML = htmlTemplate
-}
-
-// Template returns the HipChats's template
-func (hc *HipChat) Template() *template.Template {
-	return hc.template
-}
-
-// GOPATH returns the GOPATH calculated by HTTP
-func (hc *HipChat) GOPATH() string {
-	return hc.gopath
-}
-
-// Run starts the logger consuming on the returned channed
-func (hc *HipChat) Run() chan<- *log.Entry {
-
-	fileDisplay := hc.FilenameDisplay()
-	tsFormat := hc.TimestampFormat()
-
-	// parse HipChat htmlTemplate, will panic if fails
+// SetTemplate sets Hipchats html template to be used for email body
+func (hc *HipChat) SetTemplate(htmlTemplate string) {
 	hc.template = template.Must(template.New("hipchat").Funcs(
 		template.FuncMap{
-			"display_file": func(e *log.Entry) (file string) {
-
-				file = e.File
-				if fileDisplay == log.Lshortfile {
-
-					for i := len(file) - 1; i > 0; i-- {
-						if file[i] == '/' {
-							file = file[i+1:]
-							break
-						}
-					}
-				} else {
-
-					// additional check, just in case user does
-					// have a $GOPATH but code isn't under it.
-					if strings.HasPrefix(file, hc.GOPATH()) {
-						file = file[len(hc.GOPATH()):]
-					}
-				}
-
-				return
-			},
-			"ts": func(e *log.Entry) (ts string) {
-				ts = e.Timestamp.Format(tsFormat)
+			"ts": func(e log.Entry) (ts string) {
+				ts = e.Timestamp.Format(hc.TimestampFormat())
 				return
 			},
 		},
-	).Parse(hc.templateHTML))
-
-	// pre-setup
-	if fileDisplay == log.Llongfile {
-		// gather $GOPATH for use in stripping off of full name
-		// if not found still ok as will be blank
-		hc.gopath = os.Getenv(gopath)
-		if len(hc.gopath) != 0 {
-			hc.gopath += string(os.PathSeparator) + "src" + string(os.PathSeparator)
-		}
-	}
-
-	ch := make(chan *log.Entry, hc.Buffers())
-
-	for i := 0; i <= int(hc.Workers()); i++ {
-		go http.HandleLog(hc, ch)
-	}
-	return ch
+	).Parse(htmlTemplate))
 }
 
-func defaultFormatFunc(h http.HTTP) http.Formatter {
+func formatFunc(hc *HipChat) http.FormatFunc {
+	return func(h *http.HTTP) http.Formatter {
+		var bt []byte
 
-	var bt []byte
-	var err error
+		b := new(bytes.Buffer)
+		body := new(Body)
+		body.Notify = true
 
-	hc := h.(*HipChat)
-	b := new(bytes.Buffer)
-	template := hc.Template()
+		return func(e log.Entry) []byte {
 
-	body := new(Body)
-	body.Notify = true
+			bt = bt[0:0]
+			b.Reset()
+			body.From = hc.application
+			body.Color = hc.colors[e.Level]
 
-	return func(e *log.Entry) []byte {
+			_ = hc.template.ExecuteTemplate(b, "hipchat", e)
+			body.Message = b.String()
 
-		bt = bt[0:0]
-		b.Reset()
-		body.From = e.ApplicationID
-		body.Color = hc.GetDisplayColor(e.Level)
-
-		if err = template.ExecuteTemplate(b, "hipchat", e); err != nil {
-			log.WithFields(log.F("error", err)).Error("Error parsing HipChat handler template")
+			// shouldn't be possible to fail here
+			// at least with the default handler...
+			bt, _ = json.Marshal(body)
+			return bt
 		}
-
-		body.Message = b.String()
-
-		// shouldn't be possible to fail here
-		// at least with the default handler...
-		bt, _ = json.Marshal(body)
-
-		return bt
 	}
 }
