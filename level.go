@@ -1,5 +1,7 @@
 package log
 
+import "bytes"
+
 // AllLevels is an array of all log levels, for easier registering of all levels to a handler
 var AllLevels = []Level{
 	DebugLevel,
@@ -50,4 +52,36 @@ func (l Level) String() string {
 	}
 }
 
-// TODO: Add a bytes method along with string
+func level(s string) Level {
+	switch s {
+	case "DEBUG":
+		return DebugLevel
+	case "INFO":
+		return InfoLevel
+	case "NOTICE":
+		return NoticeLevel
+	case "WARN":
+		return WarnLevel
+	case "ERROR":
+		return ErrorLevel
+	case "PANIC":
+		return PanicLevel
+	case "ALERT":
+		return AlertLevel
+	case "FATAL":
+		return FatalLevel
+	default:
+		return 255
+	}
+}
+
+// MarshalJSON implementation.
+func (l Level) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + l.String() + `"`), nil
+}
+
+// UnmarshalJSON implementation.
+func (l *Level) UnmarshalJSON(b []byte) error {
+	*l = level(string(bytes.Trim(b, `"`)))
+	return nil
+}
