@@ -14,8 +14,8 @@ func TestJSONLogger(t *testing.T) {
 	log.AddHandler(l, log.AllLevels...)
 	log.WithField("key", "value").Debug("debug")
 
-	expected := `{"message":"debug","timestamp":"","fields":[{"key":"key","value":"value"}],"level":0}`
-	if !strings.HasPrefix(buff.String(), `{"message":"debug","timestamp":"`) || !strings.HasSuffix(strings.TrimSpace(buff.String()), `","fields":[{"key":"key","value":"value"}],"level":0}`) {
+	expected := `{"message":"debug","timestamp":"","fields":[{"key":"key","value":"value"}],"level":"DEBUG"}`
+	if !strings.HasPrefix(buff.String(), `{"message":"debug","timestamp":"`) || !strings.HasSuffix(strings.TrimSpace(buff.String()), `","fields":[{"key":"key","value":"value"}],"level":"DEBUG"}`) {
 		t.Errorf("Expected '%s' Got '%s'", expected, buff.String())
 	}
 }
