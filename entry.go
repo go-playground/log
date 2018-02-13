@@ -21,21 +21,14 @@ type Entry struct {
 }
 
 func newEntry(e Entry) Entry {
-	ne := Entry{
-		Fields:    make([]Field, 0, len(e.Fields)),
-		Timestamp: time.Now(),
-		Message:   e.Message,
-		Level:     e.Level,
-		start:     e.start,
-	}
-	ne.Fields = append(ne.Fields, e.Fields...)
-	return ne
+	flds := make([]Field, 0, len(e.Fields))
+	e.Fields = append(flds, e.Fields...)
+	return e
 }
 
 func newEntryWithFields(fields []Field) Entry {
 	e := Entry{
-		Fields:    make([]Field, 0, len(fields)),
-		Timestamp: time.Now(),
+		Fields: make([]Field, 0, len(fields)),
 	}
 	e.Fields = append(e.Fields, fields...)
 	return e
