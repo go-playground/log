@@ -3,6 +3,7 @@ package log
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -34,7 +35,6 @@ func (th *testHandler) Log(e Entry) {
 	for _, f := range e.Fields {
 		s += fmt.Sprintf(" %s=%v", f.Key, f.Value)
 	}
-
 	s += "\n"
 	if _, err := th.writer.Write([]byte(s)); err != nil {
 		panic(err)
@@ -928,5 +928,61 @@ func TestContext(t *testing.T) {
 	}
 	if l.Fields[0].Value != e.Fields[0].Value {
 		t.Errorf("Got '%s' Expected '%s'", e.Fields[0].Value, "value")
+	}
+}
+
+func TestParseLevel(t *testing.T) {
+
+	tests := []struct {
+		value string
+		level Level
+	}{
+		{
+			level: Level(255),
+			value: "Unknow Level",
+		},
+		{
+			level: DebugLevel,
+			value: "DEBUG",
+		},
+		{
+			level: InfoLevel,
+			value: "INFO",
+		},
+		{
+			level: NoticeLevel,
+			value: "NOTICE",
+		},
+		{
+			level: WarnLevel,
+			value: "WARN",
+		},
+		{
+			level: ErrorLevel,
+			value: "ERROR",
+		},
+		{
+			level: PanicLevel,
+			value: "PANIC",
+		},
+		{
+			level: AlertLevel,
+			value: "ALERT",
+		},
+		{
+			level: FatalLevel,
+			value: "FATAL",
+		},
+	}
+
+	for i, tt := range tests {
+		entry := Entry{
+			Level: tt.level,
+		}
+		b, _ := json.Marshal(entry)
+		_ = json.Unmarshal(b, &entry)
+		if entry.Level != tt.level || entry.Level.String() != tt.value {
+			t.Errorf("Test %d: Expected '%s' Got '%s'", i, entry.Level, tt.level)
+		}
 	}
 }
