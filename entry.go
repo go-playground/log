@@ -2,10 +2,7 @@ package log
 
 import (
 	"fmt"
-	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // Fields is the type to send to WithFields
@@ -48,8 +45,8 @@ func (e Entry) WithFields(fields ...Field) Entry {
 	return ne
 }
 
-// WithTrace withh add duration of how long the between this function call and
-// the susequent log
+// WithTrace with add duration of how long the between this function call and
+// the subsequent log
 func (e Entry) WithTrace() Entry {
 	e.start = time.Now()
 	return e
@@ -57,31 +54,7 @@ func (e Entry) WithTrace() Entry {
 
 // WithError add a minimal stack trace to the log Entry
 func (e Entry) WithError(err error) Entry {
-	return e.withError(err)
-}
-
-// WithError add a minimal stack trace to the log Entry
-func (e Entry) withError(err error) Entry {
-	ne := newEntry(e)
-	ne.Fields = append(ne.Fields, Field{Key: "error", Value: err.Error()})
-
-	var frame errors.Frame
-
-	if s, ok := err.(stackTracer); ok {
-		frame = s.StackTrace()[0]
-	} else {
-		frame = errors.WithStack(err).(stackTracer).StackTrace()[2:][0]
-	}
-
-	name := fmt.Sprintf("%n", frame)
-	file := fmt.Sprintf("%+s", frame)
-	line := fmt.Sprintf("%d", frame)
-	parts := strings.Split(file, "\n\t")
-	if len(parts) > 1 {
-		file = parts[1]
-	}
-	ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%s", name, file, line)})
-	return ne
+	return withErrFn(e, err)
 }
 
 // Debug logs a debug entry

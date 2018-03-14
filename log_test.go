@@ -51,6 +51,7 @@ type test struct {
 
 func TestConsoleLogger1(t *testing.T) {
 	SetExitFunc(func(int) {})
+	SetWithErrorFn(pkgErrorsWithError)
 	tests := getLogTests1()
 	buff := new(bytes.Buffer)
 	th := &testHandler{
@@ -58,7 +59,6 @@ func TestConsoleLogger1(t *testing.T) {
 	}
 	logHandlers = map[Level][]Handler{}
 	AddHandler(th, AllLevels...)
-
 	for i, tt := range tests {
 		buff.Reset()
 		var l Entry

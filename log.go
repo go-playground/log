@@ -16,6 +16,7 @@ var (
 	logFields   []Field
 	logHandlers = map[Level][]Handler{}
 	exitFunc    = os.Exit
+	withErrFn   = pkgErrorsWithError
 	ctxIdent    = &struct {
 		name string
 	}{
@@ -35,6 +36,11 @@ type Field struct {
 // methods.
 func SetExitFunc(fn func(code int)) {
 	exitFunc = fn
+}
+
+// SetWithErrorFn sets a custom WithError function handlers
+func SetWithErrorFn(fn func(Entry, error) Entry) {
+	withErrFn = fn
 }
 
 // SetContext sets a log entry into the provided context
@@ -108,7 +114,7 @@ func WithTrace() Entry {
 // WithError add a minimal stack trace to the log Entry
 func WithError(err error) Entry {
 	ne := newEntryWithFields(logFields)
-	return ne.withError(err)
+	return withErrFn(ne, err)
 }
 
 // Debug logs a debug entry
