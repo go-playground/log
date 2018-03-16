@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/go-playground/errors"
 )
 
 // NOTES:
@@ -22,7 +22,6 @@ import (
 //
 // -- may be a good idea to change to output path to somewherelike /tmp
 // go test -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
-//
 
 type testHandler struct {
 	writer io.Writer
@@ -51,7 +50,7 @@ type test struct {
 
 func TestConsoleLogger1(t *testing.T) {
 	SetExitFunc(func(int) {})
-	SetWithErrorFn(pkgErrorsWithError)
+	SetWithErrorFn(errorsWithError)
 	tests := getLogTests1()
 	buff := new(bytes.Buffer)
 	th := &testHandler{
@@ -115,6 +114,7 @@ func TestConsoleLogger1(t *testing.T) {
 		if buff.String() != tt.want {
 			t.Errorf("test %d: Expected '%s' Got '%s'", i, tt.want, buff.String())
 		}
+
 	}
 
 	buff.Reset()
@@ -124,7 +124,7 @@ func TestConsoleLogger1(t *testing.T) {
 	entry.Timestamp = time.Now().UTC()
 	entry.Message = "Test Message"
 	entry.Fields = make([]Field, 0)
-	handleEntry(entry)
+	HandleEntry(entry)
 
 	if buff.String() != "INFO Test Message\n" {
 		t.Errorf("test Custom Entry: Expected '%s' Got '%s'", "INFO Test Message\n", buff.String())
@@ -265,7 +265,7 @@ func TestConsoleLogger2(t *testing.T) {
 	entry.Timestamp = time.Now().UTC()
 	entry.Message = "Test Message"
 	entry.Fields = make([]Field, 0)
-	handleEntry(entry)
+	HandleEntry(entry)
 
 	if buff.String() != "INFO Test Message\n" {
 		t.Errorf("test Custom Entry: Expected '%s' Got '%s'", "INFO Test Message\n", buff.String())
@@ -374,11 +374,10 @@ func TestWithError(t *testing.T) {
 	if !strings.HasSuffix(buff.String(), "log_test.go:373\n") {
 		t.Errorf("Expected '%s' Got '%s'", "log_test.go:373\n", buff.String())
 	}
-
 	buff.Reset()
 	WithError(errors.Wrap(terr, "wrapped error")).Info()
-	if !strings.HasSuffix(buff.String(), "log_test.go:379\n") || !strings.HasPrefix(buff.String(), "INFO  error=wrapped error: this is an err source=TestWithError:") {
-		t.Errorf("Expected '%s' Got '%s'", "log_test.go:379\n", buff.String())
+	if !strings.HasSuffix(buff.String(), "log_test.go:378\n") || !strings.HasPrefix(buff.String(), "INFO  error=wrapped error: this is an err source=TestWithError:") {
+		t.Errorf("Expected '%s' Got '%s'", "log_test.go:378\n", buff.String())
 	}
 }
 
@@ -984,5 +983,29 @@ func TestParseLevel(t *testing.T) {
 		if entry.Level != tt.level || entry.Level.String() != tt.value {
 			t.Errorf("Test %d: Expected '%s' Got '%s'", i, entry.Level, tt.level)
 		}
+	}
+}
+
+func TestWrappedError(t *testing.T) {
+	SetExitFunc(func(int) {})
+	SetWithErrorFn(errorsWithError)
+	buff := new(bytes.Buffer)
+	th := &testHandler{
+		writer: buff,
+	}
+	logHandlers = map[Level][]Handler{}
+	AddHandler(th, AllLevels...)
+
+	err := fmt.Errorf("this is an %s", "error")
+	err = errors.Wrap(err, "prefix").WithTypes("Permanent", "Internal").WithTag("key", "value")
+	WithError(err).Error("test")
+	expected := "log_test.go:1000 key=value types=Permanent,Internal\n"
+	if !strings.HasSuffix(buff.String(), expected) {
+		t.Errorf("got %s Expected %s", buff.String(), expected)
+	}
+	buff.Reset()
+	WithError(errors.Cause(err)).Error("test")
+	if !strings.HasSuffix(buff.String(), expected) {
+		t.Errorf("got %s Expected %s", buff.String(), expected)
 	}
 }

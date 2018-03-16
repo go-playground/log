@@ -1,21 +1,20 @@
-package segmentio
+package pkg
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/go-playground/log"
-
-	"github.com/segmentio/errors-go"
+	"github.com/pkg/errors"
 )
 
 type stackTracer interface {
 	StackTrace() errors.StackTrace
 }
 
-// ErrorsGoWithError is a custom WithError function that can be used by using log's
+// ErrorsWithError is a custom WithError function that can be used by using log's
 // SetWithErrorFn function.
-func ErrorsGoWithError(e log.Entry, err error) log.Entry {
+func ErrorsWithError(e log.Entry, err error) log.Entry {
 	// normally would call newEntry, but instead will shallow copy
 	// because it's not exposed.
 	ne := new(log.Entry)
@@ -28,10 +27,8 @@ func ErrorsGoWithError(e log.Entry, err error) log.Entry {
 
 	var frame errors.Frame
 
-	_, types, tags, stacks, _ := errors.Inspect(err)
-
-	if len(stacks) > 0 {
-		frame = stacks[len(stacks)-1][0]
+	if s, ok := err.(stackTracer); ok {
+		frame = s.StackTrace()[0]
 	} else {
 		frame = errors.WithStack(err).(stackTracer).StackTrace()[2:][0]
 	}
@@ -39,13 +36,10 @@ func ErrorsGoWithError(e log.Entry, err error) log.Entry {
 	name := fmt.Sprintf("%n", frame)
 	file := fmt.Sprintf("%+s", frame)
 	line := fmt.Sprintf("%d", frame)
+	parts := strings.Split(file, "\n\t")
+	if len(parts) > 1 {
+		file = parts[1]
+	}
 	ne.Fields = append(ne.Fields, log.Field{Key: "source", Value: fmt.Sprintf("%s: %s:%s", name, file, line)})
-
-	for _, tag := range tags {
-		ne.Fields = append(ne.Fields, log.Field{Key: tag.Name, Value: tag.Value})
-	}
-	if len(types) > 0 {
-		ne.Fields = append(ne.Fields, log.Field{Key: "types", Value: strings.Join(types, ",")})
-	}
 	return *ne
 }

@@ -1,5 +1,5 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-5.0.2-green.svg)
+<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-6.0.0-green.svg)
 [![Build Status](https://semaphoreci.com/api/v1/joeybloggs/log/branches/master/badge.svg)](https://semaphoreci.com/joeybloggs/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -21,6 +21,9 @@ Features
 - [x] Handlers are simple to write + easy to register
 - [x] Logger is a singleton ( one of the few instances a singleton is desired ) so the root package registers which handlers are used and any libraries just follow suit.
 - [x] Convenient context helpers `GetContext` & `SetContext`
+- [x] Works with go-playground/errors extracting types and tags when used with `WithError`, is the default
+- [x] Works with pkg/errors when used with `WithError`, must set using `SetWithErrFn`
+- [x] Works with segmentio/errors-go extracting types and tags when used with `WithError`, must set using `SetWithErrFn`
 
 Installation
 -----------
