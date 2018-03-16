@@ -16,6 +16,7 @@ var (
 	logFields   []Field
 	logHandlers = map[Level][]Handler{}
 	exitFunc    = os.Exit
+	withErrFn   = errorsWithError
 	ctxIdent    = &struct {
 		name string
 	}{
@@ -37,6 +38,11 @@ func SetExitFunc(fn func(code int)) {
 	exitFunc = fn
 }
 
+// SetWithErrorFn sets a custom WithError function handlers
+func SetWithErrorFn(fn func(Entry, error) Entry) {
+	withErrFn = fn
+}
+
 // SetContext sets a log entry into the provided context
 func SetContext(ctx context.Context, e Entry) context.Context {
 	return context.WithValue(ctx, ctxIdent, e)
@@ -52,7 +58,10 @@ func GetContext(ctx context.Context) Entry {
 	return v.(Entry)
 }
 
-func handleEntry(e Entry) {
+// HandleEntry handles the log entry and fans out to all handlers with the proper log level
+// This is exposed to allow for centralized logging whereby the log entry is marshalled, passed
+// to a central logging server, unmarshalled and finally fanned out from there.
+func HandleEntry(e Entry) {
 	if !e.start.IsZero() {
 		e = e.WithField("duration", time.Since(e.start))
 	}
@@ -108,7 +117,7 @@ func WithTrace() Entry {
 // WithError add a minimal stack trace to the log Entry
 func WithError(err error) Entry {
 	ne := newEntryWithFields(logFields)
-	return ne.withError(err)
+	return withErrFn(ne, err)
 }
 
 // Debug logs a debug entry

@@ -2,10 +2,7 @@ package log
 
 import (
 	"fmt"
-	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // Fields is the type to send to WithFields
@@ -48,8 +45,8 @@ func (e Entry) WithFields(fields ...Field) Entry {
 	return ne
 }
 
-// WithTrace withh add duration of how long the between this function call and
-// the susequent log
+// WithTrace with add duration of how long the between this function call and
+// the subsequent log
 func (e Entry) WithTrace() Entry {
 	e.start = time.Now()
 	return e
@@ -57,94 +54,70 @@ func (e Entry) WithTrace() Entry {
 
 // WithError add a minimal stack trace to the log Entry
 func (e Entry) WithError(err error) Entry {
-	return e.withError(err)
-}
-
-// WithError add a minimal stack trace to the log Entry
-func (e Entry) withError(err error) Entry {
-	ne := newEntry(e)
-	ne.Fields = append(ne.Fields, Field{Key: "error", Value: err.Error()})
-
-	var frame errors.Frame
-
-	if s, ok := err.(stackTracer); ok {
-		frame = s.StackTrace()[0]
-	} else {
-		frame = errors.WithStack(err).(stackTracer).StackTrace()[2:][0]
-	}
-
-	name := fmt.Sprintf("%n", frame)
-	file := fmt.Sprintf("%+s", frame)
-	line := fmt.Sprintf("%d", frame)
-	parts := strings.Split(file, "\n\t")
-	if len(parts) > 1 {
-		file = parts[1]
-	}
-	ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%s", name, file, line)})
-	return ne
+	return withErrFn(e, err)
 }
 
 // Debug logs a debug entry
 func (e Entry) Debug(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = DebugLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Debugf logs a debug entry with formatting
 func (e Entry) Debugf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = DebugLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Info logs a normal. information, entry
 func (e Entry) Info(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = InfoLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Infof logs a normal. information, entry with formatting
 func (e Entry) Infof(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = InfoLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Notice logs a notice log entry
 func (e Entry) Notice(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = NoticeLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Noticef logs a notice log entry with formatting
 func (e Entry) Noticef(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = NoticeLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Warn logs a warn log entry
 func (e Entry) Warn(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = WarnLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Warnf logs a warn log entry with formatting
 func (e Entry) Warnf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = WarnLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Panic logs a panic log entry
 func (e Entry) Panic(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = PanicLevel
-	handleEntry(e)
+	HandleEntry(e)
 	exitFunc(1)
 }
 
@@ -152,7 +125,7 @@ func (e Entry) Panic(v ...interface{}) {
 func (e Entry) Panicf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = PanicLevel
-	handleEntry(e)
+	HandleEntry(e)
 	exitFunc(1)
 }
 
@@ -160,21 +133,21 @@ func (e Entry) Panicf(s string, v ...interface{}) {
 func (e Entry) Alert(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = AlertLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Alertf logs an alert log entry with formatting
 func (e Entry) Alertf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = AlertLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Fatal logs a fatal log entry
 func (e Entry) Fatal(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = FatalLevel
-	handleEntry(e)
+	HandleEntry(e)
 	exitFunc(1)
 }
 
@@ -182,7 +155,7 @@ func (e Entry) Fatal(v ...interface{}) {
 func (e Entry) Fatalf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = FatalLevel
-	handleEntry(e)
+	HandleEntry(e)
 	exitFunc(1)
 }
 
@@ -190,12 +163,12 @@ func (e Entry) Fatalf(s string, v ...interface{}) {
 func (e Entry) Error(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = ErrorLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
 
 // Errorf logs an error log entry with formatting
 func (e Entry) Errorf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = ErrorLevel
-	handleEntry(e)
+	HandleEntry(e)
 }
