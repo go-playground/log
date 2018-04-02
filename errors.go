@@ -10,33 +10,24 @@ import (
 func errorsWithError(e Entry, err error) Entry {
 	ne := newEntry(e)
 
-	if w, ok := err.(*errors.Wrapped); ok {
-		cause := errors.Cause(w).(*errors.Wrapped)
+	switch t := err.(type) {
+	case errors.Chain:
+		cause := t[0]
 		ne.Fields = append(ne.Fields, Field{Key: "error", Value: fmt.Sprintf("%s: %s", cause.Prefix, cause.Err)})
 		ne.Fields = append(ne.Fields, Field{Key: "source", Value: cause.Source})
-		if len(w.Errors) > 0 {
-			// top level error
-			types := make([]string, 0, len(w.Errors))
-			for _, e := range w.Errors {
-				for _, tag := range e.Tags {
-					ne.Fields = append(ne.Fields, Field{Key: tag.Key, Value: tag.Value})
-				}
-				types = append(types, e.Types...)
-			}
-			if len(types) > 0 {
-				ne.Fields = append(ne.Fields, Field{Key: "types", Value: strings.Join(types, ",")})
-			}
-		} else {
-			// not top level, probably cause
-			for _, tag := range w.Tags {
+
+		types := make([]string, 0, len(t))
+		for _, e := range t {
+			for _, tag := range e.Tags {
 				ne.Fields = append(ne.Fields, Field{Key: tag.Key, Value: tag.Value})
 			}
-			if len(w.Types) > 0 {
-				ne.Fields = append(ne.Fields, Field{Key: "types", Value: strings.Join(w.Types, ",")})
-			}
+			types = append(types, e.Types...)
+		}
+		if len(types) > 0 {
+			ne.Fields = append(ne.Fields, Field{Key: "types", Value: strings.Join(types, ",")})
 		}
 
-	} else {
+	default:
 		ne.Fields = append(ne.Fields, Field{Key: "error", Value: err.Error()})
 		frame := errors.StackLevel(2)
 		name := fmt.Sprintf("%n", frame)

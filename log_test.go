@@ -1004,7 +1004,7 @@ func TestWrappedError(t *testing.T) {
 		t.Errorf("got %s Expected %s", buff.String(), expected)
 	}
 	buff.Reset()
-	WithError(errors.Cause(err)).Error("test")
+	WithError(err).Error("test")
 	if !strings.HasSuffix(buff.String(), expected) {
 		t.Errorf("got %s Expected %s", buff.String(), expected)
 	}
