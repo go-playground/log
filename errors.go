@@ -13,16 +13,22 @@ func errorsWithError(e Entry, err error) Entry {
 	switch t := err.(type) {
 	case errors.Chain:
 		cause := t[0]
-		ne.Fields = append(ne.Fields, Field{Key: "error", Value: fmt.Sprintf("%s: %s", cause.Prefix, cause.Err)})
-		ne.Fields = append(ne.Fields, Field{Key: "source", Value: cause.Source})
-
+		errField := cause.Err.Error()
 		types := make([]string, 0, len(t))
+		tags := make([]Field, 0, len(t))
 		for _, e := range t {
+			if e.Prefix != "" {
+				errField = fmt.Sprintf("%s: %s", e.Prefix, errField)
+			}
 			for _, tag := range e.Tags {
-				ne.Fields = append(ne.Fields, Field{Key: tag.Key, Value: tag.Value})
+				tags = append(tags, Field{Key: tag.Key, Value: tag.Value})
+
 			}
 			types = append(types, e.Types...)
 		}
+		ne.Fields = append(ne.Fields, Field{Key: "error", Value: errField})
+		ne.Fields = append(ne.Fields, Field{Key: "source", Value: cause.Source})
+		ne.Fields = append(ne.Fields, tags...) // we do it this way to maintain order of error, source as first fields
 		if len(types) > 0 {
 			ne.Fields = append(ne.Fields, Field{Key: "types", Value: strings.Join(types, ",")})
 		}

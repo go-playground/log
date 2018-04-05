@@ -989,15 +989,15 @@ func TestParseLevel(t *testing.T) {
 func TestWrappedError(t *testing.T) {
 	SetExitFunc(func(int) {})
 	SetWithErrorFn(errorsWithError)
+	logFields = logFields[0:0]
 	buff := new(bytes.Buffer)
 	th := &testHandler{
 		writer: buff,
 	}
 	logHandlers = map[Level][]Handler{}
 	AddHandler(th, AllLevels...)
-
 	err := fmt.Errorf("this is an %s", "error")
-	err = errors.Wrap(err, "prefix").WithTypes("Permanent", "Internal").WithTag("key", "value")
+	err = errors.Wrap(err, "prefix").AddTypes("Permanent", "Internal").AddTag("key", "value")
 	WithError(err).Error("test")
 	expected := "log_test.go:1000 key=value types=Permanent,Internal\n"
 	if !strings.HasSuffix(buff.String(), expected) {
