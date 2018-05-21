@@ -103,6 +103,12 @@ func TestEmailHandler(t *testing.T) {
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
 	email.SetTimestampFormat("MST")
 	email.SetTemplate(defaultTemplate)
+	email.SetHost("localhost")
+	email.SetPort(3041)
+	email.SetUsername("")
+	email.SetPassword("")
+	email.SetFrom("from@email.com")
+	email.SetTo([]string{"to@email.com"})
 	// email.SetFormatFunc(testFormatFunc)
 	log.AddHandler(email, log.InfoLevel, log.DebugLevel)
 

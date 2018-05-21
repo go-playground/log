@@ -104,6 +104,36 @@ func (email *Email) SetFormatFunc(fn FormatFunc) {
 	email.formatFunc = fn
 }
 
+// SetHost sets Email's host
+func (email *Email) SetHost(host string) {
+	email.host = host
+}
+
+// SetPort sets Email's port
+func (email *Email) SetPort(port int) {
+	email.port = port
+}
+
+// SetUsername sets Email's username
+func (email *Email) SetUsername(username string) {
+	email.username = username
+}
+
+// SetPassword sets Email's password
+func (email *Email) SetPassword(password string) {
+	email.password = password
+}
+
+// SetFrom sets Email's email address to send from
+func (email *Email) SetFrom(from string) {
+	email.from = from
+}
+
+// SetTo sets Email's email address(es) to send to
+func (email *Email) SetTo(to []string) {
+	email.to = to
+}
+
 func defaultFormatFunc(email *Email) Formatter {
 	b := new(bytes.Buffer)
 
