@@ -45,6 +45,7 @@ type Email struct {
 	password        string
 	from            string
 	to              []string
+	rw              sync.RWMutex
 	once            sync.Once
 }
 
@@ -104,33 +105,16 @@ func (email *Email) SetFormatFunc(fn FormatFunc) {
 	email.formatFunc = fn
 }
 
-// SetHost sets Email's host
-func (email *Email) SetHost(host string) {
+// SetEmailConfig allows updating of the email config in flight and is thread safe.
+func (email *Email) SetEmailConfig(host string, port int, username string, password string, from string, to []string) {
+	email.rw.Lock()
+	defer email.rw.Unlock()
+
 	email.host = host
-}
-
-// SetPort sets Email's port
-func (email *Email) SetPort(port int) {
 	email.port = port
-}
-
-// SetUsername sets Email's username
-func (email *Email) SetUsername(username string) {
 	email.username = username
-}
-
-// SetPassword sets Email's password
-func (email *Email) SetPassword(password string) {
 	email.password = password
-}
-
-// SetFrom sets Email's email address to send from
-func (email *Email) SetFrom(from string) {
 	email.from = from
-}
-
-// SetTo sets Email's email address(es) to send to
-func (email *Email) SetTo(to []string) {
 	email.to = to
 }
 
@@ -144,7 +128,7 @@ func defaultFormatFunc(email *Email) Formatter {
 	to := make([]string, len(email.to))
 	copy(to, email.to)
 
-	template := email.Template()
+	tmpl := email.Template()
 	message := gomail.NewMessage()
 
 	message.SetHeader("From", email.from)
@@ -152,7 +136,7 @@ func defaultFormatFunc(email *Email) Formatter {
 
 	return func(e log.Entry) *gomail.Message {
 		b.Reset()
-		_ = template.ExecuteTemplate(b, "email", e)
+		_ = tmpl.ExecuteTemplate(b, "email", e)
 		message.SetHeader("Subject", e.Message)
 		message.SetBody(contentType, b.String())
 		return message
@@ -171,7 +155,9 @@ func (email *Email) Log(e log.Entry) {
 	var message *gomail.Message
 	var count uint8
 
+	email.rw.RLock()
 	d := gomail.NewDialer(email.host, email.port, email.username, email.password)
+	email.rw.RUnlock()
 
 	for {
 		count = 0
