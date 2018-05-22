@@ -116,6 +116,7 @@ func (email *Email) SetEmailConfig(host string, port int, username string, passw
 	email.password = password
 	email.from = from
 	email.to = to
+	email.formatter = email.formatFunc(email)
 }
 
 func defaultFormatFunc(email *Email) Formatter {
