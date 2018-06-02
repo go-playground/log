@@ -45,6 +45,7 @@ type Email struct {
 	password        string
 	from            string
 	to              []string
+	send            bool
 	rw              sync.RWMutex
 	once            sync.Once
 }
@@ -59,6 +60,7 @@ func New(host string, port int, username string, password string, from string, t
 		password:        password,
 		from:            from,
 		to:              to,
+		send:            true,
 		formatFunc:      defaultFormatFunc,
 	}
 	e.SetTemplate(defaultTemplate)
@@ -67,6 +69,9 @@ func New(host string, port int, username string, password string, from string, t
 
 // SetTemplate sets Email's html template to be used for email body
 func (email *Email) SetTemplate(htmlTemplate string) {
+	email.rw.Lock()
+	defer email.rw.Unlock()
+
 	// parse email htmlTemplate, will panic if fails
 	email.template = template.Must(template.New("email").Funcs(
 		template.FuncMap{
@@ -96,12 +101,18 @@ func (email *Email) Template() *template.Template {
 // SetTimestampFormat sets Email's timestamp output format
 // Default is : "2006-01-02T15:04:05.000000000Z07:00"
 func (email *Email) SetTimestampFormat(format string) {
+	email.rw.Lock()
+	defer email.rw.Unlock()
+
 	email.timestampFormat = format
 }
 
 // SetFormatFunc sets FormatFunc each worker will call to get
 // a Formatter func
 func (email *Email) SetFormatFunc(fn FormatFunc) {
+	email.rw.Lock()
+	defer email.rw.Unlock()
+
 	email.formatFunc = fn
 }
 
@@ -117,6 +128,14 @@ func (email *Email) SetEmailConfig(host string, port int, username string, passw
 	email.from = from
 	email.to = to
 	email.formatter = email.formatFunc(email)
+}
+
+// SetSend enables or disables the email handler sending emails
+func (email *Email) SetSend(send bool) {
+	email.rw.Lock()
+	defer email.rw.Unlock()
+
+	email.send = send
 }
 
 func defaultFormatFunc(email *Email) Formatter {
@@ -146,6 +165,9 @@ func defaultFormatFunc(email *Email) Formatter {
 
 // Log handles the log entry
 func (email *Email) Log(e log.Entry) {
+	if !email.send {
+		return
+	}
 	email.once.Do(func() {
 		email.formatter = email.formatFunc(email)
 	})
