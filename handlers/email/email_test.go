@@ -104,7 +104,7 @@ func TestEmailHandler(t *testing.T) {
 	email.SetTimestampFormat("MST")
 	email.SetTemplate(defaultTemplate)
 	email.SetEmailConfig("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
-	email.SetSend(true)
+	email.SetEnabled(true)
 	// email.SetFormatFunc(testFormatFunc)
 	log.AddHandler(email, log.InfoLevel, log.DebugLevel)
 
@@ -175,7 +175,6 @@ func TestBadEmailTemplate(t *testing.T) {
 }
 
 func TestBadSend(t *testing.T) {
-
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
 	log.AddHandler(email, log.InfoLevel)
 

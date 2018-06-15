@@ -35,6 +35,7 @@ const (
 
 // Email is an instance of the email logger
 type Email struct {
+	enabled         bool
 	formatter       Formatter
 	formatFunc      FormatFunc
 	timestampFormat string
@@ -45,7 +46,6 @@ type Email struct {
 	password        string
 	from            string
 	to              []string
-	send            bool
 	rw              sync.RWMutex
 	once            sync.Once
 }
@@ -53,6 +53,7 @@ type Email struct {
 // New returns a new instance of the email logger
 func New(host string, port int, username string, password string, from string, to []string) *Email {
 	e := &Email{
+		enabled:         true,
 		timestampFormat: log.DefaultTimeFormat,
 		host:            host,
 		port:            port,
@@ -60,7 +61,6 @@ func New(host string, port int, username string, password string, from string, t
 		password:        password,
 		from:            from,
 		to:              to,
-		send:            true,
 		formatFunc:      defaultFormatFunc,
 	}
 	e.SetTemplate(defaultTemplate)
@@ -130,12 +130,12 @@ func (email *Email) SetEmailConfig(host string, port int, username string, passw
 	email.formatter = email.formatFunc(email)
 }
 
-// SetSend enables or disables the email handler sending emails
-func (email *Email) SetSend(send bool) {
+// SetEnabled enables or disables the email handler sending emails
+func (email *Email) SetEnabled(enabled bool) {
 	email.rw.Lock()
 	defer email.rw.Unlock()
 
-	email.send = send
+	email.enabled = enabled
 }
 
 func defaultFormatFunc(email *Email) Formatter {
@@ -165,12 +165,18 @@ func defaultFormatFunc(email *Email) Formatter {
 
 // Log handles the log entry
 func (email *Email) Log(e log.Entry) {
-	if !email.send {
+	email.rw.RLock()
+
+	if !email.enabled {
 		return
 	}
+
+	email.rw.RUnlock()
+
 	email.once.Do(func() {
 		email.formatter = email.formatFunc(email)
 	})
+
 	var s gomail.SendCloser
 	var err error
 	var open bool
