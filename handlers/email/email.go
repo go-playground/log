@@ -168,14 +168,17 @@ func (email *Email) Log(e log.Entry) {
 	email.rw.RLock()
 
 	if !email.enabled {
+		email.rw.RUnlock()
 		return
 	}
-
-	email.rw.RUnlock()
 
 	email.once.Do(func() {
 		email.formatter = email.formatFunc(email)
 	})
+
+	d := gomail.NewDialer(email.host, email.port, email.username, email.password)
+
+	email.rw.RUnlock()
 
 	var s gomail.SendCloser
 	var err error
@@ -183,10 +186,6 @@ func (email *Email) Log(e log.Entry) {
 	var alreadyTriedSending bool
 	var message *gomail.Message
 	var count uint8
-
-	email.rw.RLock()
-	d := gomail.NewDialer(email.host, email.port, email.username, email.password)
-	email.rw.RUnlock()
 
 	for {
 		count = 0
