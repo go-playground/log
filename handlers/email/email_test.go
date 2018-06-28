@@ -45,7 +45,6 @@ func (c *Client) r() string {
 }
 
 func handleClient(c *Client, closePrematurly bool) string {
-
 	var msg []byte
 
 	c.w("220 Welcome to the Jungle")
@@ -82,7 +81,6 @@ func handleClient(c *Client, closePrematurly bool) string {
 }
 
 func TestEmailHandler(t *testing.T) {
-
 	tests := []struct {
 		expected string
 	}{
@@ -174,7 +172,6 @@ func TestBadEmailTemplate(t *testing.T) {
 }
 
 func TestBadSend(t *testing.T) {
-
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
 	log.AddHandler(email, log.InfoLevel)
 
@@ -207,6 +204,18 @@ func TestBadSend(t *testing.T) {
 			handleClient(c, true)
 		}
 	}()
+
+	log.Info("info")
+}
+
+func TestBadEnabled(t *testing.T) {
+	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
+	email.SetEnabled(false)
+	log.AddHandler(email, log.InfoLevel)
+
+	if email.enabled {
+		t.Errorf("Expected 'false' Got 'true'")
+	}
 
 	log.Info("info")
 }
