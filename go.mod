@@ -1,6 +1,6 @@
 module github.com/go-playground/log
 
-go 1.12
+go 1.11
 
 require (
 	github.com/RackSec/srslog v0.0.0-20180709174129-a4725f04ec91
