@@ -1,7 +1,0 @@
-mode: count
-github.com/go-playground/log/errors/pkg/pkg.go:17.56,30.36 8 2
-github.com/go-playground/log/errors/pkg/pkg.go:36.2,40.20 5 2
-github.com/go-playground/log/errors/pkg/pkg.go:43.2,44.12 2 2
-github.com/go-playground/log/errors/pkg/pkg.go:30.36,32.3 1 1
-github.com/go-playground/log/errors/pkg/pkg.go:32.8,34.3 1 1
-github.com/go-playground/log/errors/pkg/pkg.go:40.20,42.3 1 2
