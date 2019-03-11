@@ -1,6 +1,7 @@
 package log
 
 import (
+	"bytes"
 	stderr "errors"
 	"testing"
 
@@ -15,6 +16,18 @@ func BenchmarkWithError(b *testing.B) {
 	}
 }
 
+func BenchmarkWithErrorParallel(b *testing.B) {
+	err := stderr.New("new error")
+	entry := Entry{}
+	b.RunParallel(func(pb *testing.PB) {
+		var buf bytes.Buffer
+		for pb.Next() {
+			buf.Reset()
+			_ = errorsWithError(entry, err)
+		}
+	})
+}
+
 func BenchmarkWithErrorExisting(b *testing.B) {
 	err := errors.New("new error")
 	entry := Entry{}
@@ -23,6 +36,14 @@ func BenchmarkWithErrorExisting(b *testing.B) {
 	}
 }
 
-//func BenchmarkWithErrorExisting(b *testing.B) {
-//
-//}
+func BenchmarkWithErrorExistingParallel(b *testing.B) {
+	err := errors.New("new error")
+	entry := Entry{}
+	b.RunParallel(func(pb *testing.PB) {
+		var buf bytes.Buffer
+		for pb.Next() {
+			buf.Reset()
+			_ = errorsWithError(entry, err)
+		}
+	})
+}
