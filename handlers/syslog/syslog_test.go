@@ -48,7 +48,9 @@ func TestSyslogLogger(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	sLog, err := New("udp", "127.0.0.1:2000", "", nil)
 	if err != nil {
@@ -131,7 +133,9 @@ func TestSyslogLoggerColor(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected '%v' Got '%s'", nil, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	sLog, err := New("udp", "127.0.0.1:2001", "", nil)
 	if err != nil {
@@ -231,7 +235,9 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 	if err != nil {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	sLog, err := New("udp", "127.0.0.1:2004", "", nil)
 	if err != nil {
@@ -267,7 +273,9 @@ func TestSyslogTLS(t *testing.T) {
 	if err != nil {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	var msg string
 	var m sync.Mutex
@@ -275,7 +283,7 @@ func TestSyslogTLS(t *testing.T) {
 	go func() {
 		client, err := conn.Accept()
 		if err != nil {
-			log.Errorf("Expected '%v' Got '%v'", nil, err)
+			panic(fmt.Sprintf("Expected '%v' Got '%v'", nil, err))
 		}
 
 		b := make([]byte, 1024)
@@ -284,7 +292,7 @@ func TestSyslogTLS(t *testing.T) {
 		defer m.Unlock()
 		read, err := client.Read(b)
 		if err != nil {
-			t.Fatalf("Expected '%v' Got '%v'", nil, err)
+			panic(fmt.Sprintf("Expected '%v' Got '%v'", nil, err))
 		}
 		msg = string(b[0:read])
 	}()

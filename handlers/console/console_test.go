@@ -147,7 +147,7 @@ func TestConsoleLoggerColor(t *testing.T) {
 		case log.PanicLevel:
 			func() {
 				defer func() {
-					recover()
+					_ = recover()
 				}()
 
 				if len(tt.printf) == 0 {

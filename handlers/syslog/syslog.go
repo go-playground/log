@@ -250,18 +250,18 @@ func (s *Syslog) Log(e log.Entry) {
 
 	switch e.Level {
 	case log.DebugLevel:
-		s.writer.Debug(line)
+		_ = s.writer.Debug(line)
 	case log.InfoLevel:
-		s.writer.Info(line)
+		_ = s.writer.Info(line)
 	case log.NoticeLevel:
-		s.writer.Notice(line)
+		_ = s.writer.Notice(line)
 	case log.WarnLevel:
-		s.writer.Warning(line)
+		_ = s.writer.Warning(line)
 	case log.ErrorLevel:
-		s.writer.Err(line)
+		_ = s.writer.Err(line)
 	case log.PanicLevel, log.AlertLevel:
-		s.writer.Alert(line)
+		_ = s.writer.Alert(line)
 	case log.FatalLevel:
-		s.writer.Crit(line)
+		_ = s.writer.Crit(line)
 	}
 }

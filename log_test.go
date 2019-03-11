@@ -182,7 +182,7 @@ func TestConsoleLogger2(t *testing.T) {
 			case uint8(PanicLevel):
 				func() {
 					defer func() {
-						recover()
+						_ = recover()
 					}()
 
 					if len(tt.printf) == 0 {
@@ -235,7 +235,7 @@ func TestConsoleLogger2(t *testing.T) {
 			case uint8(PanicLevel):
 				func() {
 					defer func() {
-						recover()
+						_ = recover()
 					}()
 
 					if len(tt.printf) == 0 {
