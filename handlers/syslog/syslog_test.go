@@ -1,8 +1,7 @@
 package syslog
 
 import (
-	"crypto/tls"
-	"crypto/x509"
+	"fmt"
 	"net"
 	"strings"
 	"sync"
@@ -49,7 +48,9 @@ func TestSyslogLogger(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	sLog, err := New("udp", "127.0.0.1:2000", "", nil)
 	if err != nil {
@@ -132,7 +133,9 @@ func TestSyslogLoggerColor(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected '%v' Got '%s'", nil, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	sLog, err := New("udp", "127.0.0.1:2001", "", nil)
 	if err != nil {
@@ -232,7 +235,9 @@ func TestBadWorkerCountAndCustomFormatFunc(t *testing.T) {
 	if err != nil {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	sLog, err := New("udp", "127.0.0.1:2004", "", nil)
 	if err != nil {
@@ -264,22 +269,13 @@ func TestSyslogTLS(t *testing.T) {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
 
-	cnn, err := net.ListenTCP("tcp", addr)
+	conn, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		log.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
-	defer cnn.Close()
-
-	tlsConfig := &tls.Config{
-		Certificates: make([]tls.Certificate, 1),
-	}
-
-	tlsConfig.Certificates[0], err = tls.X509KeyPair([]byte(publicKey), []byte(privateKey))
-	if err != nil {
-		log.Errorf("Expected '%v' Got '%v'", nil, err)
-	}
-
-	conn := tls.NewListener(cnn, tlsConfig)
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	var msg string
 	var m sync.Mutex
@@ -287,33 +283,23 @@ func TestSyslogTLS(t *testing.T) {
 	go func() {
 		client, err := conn.Accept()
 		if err != nil {
-			log.Errorf("Expected '%v' Got '%v'", nil, err)
+			panic(fmt.Sprintf("Expected '%v' Got '%v'", nil, err))
 		}
 
 		b := make([]byte, 1024)
 
-		read, err := client.Read(b)
-		if err != nil {
-			log.Errorf("Expected '%v' Got '%v'", nil, err)
-		}
-
 		m.Lock()
 		defer m.Unlock()
+		read, err := client.Read(b)
+		if err != nil {
+			panic(fmt.Sprintf("Expected '%v' Got '%v'", nil, err))
+		}
 		msg = string(b[0:read])
 	}()
 
-	// setup client log
-
-	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM([]byte(publicKey))
-
-	config := &tls.Config{
-		RootCAs: pool,
-	}
-
-	sLog, err := New("tcp+tls", "127.0.0.1:2022", "", config)
+	sLog, err := New("tcp", "127.0.0.1:2022", "", nil)
 	if err != nil {
-		log.Fatalf("Expected '%v' Got '%v'", nil, err)
+		panic(fmt.Sprintf("Expected '%v' Got '%v'", nil, err))
 	}
 
 	sLog.SetFormatFunc(func(s *Syslog) Formatter {
@@ -330,8 +316,8 @@ func TestSyslogTLS(t *testing.T) {
 	m.Lock()
 	defer m.Unlock()
 
-	if msg != "debug" {
-		log.Errorf("Expected '%s' Got '%s'", "debug", msg)
+	if strings.HasSuffix(msg, "debug") {
+		t.Fatalf("Expected '%s' Got '%s'", "debug", msg)
 	}
 }
 
@@ -829,52 +815,3 @@ func getSyslogLoggerColorTests() []test {
 		},
 	}
 }
-
-const (
-	publicKey = `-----BEGIN CERTIFICATE-----
-MIIC4DCCAcigAwIBAgIQQiBLO9euTB+dokvZeAoNQjANBgkqhkiG9w0BAQsFADAU
-MRIwEAYDVQQDDAkxMjcuMC4wLjEwHhcNMTYwNzIwMTA0MjA4WhcNMTgxMjMxMDAw
-MDAwWjAUMRIwEAYDVQQDDAkxMjcuMC4wLjEwggEiMA0GCSqGSIb3DQEBAQUAA4IB
-DwAwggEKAoIBAQDbrVoGAj4NplB4qzHa7GgYCk2kbsLrb15POIRVmsgpfsLumMsJ
-xjI+/wW+ff6SLvmEoONhiQyhUzzqUm9XlC+CWm0rAPZabT0P11WFxL0fFW9lANSa
-rvmcIxAo54Vx0VugXntFSV7MTPhu08Xy6kU6d0D2+t6eY8qNsaP0CSGLXHiDMQH4
-g5mtL5RUtDb0JRBCX96BaMj3Y9T9oYPQf++tlsv4QbdvgvUVkRz9T66hmLOSpN3I
-VlWKbSUtjysFR1Q5TokJmQy4VkRIjKUsrhoOayFlbzXAz40qumvOUKdB2H2YNbY3
-yXCTD0O2Em/Hwav1XDueRX3IEKdWDauPEBpfAgMBAAGjLjAsMA8GA1UdEQQIMAaH
-BH8AAAEwCwYDVR0PBAQDAgGuMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQAD
-ggEBAGr/EQC2O/nPLLTQaZ9sio1S7aT0wsRGvqReeyMBeRPB1OlFa1EYtHbs9tAz
-Hsh6jUqTEyxQ3aorx1bIwuKcbKmw+G4zLf0r7v0M59xIJzECaV9zHqNxenYw4i2L
-53R3yu7Q9QvWqFgpHRErk2+F7CoUGsCsmI+J90Pk1KwPcEieoRJJc9di9z7wUORa
-QciCwomYnFl/5dQLepV2oIEWCEFwm1oFzSuIboffK3T3vzIYDe424b2mo+/O2J4l
-lQFRwOT4kY5o246rn/sm4ag/hD5sQxu1tairnyLeSBSYLq0qef0VGIF78L5QonFR
-YwYOENQ14l1n9/lbTd4WBsFqHNA=
------END CERTIFICATE-----`
-	privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDbrVoGAj4NplB4
-qzHa7GgYCk2kbsLrb15POIRVmsgpfsLumMsJxjI+/wW+ff6SLvmEoONhiQyhUzzq
-Um9XlC+CWm0rAPZabT0P11WFxL0fFW9lANSarvmcIxAo54Vx0VugXntFSV7MTPhu
-08Xy6kU6d0D2+t6eY8qNsaP0CSGLXHiDMQH4g5mtL5RUtDb0JRBCX96BaMj3Y9T9
-oYPQf++tlsv4QbdvgvUVkRz9T66hmLOSpN3IVlWKbSUtjysFR1Q5TokJmQy4VkRI
-jKUsrhoOayFlbzXAz40qumvOUKdB2H2YNbY3yXCTD0O2Em/Hwav1XDueRX3IEKdW
-DauPEBpfAgMBAAECggEBAK5fQuckHoeNLbErCs7g+puiihDszpI9e5ncncaprxqp
-ASiNZhVjGn1Axxl3P3xgBzXM09CXDcx8mwzQ1IqrGK8bAi6xe9s5fM+3OK6PBSPI
-SvzclOYX4BCdEHW3mQhIi7eXZ7gOzk3TBxxJw4XXiY4oHQwvBEiro5unlyHdoZ/R
-FUZhXvy5E5a0/bkcCgCzYmzQPqCfB/+xCCC1P3TBNt7x6qOmTVJ7Z5TFdF47R9Ld
-/G72+p96x50YJpOhfyvxqSIi/79NQVQsf8kLGo62PuCsJ2pT6V1Hb2LTDGLbUhRX
-/45ycTIE9YzTso1mWIWInl4wN6NsUPyGeY/kWc9cTdkCgYEA85pPN7FPOtvj/6gl
-iOL8YutkplLfhmf4B9tqSIWMsOaEK69KSJC7BTLEEZ/EMypba50fJ/HL5CfYAYz3
-7YgIoresUd4gDCmA4TaaCOC/WXeuRBzyNYn2A66yfufv3T+cnjER+q6l8x2mf5Pc
-Y+L3kvAUvjCcrgbhDvcrY3eZW3sCgYEA5ttWAnyCbp2Fw/6oNICsfifHpO8AbRHp
-2dndMc4N9rKY3t0dwPXCSEwgedIgj76vSBUUR/39vltBmG90Diz7lYful2Uzs0Zp
-JJWY5CU6rosohIiq4vef5J8uHzGkhfYoOmlMyTqT3YJvJFrv4IUS1PkF2nLU6tEF
-DAn+3B6URW0CgYBsMuzeqsWrOgHiCxho3ZEGitFQwtx/gWx8aOujPJZJ+IlaMeiH
-pKk83NiTj2gA5d5nRQmSn2ZVd5EM10VD3rkfNP+3+TY40LJq1erC6Lh1D6B6pnS6
-bQW1iwHDNlem6NsytE7tDmetPU03u0AXqbcXL8W22DavYWTTVduSuYuHQwKBgG1o
-F1v4TAxGRQW841R2gskK6zfEOOx3597hvE2FPOLkg0RjgF1ZWyjOQznYlqvpD8LW
-kpUHz0BumSi38UVilhyoni9Lu/PDc8LtztaYujXMJ3igGHSWLEW6Fq6b5T/DiA8e
-plBbnYYF8cxF+JbsGh+qoNaFQ1jBlGW/OvRw3Y4FAoGBAKMeQFBTPw6/JN0yAJld
-rkahdsRBeRYQQPGv4O2fHN50E9IKZrcF7wFOs+xK6KYJVl0UexxRYz/Z7d2zWHFC
-8GDWydoyRAicwuyldIbL+uA517KCzreYWnVumo5gpkkJeb2L0Kr3lk3/pz4Kfq1b
-iJo4hgFbcvqHpSPfZDTLK9RX
------END PRIVATE KEY-----`
-)

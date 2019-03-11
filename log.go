@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,7 @@ var (
 	}{
 		name: "log",
 	}
+	rw sync.RWMutex
 )
 
 // Field is a single Field key and value
@@ -67,9 +69,11 @@ func HandleEntry(e Entry) {
 	}
 	e.Timestamp = time.Now()
 
+	rw.RLock()
 	for _, h := range logHandlers[e.Level] {
 		h.Log(e)
 	}
+	rw.RUnlock()
 }
 
 // F creates a new Field using the supplied key + value.
@@ -81,10 +85,54 @@ func F(key string, value interface{}) Field {
 // AddHandler adds a new log handler and accepts which log levels that
 // handler will be triggered for
 func AddHandler(h Handler, levels ...Level) {
+	rw.Lock()
 	for _, level := range levels {
 		handler := append(logHandlers[level], h)
 		logHandlers[level] = handler
 	}
+	rw.Unlock()
+}
+
+// RemoveHandler removes an existing handler
+func RemoveHandler(h Handler) {
+	rw.Lock()
+OUTER:
+	for lvl, handlers := range logHandlers {
+		for i, handler := range handlers {
+			if h == handler {
+				n := append(handlers[:i], handlers[i+1:]...)
+				if len(n) == 0 {
+					delete(logHandlers, lvl)
+					continue OUTER
+				}
+				logHandlers[lvl] = n
+				continue OUTER
+			}
+		}
+	}
+	rw.Unlock()
+}
+
+// RemoveHandlerLevels removes the supplied levels, if no more levels exists for the handler
+// it will no longer be registered and need to to added via AddHandler again.
+func RemoveHandlerLevels(h Handler, levels ...Level) {
+	rw.Lock()
+OUTER:
+	for _, lvl := range levels {
+		handlers := logHandlers[lvl]
+		for i, handler := range handlers {
+			if h == handler {
+				n := append(handlers[:i], handlers[i+1:]...)
+				if len(n) == 0 {
+					delete(logHandlers, lvl)
+					continue OUTER
+				}
+				logHandlers[lvl] = n
+				continue OUTER
+			}
+		}
+	}
+	rw.Unlock()
 }
 
 // WithDefaultFields adds fields to the underlying logger instance

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/gomail.v2"
+	gomail "gopkg.in/gomail.v2"
 
 	"github.com/go-playground/log"
 )
@@ -33,8 +33,8 @@ type Client struct {
 }
 
 func (c *Client) w(s string) {
-	c.bufout.WriteString(s + "\r\n")
-	c.bufout.Flush()
+	_, _ = c.bufout.WriteString(s + "\r\n")
+	_ = c.bufout.Flush()
 }
 func (c *Client) r() string {
 	reply, err := c.bufin.ReadString('\n')
@@ -75,7 +75,7 @@ func handleClient(c *Client, closePrematurly bool) string {
 		c.w("250 server has transmitted the message")
 	}
 
-	c.conn.Close()
+	_ = c.conn.Close()
 
 	return string(msg)
 }
@@ -112,7 +112,9 @@ func TestEmailHandler(t *testing.T) {
 		t.Errorf("Expected <nil> Got '%s'", err)
 	}
 
-	defer server.Close()
+	defer func() {
+		_ = server.Close()
+	}()
 
 	proceed := make(chan struct{})
 	defer close(proceed)
@@ -180,7 +182,9 @@ func TestBadSend(t *testing.T) {
 		t.Errorf("Expected <nil> Got '%s'", err)
 	}
 
-	defer server.Close()
+	defer func() {
+		_ = server.Close()
+	}()
 
 	go func() {
 		for {

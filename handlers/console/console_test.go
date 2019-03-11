@@ -2,8 +2,10 @@ package console
 
 import (
 	"bytes"
+	"io"
 	stdlog "log"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,7 +23,7 @@ import (
 
 func TestConsoleLogger(t *testing.T) {
 	tests := getConsoleLoggerTests()
-	buff := new(bytes.Buffer)
+	buff := new(buffer)
 
 	log.SetExitFunc(func(int) {})
 
@@ -94,7 +96,7 @@ func TestConsoleLogger(t *testing.T) {
 func TestConsoleLoggerColor(t *testing.T) {
 	log.SetExitFunc(func(int) {})
 	tests := getConsoleLoggerColorTests()
-	buff := new(bytes.Buffer)
+	buff := new(buffer)
 	cLog := New(false)
 	cLog.SetWriter(buff)
 	cLog.SetDisplayColor(true)
@@ -145,7 +147,7 @@ func TestConsoleLoggerColor(t *testing.T) {
 		case log.PanicLevel:
 			func() {
 				defer func() {
-					recover()
+					_ = recover()
 				}()
 
 				if len(tt.printf) == 0 {
@@ -169,7 +171,7 @@ func TestConsoleLoggerColor(t *testing.T) {
 }
 
 func TestConsoleSTDLogCapturing(t *testing.T) {
-	buff := new(bytes.Buffer)
+	buff := new(buffer)
 	cLog := New(true)
 	cLog.SetDisplayColor(false)
 	cLog.SetTimestampFormat("MST")
@@ -675,4 +677,116 @@ func getConsoleLoggerColorTests() []test {
 			want: " [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=5.33 [32mkey[0m=5.34 [32mkey[0m=true [32mkey[0m={struct}\n",
 		},
 	}
+}
+
+type buffer struct {
+	b bytes.Buffer
+	m sync.Mutex
+}
+
+func (b *buffer) Read(p []byte) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Read(p)
+}
+func (b *buffer) Write(p []byte) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Write(p)
+}
+func (b *buffer) String() string {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.String()
+}
+
+func (b *buffer) Bytes() []byte {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Bytes()
+}
+func (b *buffer) Cap() int {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Cap()
+}
+func (b *buffer) Grow(n int) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	b.b.Grow(n)
+}
+func (b *buffer) Len() int {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Len()
+}
+func (b *buffer) Next(n int) []byte {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Next(n)
+}
+func (b *buffer) ReadByte() (c byte, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.ReadByte()
+}
+func (b *buffer) ReadBytes(delim byte) (line []byte, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.ReadBytes(delim)
+}
+func (b *buffer) ReadFrom(r io.Reader) (n int64, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.ReadFrom(r)
+}
+func (b *buffer) ReadRune() (r rune, size int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.ReadRune()
+}
+func (b *buffer) ReadString(delim byte) (line string, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.ReadString(delim)
+}
+func (b *buffer) Reset() {
+	b.m.Lock()
+	defer b.m.Unlock()
+	b.b.Reset()
+}
+func (b *buffer) Truncate(n int) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	b.b.Truncate(n)
+}
+func (b *buffer) UnreadByte() error {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.UnreadByte()
+}
+func (b *buffer) UnreadRune() error {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.UnreadRune()
+}
+func (b *buffer) WriteByte(c byte) error {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.WriteByte(c)
+}
+func (b *buffer) WriteRune(r rune) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.WriteRune(r)
+}
+func (b *buffer) WriteString(s string) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.WriteString(s)
+}
+func (b *buffer) WriteTo(w io.Writer) (n int64, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.WriteTo(w)
 }

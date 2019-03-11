@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"sync"
 
-	"gopkg.in/gomail.v2"
+	gomail "gopkg.in/gomail.v2"
 
 	"github.com/go-playground/log"
 )
@@ -193,7 +193,7 @@ func (email *Email) Log(e log.Entry) {
 		message = email.formatter(e)
 
 	REOPEN:
-		// check if smtp connection open
+		// check if SMTP connection open
 		if !open {
 			count++
 			if s, err = d.Dial(); err != nil {
@@ -218,7 +218,7 @@ func (email *Email) Log(e log.Entry) {
 				// maybe we got disconnected...
 				alreadyTriedSending = true
 				open = false
-				s.Close()
+				_ = s.Close()
 				goto REOPEN
 			} else if alreadyTriedSending {
 				// we reopened and tried 2 more times, can't say we didn't try

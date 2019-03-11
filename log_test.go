@@ -182,7 +182,7 @@ func TestConsoleLogger2(t *testing.T) {
 			case uint8(PanicLevel):
 				func() {
 					defer func() {
-						recover()
+						_ = recover()
 					}()
 
 					if len(tt.printf) == 0 {
@@ -235,7 +235,7 @@ func TestConsoleLogger2(t *testing.T) {
 			case uint8(PanicLevel):
 				func() {
 					defer func() {
-						recover()
+						_ = recover()
 					}()
 
 					if len(tt.printf) == 0 {
@@ -1007,5 +1007,72 @@ func TestWrappedError(t *testing.T) {
 	WithError(err).Error("test")
 	if !strings.HasSuffix(buff.String(), expected) {
 		t.Errorf("got %s Expected %s", buff.String(), expected)
+	}
+}
+
+func TestRemoveHandler(t *testing.T) {
+	SetExitFunc(func(int) {})
+	SetWithErrorFn(errorsWithError)
+	logFields = logFields[0:0]
+	buff := new(bytes.Buffer)
+	th := &testHandler{
+		writer: buff,
+	}
+	logHandlers = map[Level][]Handler{}
+	AddHandler(th, InfoLevel)
+	RemoveHandler(th)
+	if len(logHandlers) != 0 {
+		t.Error("expected 0 handlers")
+	}
+
+	AddHandler(th, AllLevels...)
+	RemoveHandler(th)
+	if len(logHandlers) != 0 {
+		t.Error("expected 0 handlers")
+	}
+}
+
+func TestRemoveHandlerLevels(t *testing.T) {
+	SetExitFunc(func(int) {})
+	SetWithErrorFn(errorsWithError)
+	logFields = logFields[0:0]
+	buff := new(bytes.Buffer)
+	th := &testHandler{
+		writer: buff,
+	}
+	th2 := &testHandler{
+		writer: buff,
+	}
+	logHandlers = map[Level][]Handler{}
+	AddHandler(th, InfoLevel)
+	RemoveHandlerLevels(th, InfoLevel)
+	if len(logHandlers) != 0 {
+		t.Error("expected 0 handlers")
+	}
+
+	AddHandler(th, InfoLevel)
+	AddHandler(th2, InfoLevel)
+	RemoveHandlerLevels(th, InfoLevel)
+	if len(logHandlers) != 1 {
+		t.Error("expected 1 handler left")
+	}
+	if len(logHandlers[InfoLevel]) != 1 {
+		t.Error("expected 1 handler with InfoLevel left")
+	}
+	RemoveHandlerLevels(th2, InfoLevel)
+	if len(logHandlers) != 0 {
+		t.Error("expected 0 handlers")
+	}
+
+	AddHandler(th, AllLevels...)
+	RemoveHandlerLevels(th, DebugLevel)
+	if len(logHandlers) != 7 {
+		t.Error("expected 7 log levels left")
+	}
+
+	for _, handlers := range logHandlers {
+		if len(handlers) != 1 {
+			t.Error("expected 1 handler for log level")
+		}
 	}
 }

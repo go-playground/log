@@ -77,8 +77,10 @@ func (c *Console) SetWriter(w io.Writer) {
 // this will redirect the output of
 func handleStdLogger(done chan<- struct{}) {
 	r, w := io.Pipe()
-	defer r.Close()
-	defer w.Close()
+	defer func() {
+		_ = r.Close()
+		_ = w.Close()
+	}()
 
 	stdlog.SetOutput(w)
 
@@ -214,5 +216,5 @@ func (c *Console) Log(e log.Entry) {
 
 		b = append(b, newLine)
 	}
-	c.writer.Write(b)
+	_, _ = c.writer.Write(b)
 }

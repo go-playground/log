@@ -112,9 +112,7 @@ func (s *Syslog) SetFormatFunc(fn FormatFunc) {
 }
 
 func defaultFormatFunc(s *Syslog) Formatter {
-	var b []byte
-	var lvl string
-	var i int
+
 	tsFormat := s.TimestampFormat()
 
 	if s.DisplayColor() {
@@ -122,7 +120,10 @@ func defaultFormatFunc(s *Syslog) Formatter {
 		var color ansi.EscSeq
 
 		return func(e log.Entry) []byte {
-			b = b[0:0]
+			var b []byte
+			var lvl string
+			var i int
+
 			color = s.GetDisplayColor(e.Level)
 
 			b = append(b, e.Timestamp.Format(tsFormat)...)
@@ -185,7 +186,10 @@ func defaultFormatFunc(s *Syslog) Formatter {
 	}
 
 	return func(e log.Entry) []byte {
-		b = b[0:0]
+		var b []byte
+		var lvl string
+		var i int
+
 		b = append(b, e.Timestamp.Format(tsFormat)...)
 		b = append(b, space)
 
@@ -246,18 +250,18 @@ func (s *Syslog) Log(e log.Entry) {
 
 	switch e.Level {
 	case log.DebugLevel:
-		s.writer.Debug(line)
+		_ = s.writer.Debug(line)
 	case log.InfoLevel:
-		s.writer.Info(line)
+		_ = s.writer.Info(line)
 	case log.NoticeLevel:
-		s.writer.Notice(line)
+		_ = s.writer.Notice(line)
 	case log.WarnLevel:
-		s.writer.Warning(line)
+		_ = s.writer.Warning(line)
 	case log.ErrorLevel:
-		s.writer.Err(line)
+		_ = s.writer.Err(line)
 	case log.PanicLevel, log.AlertLevel:
-		s.writer.Alert(line)
+		_ = s.writer.Alert(line)
 	case log.FatalLevel:
-		s.writer.Crit(line)
+		_ = s.writer.Crit(line)
 	}
 }

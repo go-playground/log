@@ -49,10 +49,10 @@ type Activity struct {
 
 // Thumbnail is a HipChat thumbnail object
 type Thumbnail struct {
-	URL       string `json:"url"`               // min 1 max 250
-	URLRetina string `json:"url@2x"`            // min 1 max 250, the thumbnail url in retina
-	Width     uint   `json:"width,omitempty"`   // width of image
-	Height    uint   `json:"height, omitempty"` // height of image
+	URL       string `json:"url"`              // min 1 max 250
+	URLRetina string `json:"url@2x"`           // min 1 max 250, the thumbnail url in retina
+	Width     uint   `json:"width,omitempty"`  // width of image
+	Height    uint   `json:"height,omitempty"` // height of image
 }
 
 // Description is a HipChat description object
@@ -99,7 +99,6 @@ var defaultColors = [...]string{
 }
 
 const (
-	gopath          = "GOPATH"
 	method          = "POST"
 	defaultTemplate = `<p><b>{{ .Level.String }}</b></p>
         <p>{{ ts . }}</p>
@@ -114,7 +113,6 @@ type HipChat struct {
 	*http.HTTP
 	colors      [8]string
 	template    *template.Template
-	gopath      string
 	api         APIVersion
 	application string
 }

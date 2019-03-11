@@ -25,6 +25,6 @@ func New(w io.Writer) *Handler {
 // Log handles the log entry
 func (h *Handler) Log(e log.Entry) {
 	h.m.Lock()
-	h.Encoder.Encode(e)
+	_ = h.Encoder.Encode(e)
 	h.m.Unlock()
 }
