@@ -2,7 +2,6 @@ package log
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/go-playground/errors"
 )
@@ -14,9 +13,10 @@ func errorsWithError(e Entry, err error) Entry {
 	case errors.Chain:
 		cause := t[0]
 		errField := cause.Err.Error()
-		types := make([]string, 0, len(t))
+		types := make([]byte, 0, 64)
+		//types := make([]string, 0, len(t))
 		tags := make([]Field, 0, len(t))
-		for _, e := range t {
+		for i, e := range t {
 			if e.Prefix != "" {
 				errField = fmt.Sprintf("%s: %s", e.Prefix, errField)
 			}
@@ -24,13 +24,19 @@ func errorsWithError(e Entry, err error) Entry {
 				tags = append(tags, Field{Key: tag.Key, Value: tag.Value})
 
 			}
-			types = append(types, e.Types...)
+			for j, typ := range e.Types {
+				types = append(types, typ...)
+				if i == len(t)-1 && j == len(e.Types)-1 {
+					continue
+				}
+				types = append(types, ',')
+			}
 		}
 		ne.Fields = append(ne.Fields, Field{Key: "error", Value: errField})
 		ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%d", cause.Source.Function(), cause.Source.File(), cause.Source.Line())})
 		ne.Fields = append(ne.Fields, tags...) // we do it this way to maintain order of error, source as first fields
 		if len(types) > 0 {
-			ne.Fields = append(ne.Fields, Field{Key: "types", Value: strings.Join(types, ",")})
+			ne.Fields = append(ne.Fields, Field{Key: "types", Value: string(types)})
 		}
 
 	default:
