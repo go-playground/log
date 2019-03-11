@@ -1,0 +1,9 @@
+mode: count
+github.com/go-playground/log/errors/segmentio/segmentio.go:18.58,33.21 9 2
+github.com/go-playground/log/errors/segmentio/segmentio.go:39.2,44.27 5 2
+github.com/go-playground/log/errors/segmentio/segmentio.go:47.2,47.20 1 2
+github.com/go-playground/log/errors/segmentio/segmentio.go:50.2,50.12 1 2
+github.com/go-playground/log/errors/segmentio/segmentio.go:33.21,35.3 1 1
+github.com/go-playground/log/errors/segmentio/segmentio.go:35.8,37.3 1 1
+github.com/go-playground/log/errors/segmentio/segmentio.go:44.27,46.3 1 1
+github.com/go-playground/log/errors/segmentio/segmentio.go:47.20,49.3 1 1

@@ -112,9 +112,7 @@ func (s *Syslog) SetFormatFunc(fn FormatFunc) {
 }
 
 func defaultFormatFunc(s *Syslog) Formatter {
-	var b []byte
-	var lvl string
-	var i int
+
 	tsFormat := s.TimestampFormat()
 
 	if s.DisplayColor() {
@@ -122,7 +120,10 @@ func defaultFormatFunc(s *Syslog) Formatter {
 		var color ansi.EscSeq
 
 		return func(e log.Entry) []byte {
-			b = b[0:0]
+			var b []byte
+			var lvl string
+			var i int
+
 			color = s.GetDisplayColor(e.Level)
 
 			b = append(b, e.Timestamp.Format(tsFormat)...)
@@ -185,7 +186,10 @@ func defaultFormatFunc(s *Syslog) Formatter {
 	}
 
 	return func(e log.Entry) []byte {
-		b = b[0:0]
+		var b []byte
+		var lvl string
+		var i int
+
 		b = append(b, e.Timestamp.Format(tsFormat)...)
 		b = append(b, space)
 
