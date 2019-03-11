@@ -27,7 +27,7 @@ func errorsWithError(e Entry, err error) Entry {
 			types = append(types, e.Types...)
 		}
 		ne.Fields = append(ne.Fields, Field{Key: "error", Value: errField})
-		ne.Fields = append(ne.Fields, Field{Key: "source", Value: cause.Source})
+		ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%d", cause.Source.Function(), cause.Source.File(), cause.Source.Line())})
 		ne.Fields = append(ne.Fields, tags...) // we do it this way to maintain order of error, source as first fields
 		if len(types) > 0 {
 			ne.Fields = append(ne.Fields, Field{Key: "types", Value: strings.Join(types, ",")})
@@ -36,14 +36,7 @@ func errorsWithError(e Entry, err error) Entry {
 	default:
 		ne.Fields = append(ne.Fields, Field{Key: "error", Value: err.Error()})
 		frame := errors.StackLevel(2)
-		name := fmt.Sprintf("%n", frame)
-		file := fmt.Sprintf("%+s", frame)
-		line := fmt.Sprintf("%d", frame)
-		parts := strings.Split(file, "\n\t")
-		if len(parts) > 1 {
-			file = parts[1]
-		}
-		ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%s", name, file, line)})
+		ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%d", frame.Function(), frame.File(), frame.Line())})
 	}
 	return ne
 }
