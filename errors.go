@@ -14,7 +14,6 @@ func errorsWithError(e Entry, err error) Entry {
 		cause := t[0]
 		errField := cause.Err.Error()
 		types := make([]byte, 0, 64)
-		//types := make([]string, 0, len(t))
 		tags := make([]Field, 0, len(t))
 		for i, e := range t {
 			if e.Prefix != "" {
