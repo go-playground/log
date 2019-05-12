@@ -56,7 +56,7 @@ func TestSyslogLogger(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected '%v' Got '%v'", nil, err)
 	}
-
+	defer func() { _ = sLog.Close() }()
 	sLog.SetDisplayColor(false)
 	sLog.SetTimestampFormat("")
 	log.AddHandler(sLog, log.AllLevels...)
@@ -144,7 +144,6 @@ func TestSyslogLoggerColor(t *testing.T) {
 
 	sLog.SetDisplayColor(true)
 	sLog.SetTimestampFormat("")
-
 	log.AddHandler(sLog, log.AllLevels...)
 
 	for i, tt := range tests {

@@ -230,3 +230,12 @@ func (email *Email) Log(e log.Entry) {
 		break
 	}
 }
+
+// Close cleans up any resources and de-registers the handler with the logger
+func (email *Email) Close() error {
+	email.rw.Lock()
+	defer email.rw.Unlock()
+	email.enabled = false
+	log.RemoveHandler(email)
+	return nil
+}

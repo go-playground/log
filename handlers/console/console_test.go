@@ -32,7 +32,7 @@ func TestConsoleLogger(t *testing.T) {
 	cLog.SetDisplayColor(false)
 	cLog.SetTimestampFormat("")
 	log.AddHandler(cLog, log.AllLevels...)
-
+	defer func() { _ = cLog.Close() }()
 	for i, tt := range tests {
 
 		buff.Reset()

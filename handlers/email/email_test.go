@@ -176,7 +176,7 @@ func TestBadEmailTemplate(t *testing.T) {
 func TestBadSend(t *testing.T) {
 	email := New("localhost", 3041, "", "", "from@email.com", []string{"to@email.com"})
 	log.AddHandler(email, log.InfoLevel)
-
+	defer func() { _ = email.Close() }()
 	server, err := net.Listen("tcp", ":3041")
 	if err != nil {
 		t.Errorf("Expected <nil> Got '%s'", err)

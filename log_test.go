@@ -30,10 +30,10 @@ type testHandler struct {
 func (th *testHandler) Log(e Entry) {
 	s := e.Level.String() + " "
 	s += e.Message
-
 	for _, f := range e.Fields {
 		s += fmt.Sprintf(" %s=%v", f.Key, f.Value)
 	}
+
 	s += "\n"
 	if _, err := th.writer.Write([]byte(s)); err != nil {
 		panic(err)
@@ -41,7 +41,7 @@ func (th *testHandler) Log(e Entry) {
 }
 
 type test struct {
-	lvl    uint8
+	lvl    Level
 	msg    string
 	flds   []Field
 	want   string
@@ -67,43 +67,43 @@ func TestConsoleLogger1(t *testing.T) {
 		}
 
 		switch tt.lvl {
-		case uint8(DebugLevel):
+		case DebugLevel:
 			if len(tt.printf) == 0 {
 				l.Debug(tt.msg)
 			} else {
 				l.Debugf(tt.printf, tt.msg)
 			}
-		case uint8(InfoLevel):
+		case InfoLevel:
 			if len(tt.printf) == 0 {
 				l.Info(tt.msg)
 			} else {
 				l.Infof(tt.printf, tt.msg)
 			}
-		case uint8(NoticeLevel):
+		case NoticeLevel:
 			if len(tt.printf) == 0 {
 				l.Notice(tt.msg)
 			} else {
 				l.Noticef(tt.printf, tt.msg)
 			}
-		case uint8(WarnLevel):
+		case WarnLevel:
 			if len(tt.printf) == 0 {
 				l.Warn(tt.msg)
 			} else {
 				l.Warnf(tt.printf, tt.msg)
 			}
-		case uint8(ErrorLevel):
+		case ErrorLevel:
 			if len(tt.printf) == 0 {
 				l.Error(tt.msg)
 			} else {
 				l.Errorf(tt.printf, tt.msg)
 			}
-		case uint8(PanicLevel):
+		case PanicLevel:
 			if len(tt.printf) == 0 {
 				l.Panic(tt.msg)
 			} else {
 				l.Panicf(tt.printf, tt.msg)
 			}
-		case uint8(AlertLevel):
+		case AlertLevel:
 			if len(tt.printf) == 0 {
 				l.Alert(tt.msg)
 			} else {
@@ -149,37 +149,37 @@ func TestConsoleLogger2(t *testing.T) {
 			l = WithFields(tt.flds...)
 
 			switch tt.lvl {
-			case uint8(DebugLevel):
+			case DebugLevel:
 				if len(tt.printf) == 0 {
 					l.Debug(tt.msg)
 				} else {
 					l.Debugf(tt.printf, tt.msg)
 				}
-			case uint8(InfoLevel):
+			case InfoLevel:
 				if len(tt.printf) == 0 {
 					l.Info(tt.msg)
 				} else {
 					l.Infof(tt.printf, tt.msg)
 				}
-			case uint8(NoticeLevel):
+			case NoticeLevel:
 				if len(tt.printf) == 0 {
 					l.Notice(tt.msg)
 				} else {
 					l.Noticef(tt.printf, tt.msg)
 				}
-			case uint8(WarnLevel):
+			case WarnLevel:
 				if len(tt.printf) == 0 {
 					l.Warn(tt.msg)
 				} else {
 					l.Warnf(tt.printf, tt.msg)
 				}
-			case uint8(ErrorLevel):
+			case ErrorLevel:
 				if len(tt.printf) == 0 {
 					l.Error(tt.msg)
 				} else {
 					l.Errorf(tt.printf, tt.msg)
 				}
-			case uint8(PanicLevel):
+			case PanicLevel:
 				func() {
 					defer func() {
 						_ = recover()
@@ -191,7 +191,7 @@ func TestConsoleLogger2(t *testing.T) {
 						l.Panicf(tt.printf, tt.msg)
 					}
 				}()
-			case uint8(AlertLevel):
+			case AlertLevel:
 				if len(tt.printf) == 0 {
 					l.Alert(tt.msg)
 				} else {
@@ -202,37 +202,37 @@ func TestConsoleLogger2(t *testing.T) {
 		} else {
 
 			switch tt.lvl {
-			case uint8(DebugLevel):
+			case DebugLevel:
 				if len(tt.printf) == 0 {
 					Debug(tt.msg)
 				} else {
 					Debugf(tt.printf, tt.msg)
 				}
-			case uint8(InfoLevel):
+			case InfoLevel:
 				if len(tt.printf) == 0 {
 					Info(tt.msg)
 				} else {
 					Infof(tt.printf, tt.msg)
 				}
-			case uint8(NoticeLevel):
+			case NoticeLevel:
 				if len(tt.printf) == 0 {
 					Notice(tt.msg)
 				} else {
 					Noticef(tt.printf, tt.msg)
 				}
-			case uint8(WarnLevel):
+			case WarnLevel:
 				if len(tt.printf) == 0 {
 					Warn(tt.msg)
 				} else {
 					Warnf(tt.printf, tt.msg)
 				}
-			case uint8(ErrorLevel):
+			case ErrorLevel:
 				if len(tt.printf) == 0 {
 					Error(tt.msg)
 				} else {
 					Errorf(tt.printf, tt.msg)
 				}
-			case uint8(PanicLevel):
+			case PanicLevel:
 				func() {
 					defer func() {
 						_ = recover()
@@ -244,7 +244,7 @@ func TestConsoleLogger2(t *testing.T) {
 						Panicf(tt.printf, tt.msg)
 					}
 				}()
-			case uint8(AlertLevel):
+			case AlertLevel:
 				if len(tt.printf) == 0 {
 					Alert(tt.msg)
 				} else {
@@ -417,104 +417,104 @@ func TestDefaultFields(t *testing.T) {
 func getLogTests() []test {
 	return []test{
 		{
-			lvl:  uint8(PanicLevel),
+			lvl:  PanicLevel,
 			msg:  "panicln",
 			flds: nil,
 			want: "PANIC panicln\n",
 		},
 		{
-			lvl:  uint8(DebugLevel),
+			lvl:  DebugLevel,
 			msg:  "debug",
 			flds: nil,
 			want: "DEBUG debug\n",
 		},
 		{
-			lvl:    uint8(DebugLevel),
+			lvl:    DebugLevel,
 			msg:    "debugf",
 			printf: "%s",
 			flds:   nil,
 			want:   "DEBUG debugf\n",
 		},
 		{
-			lvl:  uint8(InfoLevel),
+			lvl:  InfoLevel,
 			msg:  "info",
 			flds: nil,
 			want: "INFO info\n",
 		},
 		{
-			lvl:    uint8(InfoLevel),
+			lvl:    InfoLevel,
 			msg:    "infof",
 			printf: "%s",
 			flds:   nil,
 			want:   "INFO infof\n",
 		},
 		{
-			lvl:  uint8(NoticeLevel),
+			lvl:  NoticeLevel,
 			msg:  "notice",
 			flds: nil,
 			want: "NOTICE notice\n",
 		},
 		{
-			lvl:    uint8(NoticeLevel),
+			lvl:    NoticeLevel,
 			msg:    "noticef",
 			printf: "%s",
 			flds:   nil,
 			want:   "NOTICE noticef\n",
 		},
 		{
-			lvl:  uint8(WarnLevel),
+			lvl:  WarnLevel,
 			msg:  "warn",
 			flds: nil,
 			want: "WARN warn\n",
 		},
 		{
-			lvl:    uint8(WarnLevel),
+			lvl:    WarnLevel,
 			msg:    "warnf",
 			printf: "%s",
 			flds:   nil,
 			want:   "WARN warnf\n",
 		},
 		{
-			lvl:  uint8(ErrorLevel),
+			lvl:  ErrorLevel,
 			msg:  "error",
 			flds: nil,
 			want: "ERROR error\n",
 		},
 		{
-			lvl:    uint8(ErrorLevel),
+			lvl:    ErrorLevel,
 			msg:    "errorf",
 			printf: "%s",
 			flds:   nil,
 			want:   "ERROR errorf\n",
 		},
 		{
-			lvl:  uint8(AlertLevel),
+			lvl:  AlertLevel,
 			msg:  "alert",
 			flds: nil,
 			want: "ALERT alert\n",
 		},
 		{
-			lvl:    uint8(AlertLevel),
+			lvl:    AlertLevel,
 			msg:    "alertf",
 			printf: "%s",
 			flds:   nil,
 			want:   "ALERT alertf\n",
 		},
 		{
-			lvl:  uint8(PanicLevel),
+			lvl:  PanicLevel,
 			msg:  "panic",
 			flds: nil,
 			want: "PANIC panic\n",
 		},
 		{
-			lvl:    uint8(PanicLevel),
+			lvl:    PanicLevel,
 			msg:    "panicf",
 			printf: "%s",
 			flds:   nil,
 			want:   "PANIC panicf\n",
 		},
 		{
-			lvl: uint8(DebugLevel),
+			lvl: DebugLevel,
 			msg: "debug",
 			flds: []Field{
 				F("key", "value"),
@@ -522,7 +522,7 @@ func getLogTests() []test {
 			want: "DEBUG debug key=value\n",
 		},
 		{
-			lvl:    uint8(DebugLevel),
+			lvl:    DebugLevel,
 			msg:    "debugf",
 			printf: "%s",
 			flds: []Field{
@@ -531,7 +531,7 @@ func getLogTests() []test {
 			want: "DEBUG debugf key=value\n",
 		},
 		{
-			lvl: uint8(InfoLevel),
+			lvl: InfoLevel,
 			msg: "info",
 			flds: []Field{
 				F("key", "value"),
@@ -539,7 +539,7 @@ func getLogTests() []test {
 			want: "INFO info key=value\n",
 		},
 		{
-			lvl:    uint8(InfoLevel),
+			lvl:    InfoLevel,
 			msg:    "infof",
 			printf: "%s",
 			flds: []Field{
@@ -548,7 +548,7 @@ func getLogTests() []test {
 			want: "INFO infof key=value\n",
 		},
 		{
-			lvl: uint8(NoticeLevel),
+			lvl: NoticeLevel,
 			msg: "notice",
 			flds: []Field{
 				F("key", "value"),
@@ -556,7 +556,7 @@ func getLogTests() []test {
 			want: "NOTICE notice key=value\n",
 		},
 		{
-			lvl:    uint8(NoticeLevel),
+			lvl:    NoticeLevel,
 			msg:    "noticef",
 			printf: "%s",
 			flds: []Field{
@@ -565,7 +565,7 @@ func getLogTests() []test {
 			want: "NOTICE noticef key=value\n",
 		},
 		{
-			lvl: uint8(WarnLevel),
+			lvl: WarnLevel,
 			msg: "warn",
 			flds: []Field{
 				F("key", "value"),
@@ -573,7 +573,7 @@ func getLogTests() []test {
 			want: "WARN warn key=value\n",
 		},
 		{
-			lvl:    uint8(WarnLevel),
+			lvl:    WarnLevel,
 			msg:    "warnf",
 			printf: "%s",
 			flds: []Field{
@@ -582,7 +582,7 @@ func getLogTests() []test {
 			want: "WARN warnf key=value\n",
 		},
 		{
-			lvl: uint8(ErrorLevel),
+			lvl: ErrorLevel,
 			msg: "error",
 			flds: []Field{
 				F("key", "value"),
@@ -590,7 +590,7 @@ func getLogTests() []test {
 			want: "ERROR error key=value\n",
 		},
 		{
-			lvl:    uint8(ErrorLevel),
+			lvl:    ErrorLevel,
 			msg:    "errorf",
 			printf: "%s",
 			flds: []Field{
@@ -599,7 +599,7 @@ func getLogTests() []test {
 			want: "ERROR errorf key=value\n",
 		},
 		{
-			lvl: uint8(AlertLevel),
+			lvl: AlertLevel,
 			msg: "alert",
 			flds: []Field{
 				F("key", "value"),
@@ -607,7 +607,7 @@ func getLogTests() []test {
 			want: "ALERT alert key=value\n",
 		},
 		{
-			lvl: uint8(AlertLevel),
+			lvl: AlertLevel,
 			msg: "alert",
 			flds: []Field{
 				F("key", "value"),
@@ -615,7 +615,7 @@ func getLogTests() []test {
 			want: "ALERT alert key=value\n",
 		},
 		{
-			lvl:    uint8(AlertLevel),
+			lvl:    AlertLevel,
 			msg:    "alertf",
 			printf: "%s",
 			flds: []Field{
@@ -624,7 +624,7 @@ func getLogTests() []test {
 			want: "ALERT alertf key=value\n",
 		},
 		{
-			lvl:    uint8(PanicLevel),
+			lvl:    PanicLevel,
 			msg:    "panicf",
 			printf: "%s",
 			flds: []Field{
@@ -633,7 +633,7 @@ func getLogTests() []test {
 			want: "PANIC panicf key=value\n",
 		},
 		{
-			lvl: uint8(PanicLevel),
+			lvl: PanicLevel,
 			msg: "panic",
 			flds: []Field{
 				F("key", "value"),
@@ -641,7 +641,7 @@ func getLogTests() []test {
 			want: "PANIC panic key=value\n",
 		},
 		{
-			lvl: uint8(DebugLevel),
+			lvl: DebugLevel,
 			msg: "debug",
 			flds: []Field{
 				F("key", "string"),
@@ -666,104 +666,104 @@ func getLogTests() []test {
 func getLogTests1() []test {
 	return []test{
 		{
-			lvl:  uint8(PanicLevel),
+			lvl:  PanicLevel,
 			msg:  "panicln",
 			flds: nil,
 			want: "PANIC panicln\n",
 		},
 		{
-			lvl:  uint8(DebugLevel),
+			lvl:  DebugLevel,
 			msg:  "debug",
 			flds: nil,
 			want: "DEBUG debug\n",
 		},
 		{
-			lvl:    uint8(DebugLevel),
+			lvl:    DebugLevel,
 			msg:    "debugf",
 			printf: "%s",
 			flds:   nil,
 			want:   "DEBUG debugf\n",
 		},
 		{
-			lvl:  uint8(InfoLevel),
+			lvl:  InfoLevel,
 			msg:  "info",
 			flds: nil,
 			want: "INFO info\n",
 		},
 		{
-			lvl:    uint8(InfoLevel),
+			lvl:    InfoLevel,
 			msg:    "infof",
 			printf: "%s",
 			flds:   nil,
 			want:   "INFO infof\n",
 		},
 		{
-			lvl:  uint8(NoticeLevel),
+			lvl:  NoticeLevel,
 			msg:  "notice",
 			flds: nil,
 			want: "NOTICE notice\n",
 		},
 		{
-			lvl:    uint8(NoticeLevel),
+			lvl:    NoticeLevel,
 			msg:    "noticef",
 			printf: "%s",
 			flds:   nil,
 			want:   "NOTICE noticef\n",
 		},
 		{
-			lvl:  uint8(WarnLevel),
+			lvl:  WarnLevel,
 			msg:  "warn",
 			flds: nil,
 			want: "WARN warn\n",
 		},
 		{
-			lvl:    uint8(WarnLevel),
+			lvl:    WarnLevel,
 			msg:    "warnf",
 			printf: "%s",
 			flds:   nil,
 			want:   "WARN warnf\n",
 		},
 		{
-			lvl:  uint8(ErrorLevel),
+			lvl:  ErrorLevel,
 			msg:  "error",
 			flds: nil,
 			want: "ERROR error\n",
 		},
 		{
-			lvl:    uint8(ErrorLevel),
+			lvl:    ErrorLevel,
 			msg:    "errorf",
 			printf: "%s",
 			flds:   nil,
 			want:   "ERROR errorf\n",
 		},
 		{
-			lvl:  uint8(AlertLevel),
+			lvl:  AlertLevel,
 			msg:  "alert",
 			flds: nil,
 			want: "ALERT alert\n",
 		},
 		{
-			lvl:    uint8(AlertLevel),
+			lvl:    AlertLevel,
 			msg:    "alertf",
 			printf: "%s",
 			flds:   nil,
 			want:   "ALERT alertf\n",
 		},
 		{
-			lvl:  uint8(PanicLevel),
+			lvl:  PanicLevel,
 			msg:  "panic",
 			flds: nil,
 			want: "PANIC panic\n",
 		},
 		{
-			lvl:    uint8(PanicLevel),
+			lvl:    PanicLevel,
 			msg:    "panicf",
 			printf: "%s",
 			flds:   nil,
 			want:   "PANIC panicf\n",
 		},
 		{
-			lvl: uint8(DebugLevel),
+			lvl: DebugLevel,
 			msg: "debug",
 			flds: []Field{
 				F("key", "value"),
@@ -771,7 +771,7 @@ func getLogTests1() []test {
 			want: "DEBUG debug key=value\n",
 		},
 		{
-			lvl:    uint8(DebugLevel),
+			lvl:    DebugLevel,
 			msg:    "debugf",
 			printf: "%s",
 			flds: []Field{
@@ -780,7 +780,7 @@ func getLogTests1() []test {
 			want: "DEBUG debugf key=value\n",
 		},
 		{
-			lvl: uint8(InfoLevel),
+			lvl: InfoLevel,
 			msg: "info",
 			flds: []Field{
 				F("key", "value"),
@@ -788,7 +788,7 @@ func getLogTests1() []test {
 			want: "INFO info key=value\n",
 		},
 		{
-			lvl:    uint8(InfoLevel),
+			lvl:    InfoLevel,
 			msg:    "infof",
 			printf: "%s",
 			flds: []Field{
@@ -797,7 +797,7 @@ func getLogTests1() []test {
 			want: "INFO infof key=value\n",
 		},
 		{
-			lvl: uint8(NoticeLevel),
+			lvl: NoticeLevel,
 			msg: "notice",
 			flds: []Field{
 				F("key", "value"),
@@ -805,7 +805,7 @@ func getLogTests1() []test {
 			want: "NOTICE notice key=value\n",
 		},
 		{
-			lvl:    uint8(NoticeLevel),
+			lvl:    NoticeLevel,
 			msg:    "noticef",
 			printf: "%s",
 			flds: []Field{
@@ -814,7 +814,7 @@ func getLogTests1() []test {
 			want: "NOTICE noticef key=value\n",
 		},
 		{
-			lvl: uint8(WarnLevel),
+			lvl: WarnLevel,
 			msg: "warn",
 			flds: []Field{
 				F("key", "value"),
@@ -822,7 +822,7 @@ func getLogTests1() []test {
 			want: "WARN warn key=value\n",
 		},
 		{
-			lvl:    uint8(WarnLevel),
+			lvl:    WarnLevel,
 			msg:    "warnf",
 			printf: "%s",
 			flds: []Field{
@@ -831,7 +831,7 @@ func getLogTests1() []test {
 			want: "WARN warnf key=value\n",
 		},
 		{
-			lvl: uint8(ErrorLevel),
+			lvl: ErrorLevel,
 			msg: "error",
 			flds: []Field{
 				F("key", "value"),
@@ -839,7 +839,7 @@ func getLogTests1() []test {
 			want: "ERROR error key=value\n",
 		},
 		{
-			lvl:    uint8(ErrorLevel),
+			lvl:    ErrorLevel,
 			msg:    "errorf",
 			printf: "%s",
 			flds: []Field{
@@ -848,7 +848,7 @@ func getLogTests1() []test {
 			want: "ERROR errorf key=value\n",
 		},
 		{
-			lvl: uint8(AlertLevel),
+			lvl: AlertLevel,
 			msg: "alert",
 			flds: []Field{
 				F("key", "value"),
@@ -856,7 +856,7 @@ func getLogTests1() []test {
 			want: "ALERT alert key=value\n",
 		},
 		{
-			lvl: uint8(AlertLevel),
+			lvl: AlertLevel,
 			msg: "alert",
 			flds: []Field{
 				F("key", "value"),
@@ -864,7 +864,7 @@ func getLogTests1() []test {
 			want: "ALERT alert key=value\n",
 		},
 		{
-			lvl:    uint8(AlertLevel),
+			lvl:    AlertLevel,
 			msg:    "alertf",
 			printf: "%s",
 			flds: []Field{
@@ -873,7 +873,7 @@ func getLogTests1() []test {
 			want: "ALERT alertf key=value\n",
 		},
 		{
-			lvl:    uint8(PanicLevel),
+			lvl:    PanicLevel,
 			msg:    "panicf",
 			printf: "%s",
 			flds: []Field{
@@ -882,7 +882,7 @@ func getLogTests1() []test {
 			want: "PANIC panicf key=value\n",
 		},
 		{
-			lvl: uint8(PanicLevel),
+			lvl: PanicLevel,
 			msg: "panic",
 			flds: []Field{
 				F("key", "value"),
@@ -890,7 +890,7 @@ func getLogTests1() []test {
 			want: "PANIC panic key=value\n",
 		},
 		{
-			lvl: uint8(DebugLevel),
+			lvl: DebugLevel,
 			msg: "debug",
 			flds: []Field{
 				F("key", "string"),

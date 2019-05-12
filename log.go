@@ -4,8 +4,29 @@ import (
 	"context"
 	"os"
 	"sync"
+	"syscall"
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
+
+var (
+	bytePool = &ByteArrayPool{pool: &sync.Pool{
+		New: func() interface{} {
+			return make([]byte, 0, 32)
+		},
+	}}
+	defaultHandlerRegistered = false
+	defaultHandler           *console
+)
+
+func init() {
+	if terminal.IsTerminal(syscall.Stdout) {
+		defaultHandler = newDefaultLogger()
+		AddHandler(defaultHandler, AllLevels...)
+		defaultHandlerRegistered = true
+	}
+}
 
 const (
 	// DefaultTimeFormat is the default time format when parsing Time values.
@@ -60,6 +81,12 @@ func GetContext(ctx context.Context) Entry {
 	return v.(Entry)
 }
 
+// BytePool returns a sync.Pool of bytes that multiple handlers can use in order to reduce allocation and keep
+// a central copy for reuse.
+func BytePool() *ByteArrayPool {
+	return bytePool
+}
+
 // HandleEntry handles the log entry and fans out to all handlers with the proper log level
 // This is exposed to allow for centralized logging whereby the log entry is marshalled, passed
 // to a central logging server, unmarshalled and finally fanned out from there.
@@ -86,16 +113,27 @@ func F(key string, value interface{}) Field {
 // handler will be triggered for
 func AddHandler(h Handler, levels ...Level) {
 	rw.Lock()
+	defer rw.Unlock()
+	if defaultHandlerRegistered {
+		removeHandler(defaultHandler)
+		defaultHandler.Close()
+		defaultHandler = nil
+		defaultHandlerRegistered = false
+	}
 	for _, level := range levels {
 		handler := append(logHandlers[level], h)
 		logHandlers[level] = handler
 	}
-	rw.Unlock()
 }
 
 // RemoveHandler removes an existing handler
 func RemoveHandler(h Handler) {
 	rw.Lock()
+	removeHandler(h)
+	rw.Unlock()
+}
+
+func removeHandler(h Handler) {
 OUTER:
 	for lvl, handlers := range logHandlers {
 		for i, handler := range handlers {
@@ -110,13 +148,13 @@ OUTER:
 			}
 		}
 	}
-	rw.Unlock()
 }
 
 // RemoveHandlerLevels removes the supplied levels, if no more levels exists for the handler
 // it will no longer be registered and need to to added via AddHandler again.
 func RemoveHandlerLevels(h Handler, levels ...Level) {
 	rw.Lock()
+	defer rw.Unlock()
 OUTER:
 	for _, lvl := range levels {
 		handlers := logHandlers[lvl]
@@ -132,7 +170,6 @@ OUTER:
 			}
 		}
 	}
-	rw.Unlock()
 }
 
 // WithDefaultFields adds fields to the underlying logger instance

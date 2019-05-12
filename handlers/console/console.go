@@ -24,8 +24,11 @@ const (
 type Console struct {
 	colors          [8]ansi.EscSeq
 	writer          io.Writer
+	r               *io.PipeReader
 	timestampFormat string
 	displayColor    bool
+	redirectSTDOut  bool
+	close           chan struct{}
 }
 
 // Colors mapping.
@@ -42,18 +45,20 @@ var defaultColors = [...]ansi.EscSeq{
 
 // New returns a new instance of the console logger
 func New(redirectSTDOut bool) *Console {
-	if redirectSTDOut {
-		done := make(chan struct{})
-		go handleStdLogger(done)
-		<-done // have to wait, it was running too quickly and some messages can be lost
-	}
-
-	return &Console{
+	c := &Console{
 		colors:          defaultColors,
 		writer:          os.Stderr,
 		timestampFormat: "2006-01-02 15:04:05.000000000Z07:00",
 		displayColor:    true,
+		redirectSTDOut:  redirectSTDOut,
+		close:           make(chan struct{}),
 	}
+	if redirectSTDOut {
+		done := make(chan struct{})
+		go c.handleStdLogger(done)
+		<-done // have to wait, it was running too quickly and some messages can be lost
+	}
+	return c
 }
 
 // SetDisplayColor tells Console to output in color or not
@@ -75,17 +80,12 @@ func (c *Console) SetWriter(w io.Writer) {
 }
 
 // this will redirect the output of
-func handleStdLogger(done chan<- struct{}) {
-	r, w := io.Pipe()
-	defer func() {
-		_ = r.Close()
-		_ = w.Close()
-	}()
-
+func (c *Console) handleStdLogger(done chan<- struct{}) {
+	var w *io.PipeWriter
+	c.r, w = io.Pipe()
 	stdlog.SetOutput(w)
 
-	scanner := bufio.NewScanner(r)
-
+	scanner := bufio.NewScanner(c.r)
 	go func() {
 		done <- struct{}{}
 	}()
@@ -93,15 +93,15 @@ func handleStdLogger(done chan<- struct{}) {
 	for scanner.Scan() {
 		log.WithField("stdlog", true).Info(scanner.Text())
 	}
+	_ = c.r.Close()
+	_ = w.Close()
 }
 
 // Log handles the log entry
 func (c *Console) Log(e log.Entry) {
-
-	var b []byte
 	var lvl string
 	var i int
-
+	b := log.BytePool().Get()
 	if c.displayColor {
 		color := c.colors[e.Level]
 
@@ -213,8 +213,20 @@ func (c *Console) Log(e log.Entry) {
 				b = append(b, fmt.Sprintf(v, f.Value)...)
 			}
 		}
-
 		b = append(b, newLine)
 	}
 	_, _ = c.writer.Write(b)
+	log.BytePool().Put(b)
+}
+
+// Close cleans up any resources and de-registers the handler with the logger
+func (c *Console) Close() error {
+	log.RemoveHandler(c)
+	// reset the output back to original
+	// since we reset the output piror to closing we don't have to wait
+	stdlog.SetOutput(os.Stderr)
+	if c.r != nil {
+		_ = c.r.Close()
+	}
+	return nil
 }

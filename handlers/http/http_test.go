@@ -47,9 +47,9 @@ func TestHTTPLogger(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Error initializing HTTP received '%s'", err)
 	}
+	defer func() { _ = hLog.Close() }()
 	hLog.SetTimestampFormat("")
 	log.AddHandler(hLog, log.DebugLevel, log.InfoLevel, log.NoticeLevel, log.WarnLevel, log.PanicLevel, log.AlertLevel, log.FatalLevel)
-
 	for i, tt := range tests {
 
 		var l log.Entry

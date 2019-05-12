@@ -29,13 +29,16 @@ const (
 
 // Syslog is an instance of the syslog logger
 type Syslog struct {
-	colors          [8]ansi.EscSeq
-	writer          *syslog.Writer
-	formatter       Formatter
-	formatFunc      FormatFunc
-	timestampFormat string
-	displayColor    bool
-	once            sync.Once
+	colors              [8]ansi.EscSeq
+	writer              *syslog.Writer
+	formatter           Formatter
+	formatFunc          FormatFunc
+	timestampFormat     string
+	displayColor        bool
+	isDefaultFormatFunc bool
+	once                sync.Once
+	wg                  sync.WaitGroup
+	close               chan struct{}
 }
 
 var (
@@ -59,10 +62,12 @@ var (
 func New(network string, raddr string, tag string, tlsConfig *tls.Config) (*Syslog, error) {
 	var err error
 	s := &Syslog{
-		colors:          defaultColors,
-		displayColor:    false,
-		timestampFormat: log.DefaultTimeFormat,
-		formatFunc:      defaultFormatFunc,
+		colors:              defaultColors,
+		displayColor:        false,
+		timestampFormat:     log.DefaultTimeFormat,
+		formatFunc:          defaultFormatFunc,
+		isDefaultFormatFunc: true,
+		close:               make(chan struct{}),
 	}
 
 	// if non-TLS
@@ -108,29 +113,22 @@ func (s *Syslog) TimestampFormat() string {
 // SetFormatFunc sets FormatFunc each worker will call to get
 // a Formatter func
 func (s *Syslog) SetFormatFunc(fn FormatFunc) {
+	s.isDefaultFormatFunc = false
 	s.formatFunc = fn
 }
 
 func defaultFormatFunc(s *Syslog) Formatter {
-
 	tsFormat := s.TimestampFormat()
-
 	if s.DisplayColor() {
-
 		var color ansi.EscSeq
-
 		return func(e log.Entry) []byte {
-			var b []byte
-			var lvl string
 			var i int
-
+			lvl := e.Level.String()
 			color = s.GetDisplayColor(e.Level)
-
+			b := log.BytePool().Get()
 			b = append(b, e.Timestamp.Format(tsFormat)...)
 			b = append(b, space)
 			b = append(b, color...)
-
-			lvl = e.Level.String()
 
 			for i = 0; i < 6-len(lvl); i++ {
 				b = append(b, space)
@@ -186,14 +184,11 @@ func defaultFormatFunc(s *Syslog) Formatter {
 	}
 
 	return func(e log.Entry) []byte {
-		var b []byte
-		var lvl string
 		var i int
-
+		lvl := e.Level.String()
+		b := log.BytePool().Get()
 		b = append(b, e.Timestamp.Format(tsFormat)...)
 		b = append(b, space)
-
-		lvl = e.Level.String()
 
 		for i = 0; i < 6-len(lvl); i++ {
 			b = append(b, space)
@@ -246,22 +241,41 @@ func (s *Syslog) Log(e log.Entry) {
 	s.once.Do(func() {
 		s.formatter = s.formatFunc(s)
 	})
-	line := string(s.formatter(e))
+	select {
+	case <-s.close:
+		return
+	default:
+		s.wg.Add(1)
+		defer s.wg.Done()
 
-	switch e.Level {
-	case log.DebugLevel:
-		_ = s.writer.Debug(line)
-	case log.InfoLevel:
-		_ = s.writer.Info(line)
-	case log.NoticeLevel:
-		_ = s.writer.Notice(line)
-	case log.WarnLevel:
-		_ = s.writer.Warning(line)
-	case log.ErrorLevel:
-		_ = s.writer.Err(line)
-	case log.PanicLevel, log.AlertLevel:
-		_ = s.writer.Alert(line)
-	case log.FatalLevel:
-		_ = s.writer.Crit(line)
+		b := s.formatter(e)
+
+		switch e.Level {
+		case log.DebugLevel:
+			_ = s.writer.Debug(string(b))
+		case log.InfoLevel:
+			_ = s.writer.Info(string(b))
+		case log.NoticeLevel:
+			_ = s.writer.Notice(string(b))
+		case log.WarnLevel:
+			_ = s.writer.Warning(string(b))
+		case log.ErrorLevel:
+			_ = s.writer.Err(string(b))
+		case log.PanicLevel, log.AlertLevel:
+			_ = s.writer.Alert(string(b))
+		case log.FatalLevel:
+			_ = s.writer.Crit(string(b))
+		}
+		if s.isDefaultFormatFunc {
+			log.BytePool().Put(b)
+		}
 	}
+}
+
+// Close cleans up any resources and de-registers the handler with the logger
+func (s *Syslog) Close() error {
+	log.RemoveHandler(s)
+	close(s.close)
+	s.wg.Wait()
+	return s.writer.Close()
 }

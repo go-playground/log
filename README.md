@@ -1,6 +1,6 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-6.4.0-green.svg)
-[![Build Status](https://semaphoreci.com/api/v1/joeybloggs/log/branches/master/badge.svg)](https://semaphoreci.com/joeybloggs/log)
+<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-7.0.0-green.svg)
+[![Build Status](https://travis-ci.org/go-playground/log.svg?branch=master)](https://travis-ci.org/go-playground/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
 [![GoDoc](https://godoc.org/github.com/go-playground/log?status.svg)](https://godoc.org/github.com/go-playground/log)
@@ -18,7 +18,8 @@ Features
 - [x] Logger is simple, only logic to create the log entry and send it off to the handlers and they take it from there.
 - [x] Ability to specify which log levels get sent to each handler
 - [x] Built-in console, syslog, http, HipChat, json and email handlers
-- [x] Handlers are simple to write + easy to register
+- [x] Handlers are simple to write + easy to register + easy to remove
+- [x] Default logger for quick prototyping and cli applications. It is automatically removed when you register one of your own.
 - [x] Logger is a singleton ( one of the few instances a singleton is desired ) so the root package registers which handlers are used and any libraries just follow suit.
 - [x] Convenient context helpers `GetContext` & `SetContext`
 - [x] Works with go-playground/errors extracting types and tags when used with `WithError`, is the default
@@ -36,7 +37,7 @@ go get -u github.com/go-playground/log
 
 Usage
 ------
-import the log package, setup at least one handler
+import the log package, it is recommended to set up at least one handler, but there is a default console logger.
 ```go
 package main
 
@@ -48,6 +49,8 @@ import (
 )
 
 func main() {
+	// There is a default logger with the same settings
+	// once any other logger is registered the default logger is removed.
 	cLog := console.New(true)
 	log.AddHandler(cLog, log.AllLevels...)
 
