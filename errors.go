@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-playground/errors"
+	runtimeext "github.com/go-playground/pkg/runtime"
 )
 
 func errorsWithError(e Entry, err error) Entry {
@@ -40,7 +41,7 @@ func errorsWithError(e Entry, err error) Entry {
 
 	default:
 		ne.Fields = append(ne.Fields, Field{Key: "error", Value: err.Error()})
-		frame := errors.StackLevel(2)
+		frame := runtimeext.StackLevel(2)
 		ne.Fields = append(ne.Fields, Field{Key: "source", Value: fmt.Sprintf("%s: %s:%d", frame.Function(), frame.File(), frame.Line())})
 	}
 	return ne
