@@ -18,7 +18,8 @@ Features
 - [x] Logger is simple, only logic to create the log entry and send it off to the handlers and they take it from there.
 - [x] Ability to specify which log levels get sent to each handler
 - [x] Built-in console, syslog, http, HipChat, json and email handlers
-- [x] Handlers are simple to write + easy to register
+- [x] Handlers are simple to write + easy to register + easy to remove
+- [x] Default logger for quick prototyping and cli applications. It is automatically removed when you register one of your own.
 - [x] Logger is a singleton ( one of the few instances a singleton is desired ) so the root package registers which handlers are used and any libraries just follow suit.
 - [x] Convenient context helpers `GetContext` & `SetContext`
 - [x] Works with go-playground/errors extracting types and tags when used with `WithError`, is the default
