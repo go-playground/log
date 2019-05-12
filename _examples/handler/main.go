@@ -2,10 +2,15 @@ package main
 
 import (
 	"github.com/go-playground/errors"
+
 	"github.com/go-playground/log"
+	"github.com/go-playground/log/handlers/console"
 )
 
 func main() {
+	cLog := console.New(true)
+	log.AddHandler(cLog, log.AllLevels...)
+
 	// Trace
 	defer log.WithTrace().Info("time to run")
 

@@ -4,7 +4,10 @@ import (
 	"context"
 	"os"
 	"sync"
+	"syscall"
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (
@@ -18,9 +21,11 @@ var (
 )
 
 func init() {
-	defaultHandler = newDefaultLogger()
-	AddHandler(defaultHandler, AllLevels...)
-	defaultHandlerRegistered = true
+	if terminal.IsTerminal(syscall.Stdout) {
+		defaultHandler = newDefaultLogger()
+		AddHandler(defaultHandler, AllLevels...)
+		defaultHandlerRegistered = true
+	}
 }
 
 const (
