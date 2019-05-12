@@ -195,3 +195,9 @@ func formatFunc(hc *HipChat) http.FormatFunc {
 		}
 	}
 }
+
+// Close cleans up any resources and de-registers the handler with the logger
+func (hc *HipChat) Close() error {
+	log.RemoveHandler(hc)
+	return nil
+}

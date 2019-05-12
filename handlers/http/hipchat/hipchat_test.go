@@ -60,7 +60,7 @@ func TestHipChat(t *testing.T) {
 	hc.SetTimestampFormat("")
 	hc.SetTemplate(defaultTemplate)
 	log.AddHandler(hc, log.DebugLevel)
-
+	defer func() { _ = hc.Close() }()
 	log.Debug("debug test")
 
 	for i, tt := range tests {

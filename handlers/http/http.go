@@ -178,3 +178,9 @@ func (h *HTTP) Log(e log.Entry) {
 		log.Errorf("Received HTTP %d during POST request to %s body: %s\n", resp.StatusCode, remoteHost, string(bt))
 	}
 }
+
+// Close cleans up any resources and de-registers the handler with the logger
+func (h *HTTP) Close() error {
+	log.RemoveHandler(h)
+	return nil
+}
