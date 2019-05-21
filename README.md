@@ -1,5 +1,5 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-7.0.0-green.svg)
+<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-7.0.1-green.svg)
 [![Build Status](https://travis-ci.org/go-playground/log.svg?branch=master)](https://travis-ci.org/go-playground/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
