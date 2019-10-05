@@ -1,4 +1,4 @@
-module github.com/go-playground/log
+module github.com/go-playground/log/v7
 
 go 1.11
 
