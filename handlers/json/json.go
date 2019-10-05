@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 )
 
 // Handler implementation.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 )
 
 func TestJSONLogger(t *testing.T) {

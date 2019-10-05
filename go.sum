@@ -6,6 +6,8 @@ github.com/go-playground/ansi v2.1.0+incompatible/go.mod h1:OCdnfTFO/GfFtp+ktUt+
 github.com/go-playground/errors v0.0.0-20190511183022-b661b75d4162 h1:E0/Tcjy4E1wyBgwyb+ufYEzQaxnPXkBbs0nbfy9HNVw=
 github.com/go-playground/errors v0.0.0-20190511183022-b661b75d4162/go.mod h1:V/gdJTQRLs5Bsu3bIcSmQbIRdQwXq+OajaRrGpCNEqY=
 github.com/go-playground/form v3.1.4+incompatible/go.mod h1:lhcKXfTuhRtIZCIKUeJ0b5F207aeQCPbZU09ScKjwWg=
+github.com/go-playground/log v6.3.0+incompatible h1:CVT3y82/iLS65WJ4xfF8+SI6dxRdMiXpX+9surI/R2U=
+github.com/go-playground/log v6.3.0+incompatible/go.mod h1:3M1OvdKL8KYwOjJa3XM42iqzpvde2LHla8Ys0oz7Ma0=
 github.com/go-playground/pkg v0.0.0-20190511145249-fa4bcb050f1d h1:dLyXECWWFoQAp49e+ayPJyTcVAVOSAEmZ/QALeOuIfg=
 github.com/go-playground/pkg v0.0.0-20190511145249-fa4bcb050f1d/go.mod h1:Wg1j+HqWLhhVIfYdaoOuBzdutBEVcqwvBxgFZRWbybk=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=

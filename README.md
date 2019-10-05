@@ -44,8 +44,8 @@ package main
 import (
 	"errors"
 
-	"github.com/go-playground/log"
-	"github.com/go-playground/log/handlers/console"
+	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v7/handlers/console"
 )
 
 func main() {
@@ -96,7 +96,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 )
 
 // CustomHandler is your custom handler

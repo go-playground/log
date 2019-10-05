@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/go-playground/errors"
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 )
 
 func main() {
