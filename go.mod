@@ -5,9 +5,8 @@ go 1.11
 require (
 	github.com/RackSec/srslog v0.0.0-20180709174129-a4725f04ec91
 	github.com/go-playground/ansi v2.1.0+incompatible
-	github.com/go-playground/errors v0.0.0-20190511183022-b661b75d4162
-	github.com/go-playground/log v6.3.0+incompatible
-	github.com/go-playground/pkg v0.0.0-20190511145249-fa4bcb050f1d
+	github.com/go-playground/errors/v5 v5.0.0
+	github.com/go-playground/pkg/v3 v3.1.5
 	github.com/pkg/errors v0.8.1
 	github.com/segmentio/errors-go v1.0.0
 	golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529

@@ -3,8 +3,8 @@ package log
 import (
 	"fmt"
 
-	"github.com/go-playground/errors"
-	runtimeext "github.com/go-playground/pkg/runtime"
+	"github.com/go-playground/errors/v5"
+	runtimeext "github.com/go-playground/pkg/v3/runtime"
 )
 
 func errorsWithError(e Entry, err error) Entry {
