@@ -7,10 +7,7 @@ github.com/go-playground/assert v1.2.1/go.mod h1:Lgy+k19nOB/wQG/fVSQ7rra5qYugmyt
 github.com/go-playground/assert/v2 v2.0.1/go.mod h1:VDjEfimB/XKnb+ZQfWdccd7VUvScMdVu0Titje2rxJ4=
 github.com/go-playground/errors/v5 v5.0.1 h1:U+br78PmQI8/I8UDqUq/5cEuKhSInSdD2OwaZsgHVfg=
 github.com/go-playground/errors/v5 v5.0.1/go.mod h1:p7HVwyH3I0esuPnvChd2Uf4ceZwG2GcaDT/KpzCN18M=
-github.com/go-playground/form v3.1.4+incompatible/go.mod h1:lhcKXfTuhRtIZCIKUeJ0b5F207aeQCPbZU09ScKjwWg=
 github.com/go-playground/form/v4 v4.0.0/go.mod h1:bodWfd97U9PVMZFcDsbVzSbQQTtaWrebnTwQtWjSW1M=
-github.com/go-playground/pkg v0.0.0-20190511145249-fa4bcb050f1d h1:dLyXECWWFoQAp49e+ayPJyTcVAVOSAEmZ/QALeOuIfg=
-github.com/go-playground/pkg v0.0.0-20190511145249-fa4bcb050f1d/go.mod h1:Wg1j+HqWLhhVIfYdaoOuBzdutBEVcqwvBxgFZRWbybk=
 github.com/go-playground/pkg/v4 v4.0.0 h1:0lTr9H8RyCwom4TcfNhMCNvlTlFuin7uUlXcZQuxrA4=
 github.com/go-playground/pkg/v4 v4.0.0/go.mod h1:TLowM3d3a/m04JlHK/zM6Ia8zf8+0C/9pTwhDEUqKO0=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
@@ -30,6 +27,5 @@ golang.org/x/sys v0.0.0-20190509141414-a5b02f93d862/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc h1:2gGKlE2+asNV9m7xrywl36YYNnBG5ZQ0r/BOOxqPpmk=
 gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc/go.mod h1:m7x9LTH6d71AHyAX77c9yqWCCa3UKHcVEj9y7hAtKDk=
-gopkg.in/go-playground/assert.v1 v1.2.1/go.mod h1:9RXL0bg/zibRAgZUYszZSwO/z8Y/a8bDuhia5mkpMnE=
 gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df h1:n7WqCuqOuCbNr617RXOY0AWRXxgwEyPp2z+p0+hgMuE=
 gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df/go.mod h1:LRQQ+SO6ZHR7tOkpBDuZnXENFzX8qRjMDMyPD6BRkCw=
