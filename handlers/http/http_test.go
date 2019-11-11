@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 )
 
 // NOTES:

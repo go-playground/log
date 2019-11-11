@@ -8,8 +8,8 @@ NOTE: "/notification" is added to the host url automatically.
 	package main
 
 	import (
-		"github.com/go-playground/log"
-		"github.com/go-playground/log/handlers/http/hipchat"
+		"github.com/go-playground/log/v7"
+		"github.com/go-playground/log/v7/handlers/http/hipchat"
 	)
 
 	func main() {

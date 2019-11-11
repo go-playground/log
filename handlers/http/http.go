@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 )
 
 // FormatFunc is the function that the workers use to create

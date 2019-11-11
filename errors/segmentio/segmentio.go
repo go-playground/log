@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 
 	"github.com/segmentio/errors-go"
 )

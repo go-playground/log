@@ -5,7 +5,7 @@ import (
 	stderr "errors"
 	"testing"
 
-	"github.com/go-playground/errors"
+	"github.com/go-playground/errors/v5"
 )
 
 func BenchmarkWithError(b *testing.B) {

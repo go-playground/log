@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/go-playground/ansi"
+	"github.com/go-playground/ansi/v3"
 )
 
 const (

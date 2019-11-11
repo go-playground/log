@@ -9,8 +9,8 @@ import (
 	stdhttp "net/http"
 	"strings"
 
-	"github.com/go-playground/log"
-	"github.com/go-playground/log/handlers/http"
+	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v7/handlers/http"
 )
 
 // APIVersion specifies the HipChat API version to use
