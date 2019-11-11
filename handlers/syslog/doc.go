@@ -12,8 +12,8 @@ NOTE: syslog uses github.com/RackSec/srslog as the stdlib syslog
     import (
         stdsyslog "log/syslog"
 
-        "github.com/go-playground/log"
-        "github.com/go-playground/log/handlers/syslog"
+        "github.com/go-playground/log/v7"
+        "github.com/go-playground/log/v7/handlers/syslog"
     )
 
     func main() {

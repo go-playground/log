@@ -1,5 +1,5 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-7.0.1-green.svg)
+<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-7.0.2-green.svg)
 [![Build Status](https://travis-ci.org/go-playground/log.svg?branch=master)](https://travis-ci.org/go-playground/log)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -32,7 +32,7 @@ Installation
 Use go get 
 
 ```go
-go get -u github.com/go-playground/log
+go get -u github.com/go-playground/log/v7
 ``` 
 
 Usage
@@ -44,8 +44,8 @@ package main
 import (
 	"errors"
 
-	"github.com/go-playground/log"
-	"github.com/go-playground/log/handlers/console"
+	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v7/handlers/console"
 )
 
 func main() {
@@ -96,7 +96,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/go-playground/log"
+	"github.com/go-playground/log/v7"
 )
 
 // CustomHandler is your custom handler
