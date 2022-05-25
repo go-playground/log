@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
 )
 
 // NOTES:
@@ -85,7 +85,7 @@ func TestHTTPLogger(t *testing.T) {
 
 func TestBadValues(t *testing.T) {
 
-	pErr := "parse @#$%: invalid URL escape \"%\""
+	pErr := `parse "@#$%": invalid URL escape "%"`
 	header := make(stdhttp.Header)
 	header.Set("Content-Type", "text/plain")
 

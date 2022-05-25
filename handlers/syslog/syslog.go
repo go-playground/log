@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	syslog "github.com/RackSec/srslog"
+	"github.com/go-playground/log/v8"
 
 	"github.com/go-playground/ansi/v3"
-	"github.com/go-playground/log/v7"
 )
 
 // FormatFunc is the function that the workers use to create

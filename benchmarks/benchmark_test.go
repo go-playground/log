@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-playground/log/v7"
-	"github.com/go-playground/log/v7/handlers/console"
+	"github.com/go-playground/log/v8"
+	"github.com/go-playground/log/v8/handlers/console"
 )
 
 var errExample = errors.New("fail")

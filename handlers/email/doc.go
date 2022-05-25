@@ -8,8 +8,8 @@ simple email
     package main
 
     import (
-        "github.com/go-playground/log/v7"
-        "github.com/go-playground/log/v7/handlers/email"
+        "github.com/go-playground/log/v8"
+        "github.com/go-playground/log/v8/handlers/email"
     )
 
     func main() {

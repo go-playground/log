@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/go-playground/ansi/v3"
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
 )
 
 const (

@@ -10,8 +10,8 @@ NOTE: you can use the HTTP handler as a base for creating other handlers
     import (
         stdhttp "net/http"
 
-        "github.com/go-playground/log/v7"
-        "github.com/go-playground/log/v7/handlers/http"
+        "github.com/go-playground/log/v8"
+        "github.com/go-playground/log/v8/handlers/http"
     )
 
     func main() {

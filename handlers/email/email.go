@@ -5,9 +5,8 @@ import (
 	"html/template"
 	"sync"
 
-	gomail "gopkg.in/gomail.v2"
-
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
+	"gopkg.in/gomail.v2"
 )
 
 // FormatFunc is the function that the workers use to create

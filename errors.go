@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-playground/errors/v5"
-	runtimeext "github.com/go-playground/pkg/v4/runtime"
+	runtimeext "github.com/go-playground/pkg/v5/runtime"
 )
 
 func errorsWithError(e Entry, err error) Entry {

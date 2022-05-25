@@ -32,7 +32,7 @@ Installation
 Use go get 
 
 ```go
-go get -u github.com/go-playground/log/v7
+go get -u github.com/go-playground/log/v8
 ``` 
 
 Usage
@@ -44,8 +44,8 @@ package main
 import (
 	"errors"
 
-	"github.com/go-playground/log/v7"
-	"github.com/go-playground/log/v7/handlers/console"
+	"github.com/go-playground/log/v8"
+	"github.com/go-playground/log/v8/handlers/console"
 )
 
 func main() {
@@ -96,7 +96,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
 )
 
 // CustomHandler is your custom handler

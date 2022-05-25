@@ -9,9 +9,8 @@ import (
 	"testing"
 	"time"
 
-	gomail "gopkg.in/gomail.v2"
-
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
+	"gopkg.in/gomail.v2"
 )
 
 // NOTES:

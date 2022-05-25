@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
 )
 
 // NOTES:
