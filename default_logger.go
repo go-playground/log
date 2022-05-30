@@ -7,6 +7,7 @@ import (
 	stdlog "log"
 	"os"
 	"strconv"
+	"sync"
 )
 
 const (
@@ -19,6 +20,7 @@ const (
 
 // Console is an instance of the console logger
 type Console struct {
+	m               sync.Mutex
 	writer          io.Writer
 	r               *io.PipeReader
 	timestampFormat string
@@ -126,7 +128,10 @@ func (c *Console) Log(e Entry) {
 	}
 	buff.B = append(buff.B, newLine)
 
+	c.m.Lock()
 	_, _ = c.writer.Write(buff.B)
+	c.m.Unlock()
+
 	BytePool().Put(buff)
 }
 
