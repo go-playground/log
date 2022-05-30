@@ -52,7 +52,7 @@ type Field struct {
 
 // SetExitFunc sets the provided function as the exit function used in Fatal(),
 // Fatalf(), Panic() and Panicf(). This is primarily used when wrapping this library,
-// you can set this to to enable testing (with coverage) of your Fatal() and Fatalf()
+// you can set this to enable testing (with coverage) of your Fatal() and Fatalf()
 // methods.
 func SetExitFunc(fn func(code int)) {
 	exitFunc = fn
@@ -106,8 +106,8 @@ func F(key string, value interface{}) Field {
 	return Field{Key: key, Value: value}
 }
 
-// AddHandler adds a new log handler and accepts which log levels that
-// handler will be triggered for
+// AddHandler adds a new log handlers and accepts which log levels that
+// handlers will be triggered for
 func AddHandler(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
@@ -148,7 +148,7 @@ OUTER:
 }
 
 // RemoveHandlerLevels removes the supplied levels, if no more levels exists for the handler
-// it will no longer be registered and need to to added via AddHandler again.
+// it will no longer be registered and need to added via AddHandler again.
 func RemoveHandlerLevels(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
@@ -220,7 +220,7 @@ func Info(v ...interface{}) {
 	e.Info(v...)
 }
 
-// Infof logs a normal. information, entry with formatiing
+// Infof logs a normal. information, entry with formatting
 func Infof(s string, v ...interface{}) {
 	e := newEntryWithFields(logFields)
 	e.Infof(s, v...)
@@ -238,13 +238,13 @@ func Noticef(s string, v ...interface{}) {
 	e.Noticef(s, v...)
 }
 
-// Warn logs a warn log entry
+// Warn logs a warning log entry
 func Warn(v ...interface{}) {
 	e := newEntryWithFields(logFields)
 	e.Warn(v...)
 }
 
-// Warnf logs a warn log entry with formatting
+// Warnf logs a warning log entry with formatting
 func Warnf(s string, v ...interface{}) {
 	e := newEntryWithFields(logFields)
 	e.Warnf(s, v...)

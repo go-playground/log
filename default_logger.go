@@ -44,7 +44,7 @@ func (c *Console) SetTimestampFormat(format string) {
 	c.timestampFormat = format
 }
 
-// SetWriter sets Console's wriiter
+// SetWriter sets Console's writer
 // Default is : os.Stderr
 func (c *Console) SetWriter(w io.Writer) {
 	c.writer = w

@@ -99,14 +99,14 @@ func (e Entry) Noticef(s string, v ...interface{}) {
 	HandleEntry(e)
 }
 
-// Warn logs a warn log entry
+// Warn logs a warning log entry
 func (e Entry) Warn(v ...interface{}) {
 	e.Message = fmt.Sprint(v...)
 	e.Level = WarnLevel
 	HandleEntry(e)
 }
 
-// Warnf logs a warn log entry with formatting
+// Warnf logs a warning log entry with formatting
 func (e Entry) Warnf(s string, v ...interface{}) {
 	e.Message = fmt.Sprintf(s, v...)
 	e.Level = WarnLevel

@@ -1,11 +1,10 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-7.0.2-green.svg)
-[![Build Status](https://travis-ci.org/go-playground/log.svg?branch=master)](https://travis-ci.org/go-playground/log)
+<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-8.0.0-green.svg)
+[![Test](https://github.com/go-playground/log/actions/workflows/go.yml/badge.svg)](https://github.com/go-playground/log/actions/workflows/go.yml)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
 [![GoDoc](https://godoc.org/github.com/go-playground/log?status.svg)](https://godoc.org/github.com/go-playground/log)
 ![License](https://img.shields.io/dub/l/vibe-d.svg)
-[![Gitter](https://badges.gitter.im/go-playground/log.svg)](https://gitter.im/go-playground/log?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 Log is a simple, highly configurable, Structured Logging library
 
@@ -99,7 +98,7 @@ import (
 	"github.com/go-playground/log/v8"
 )
 
-// CustomHandler is your custom handler
+// CustomHandler is your custom handlers
 type CustomHandler struct {
 	// whatever properties you need
 }
@@ -113,7 +112,7 @@ func (c *CustomHandler) Log(e log.Entry) {
 	// 				                                                                 |----------> | console |
 	//                                                                               |             ---------
 	// i.e. -----------------               -----------------     Unmarshal    -------------       --------
-	//     | app log handler | -- json --> | central log app | --    to    -> | log handler | --> | syslog |
+	//     | app log handlers | -- json --> | central log app | --    to    -> | log handlers | --> | syslog |
 	//      -----------------               -----------------       Entry      -------------       --------
 	//      																         |             ---------
 	//                                  									         |----------> | DataDog |

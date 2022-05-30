@@ -1047,10 +1047,10 @@ func TestRemoveHandlerLevels(t *testing.T) {
 	AddHandler(th2, InfoLevel)
 	RemoveHandlerLevels(th, InfoLevel)
 	if len(logHandlers) != 1 {
-		t.Error("expected 1 handler left")
+		t.Error("expected 1 handlers left")
 	}
 	if len(logHandlers[InfoLevel]) != 1 {
-		t.Error("expected 1 handler with InfoLevel left")
+		t.Error("expected 1 handlers with InfoLevel left")
 	}
 	RemoveHandlerLevels(th2, InfoLevel)
 	if len(logHandlers) != 0 {
@@ -1065,7 +1065,7 @@ func TestRemoveHandlerLevels(t *testing.T) {
 
 	for _, handlers := range logHandlers {
 		if len(handlers) != 1 {
-			t.Error("expected 1 handler for log level")
+			t.Error("expected 1 handlers for log level")
 		}
 	}
 }
