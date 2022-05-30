@@ -72,62 +72,62 @@ func (c *Console) handleStdLogger(ready chan<- struct{}) {
 func (c *Console) Log(e Entry) {
 	var lvl string
 	var i int
-	b := BytePool().Get()
-	b = append(b, e.Timestamp.Format(c.timestampFormat)...)
-	b = append(b, space)
+	buff := BytePool().Get()
+	buff.B = append(buff.B, e.Timestamp.Format(c.timestampFormat)...)
+	buff.B = append(buff.B, space)
 
 	lvl = e.Level.String()
 
 	for i = 0; i < 6-len(lvl); i++ {
-		b = append(b, space)
+		buff.B = append(buff.B, space)
 	}
 
-	b = append(b, lvl...)
-	b = append(b, space)
-	b = append(b, e.Message...)
+	buff.B = append(buff.B, lvl...)
+	buff.B = append(buff.B, space)
+	buff.B = append(buff.B, e.Message...)
 
 	for _, f := range e.Fields {
-		b = append(b, space)
-		b = append(b, f.Key...)
-		b = append(b, equals)
+		buff.B = append(buff.B, space)
+		buff.B = append(buff.B, f.Key...)
+		buff.B = append(buff.B, equals)
 
 		switch t := f.Value.(type) {
 		case string:
-			b = append(b, t...)
+			buff.B = append(buff.B, t...)
 		case int:
-			b = strconv.AppendInt(b, int64(t), base10)
+			buff.B = strconv.AppendInt(buff.B, int64(t), base10)
 		case int8:
-			b = strconv.AppendInt(b, int64(t), base10)
+			buff.B = strconv.AppendInt(buff.B, int64(t), base10)
 		case int16:
-			b = strconv.AppendInt(b, int64(t), base10)
+			buff.B = strconv.AppendInt(buff.B, int64(t), base10)
 		case int32:
-			b = strconv.AppendInt(b, int64(t), base10)
+			buff.B = strconv.AppendInt(buff.B, int64(t), base10)
 		case int64:
-			b = strconv.AppendInt(b, t, base10)
+			buff.B = strconv.AppendInt(buff.B, t, base10)
 		case uint:
-			b = strconv.AppendUint(b, uint64(t), base10)
+			buff.B = strconv.AppendUint(buff.B, uint64(t), base10)
 		case uint8:
-			b = strconv.AppendUint(b, uint64(t), base10)
+			buff.B = strconv.AppendUint(buff.B, uint64(t), base10)
 		case uint16:
-			b = strconv.AppendUint(b, uint64(t), base10)
+			buff.B = strconv.AppendUint(buff.B, uint64(t), base10)
 		case uint32:
-			b = strconv.AppendUint(b, uint64(t), base10)
+			buff.B = strconv.AppendUint(buff.B, uint64(t), base10)
 		case uint64:
-			b = strconv.AppendUint(b, t, base10)
+			buff.B = strconv.AppendUint(buff.B, t, base10)
 		case float32:
-			b = strconv.AppendFloat(b, float64(t), 'f', -1, 32)
+			buff.B = strconv.AppendFloat(buff.B, float64(t), 'f', -1, 32)
 		case float64:
-			b = strconv.AppendFloat(b, t, 'f', -1, 64)
+			buff.B = strconv.AppendFloat(buff.B, t, 'f', -1, 64)
 		case bool:
-			b = strconv.AppendBool(b, t)
+			buff.B = strconv.AppendBool(buff.B, t)
 		default:
-			b = append(b, fmt.Sprintf(v, f.Value)...)
+			buff.B = append(buff.B, fmt.Sprintf(v, f.Value)...)
 		}
 	}
-	b = append(b, newLine)
+	buff.B = append(buff.B, newLine)
 
-	_, _ = c.writer.Write(b)
-	BytePool().Put(b)
+	_, _ = c.writer.Write(buff.B)
+	BytePool().Put(buff)
 }
 
 // Close cleans up any resources and de-registers the handler with the logger

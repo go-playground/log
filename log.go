@@ -8,9 +8,11 @@ import (
 )
 
 var (
-	bytePool = &ByteArrayPool{pool: &sync.Pool{
+	bytePool = &byteArrayPool{pool: &sync.Pool{
 		New: func() interface{} {
-			return make([]byte, 0, 32)
+			return &Buffer{
+				B: make([]byte, 0, 32),
+			}
 		},
 	}}
 	defaultHandlerRegistered = false
@@ -78,7 +80,7 @@ func GetContext(ctx context.Context) Entry {
 
 // BytePool returns a sync.Pool of bytes that multiple handlers can use in order to reduce allocation and keep
 // a central copy for reuse.
-func BytePool() *ByteArrayPool {
+func BytePool() *byteArrayPool {
 	return bytePool
 }
 
