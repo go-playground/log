@@ -1,4 +1,4 @@
-github.com/go-playground/errors/v5 v5.2.0 h1:OGY2oy1Wm5Csu+w/syi4zIiRviBFJcF+FLE9PqFW5Lg=
-github.com/go-playground/errors/v5 v5.2.0/go.mod h1:DincxRGwraWmq39TZDqtnOtHGOJ+AbNbO0OmBzX6MLw=
+github.com/go-playground/errors/v5 v5.2.1 h1:CiPg75TkEgjVtrdsFpwSs+ehmk0u8BWyBUPn3yVcF5g=
+github.com/go-playground/errors/v5 v5.2.1/go.mod h1:DincxRGwraWmq39TZDqtnOtHGOJ+AbNbO0OmBzX6MLw=
 github.com/go-playground/pkg/v5 v5.6.0 h1:97YpRFzIcS5NFP2Uzxj8cPYz4zTuwweyXADYcA1KfUQ=
 github.com/go-playground/pkg/v5 v5.6.0/go.mod h1:TvZ2nNtNh6VfoNteY9ApA2BXt1ZwJliFZ4hzPAwLS9Y=
