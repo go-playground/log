@@ -3,13 +3,9 @@ package main
 import (
 	"github.com/go-playground/errors/v5"
 	"github.com/go-playground/log/v8"
-	"github.com/go-playground/log/v8/handlers/console"
 )
 
 func main() {
-	cLog := console.New(true)
-	log.AddHandler(cLog, log.AllLevels...)
-
 	// Trace
 	defer log.WithTrace().Info("time to run")
 

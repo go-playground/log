@@ -31,7 +31,7 @@ func (c *CustomHandler) Log(e log.Entry) {
 	b.WriteString(e.Message)
 
 	for _, f := range e.Fields {
-		fmt.Fprintf(b, " %s=%v", f.Key, f.Value)
+		_, _ = fmt.Fprintf(b, " %s=%v", f.Key, f.Value)
 	}
 	fmt.Println(b.String())
 }
@@ -39,7 +39,6 @@ func (c *CustomHandler) Log(e log.Entry) {
 func main() {
 
 	cLog := new(CustomHandler)
-
 	log.AddHandler(cLog, log.AllLevels...)
 
 	// Trace
