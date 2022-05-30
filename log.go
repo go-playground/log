@@ -20,9 +20,11 @@ var (
 )
 
 func init() {
-	defaultHandler = NewDefaultLogger(true)
-	AddHandler(defaultHandler, AllLevels...)
-	defaultHandlerRegistered = true
+	if defaultHandler == nil {
+		defaultHandler = NewDefaultLogger(true)
+		AddHandler(defaultHandler, AllLevels...)
+		defaultHandlerRegistered = true
+	}
 }
 
 const (
