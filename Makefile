@@ -1,7 +1,13 @@
 GOCMD=GO111MODULE=on go
 
-lint:
-	go vet ./...
+linters-install:
+	@golangci-lint --version >/dev/null 2>&1 || { \
+		echo "installing linting tools..."; \
+		brew install golangci-lint; \
+	}
+
+lint: linters-install
+	@golangci-lint run
 
 test:
 	$(GOCMD) test -cover -race ./...
@@ -9,4 +15,4 @@ test:
 bench:
 	$(GOCMD) test -run=NONE -bench=. -benchmem ./...
 
-.PHONY: test lint
+.PHONY: test lint linters-install

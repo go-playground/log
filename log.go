@@ -111,7 +111,7 @@ func AddHandler(h Handler, levels ...Level) {
 	defer rw.Unlock()
 	if defaultHandlerRegistered {
 		removeHandler(h)
-		defaultHandler.closeAlreadyLocked()
+		_ = defaultHandler.closeAlreadyLocked()
 		defaultHandler = nil
 		defaultHandlerRegistered = false
 	}
