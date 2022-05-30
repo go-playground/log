@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/go-playground/errors/v5"
-
+	"github.com/go-playground/log/v8"
 	"github.com/go-playground/log/v8/handlers/console"
 )
 

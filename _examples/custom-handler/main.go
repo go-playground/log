@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/go-playground/log/v8"
 )
 
 // CustomHandler is your custom handler

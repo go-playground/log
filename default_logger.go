@@ -7,8 +7,6 @@ import (
 	stdlog "log"
 	"os"
 	"strconv"
-
-	"github.com/go-playground/ansi/v3"
 )
 
 const (
@@ -19,49 +17,48 @@ const (
 	v       = "%v"
 )
 
-var (
-	defaultLoggerWriter     io.Writer = os.Stderr                             // here for tests only
-	defaultLoggerTimeFormat           = "2006-01-02 15:04:05.000000000Z07:00" // here for tests only
-)
-
-// console is an instance of the console logger
-type console struct {
-	colors          [8]ansi.EscSeq
+// Console is an instance of the console logger
+type Console struct {
 	writer          io.Writer
-	timestampFormat string
 	r               *io.PipeReader
+	timestampFormat string
 }
 
-func newDefaultLogger() *console {
-	c := &console{
-		colors: [...]ansi.EscSeq{
-			DebugLevel:  ansi.Green,
-			InfoLevel:   ansi.Blue,
-			NoticeLevel: ansi.LightCyan,
-			WarnLevel:   ansi.LightYellow,
-			ErrorLevel:  ansi.LightRed,
-			PanicLevel:  ansi.Red,
-			AlertLevel:  ansi.Red + ansi.Underline,
-			FatalLevel:  ansi.Red + ansi.Underline + ansi.Blink,
-		},
-		writer:          defaultLoggerWriter,
-		timestampFormat: defaultLoggerTimeFormat,
+// NewDefaultLogger returns a new instance of the console logger
+func NewDefaultLogger(redirectGoStdErrLogs bool) *Console {
+	c := &Console{
+		writer:          os.Stderr,
+		timestampFormat: "2006-01-02T15:04:05.000000000Z07:00", // RFC3339Nano
 	}
-	done := make(chan struct{})
-	go c.handleStdLogger(done)
-	<-done // have to wait, it was running too quickly and some messages can be lost
+	if redirectGoStdErrLogs {
+		ready := make(chan struct{})
+		go c.handleStdLogger(ready)
+		<-ready // have to wait, it was running too quickly and some messages can be lost
+	}
 	return c
 }
 
+// SetTimestampFormat sets Console's timestamp output format
+// Default is : "2006-01-02T15:04:05.000000000Z07:00"
+func (c *Console) SetTimestampFormat(format string) {
+	c.timestampFormat = format
+}
+
+// SetWriter sets Console's wriiter
+// Default is : os.Stderr
+func (c *Console) SetWriter(w io.Writer) {
+	c.writer = w
+}
+
 // this will redirect the output of
-func (c *console) handleStdLogger(done chan<- struct{}) {
+func (c *Console) handleStdLogger(ready chan<- struct{}) {
 	var w *io.PipeWriter
 	c.r, w = io.Pipe()
 	stdlog.SetOutput(w)
 
 	scanner := bufio.NewScanner(c.r)
 	go func() {
-		done <- struct{}{}
+		close(ready)
 	}()
 
 	for scanner.Scan() {
@@ -72,29 +69,26 @@ func (c *console) handleStdLogger(done chan<- struct{}) {
 }
 
 // Log handles the log entry
-func (c *console) Log(e Entry) {
+func (c *Console) Log(e Entry) {
+	var lvl string
 	var i int
-
 	b := BytePool().Get()
-	lvl := e.Level.String()
-	color := c.colors[e.Level]
 	b = append(b, e.Timestamp.Format(c.timestampFormat)...)
 	b = append(b, space)
-	b = append(b, color...)
+
+	lvl = e.Level.String()
 
 	for i = 0; i < 6-len(lvl); i++ {
 		b = append(b, space)
 	}
+
 	b = append(b, lvl...)
-	b = append(b, ansi.Reset...)
 	b = append(b, space)
 	b = append(b, e.Message...)
 
 	for _, f := range e.Fields {
 		b = append(b, space)
-		b = append(b, color...)
 		b = append(b, f.Key...)
-		b = append(b, ansi.Reset...)
 		b = append(b, equals)
 
 		switch t := f.Value.(type) {
@@ -131,15 +125,28 @@ func (c *console) Log(e Entry) {
 		}
 	}
 	b = append(b, newLine)
+
 	_, _ = c.writer.Write(b)
 	BytePool().Put(b)
 }
 
-// Close cleans up any resources
-func (c *console) Close() error {
+// Close cleans up any resources and de-registers the handler with the logger
+func (c *Console) Close() error {
+	RemoveHandler(c)
 	// reset the output back to original
+	// since we reset the output prior to closing we don't have to wait
 	stdlog.SetOutput(os.Stderr)
-	// since we reset the output piror to closing we don't have to wait
+	if c.r != nil {
+		_ = c.r.Close()
+	}
+	return nil
+}
+
+func (c *Console) closeAlreadyLocked() error {
+	removeHandler(c)
+	// reset the output back to original
+	// since we reset the output prior to closing we don't have to wait
+	stdlog.SetOutput(os.Stderr)
 	if c.r != nil {
 		_ = c.r.Close()
 	}

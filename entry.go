@@ -18,8 +18,8 @@ type Entry struct {
 }
 
 func newEntry(e Entry) Entry {
-	flds := make([]Field, 0, len(e.Fields))
-	e.Fields = append(flds, e.Fields...)
+	fields := make([]Field, 0, len(e.Fields))
+	e.Fields = append(fields, e.Fields...)
 	return e
 }
 

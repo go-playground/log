@@ -40,17 +40,10 @@ func (th *testHandler) Log(e Entry) {
 	}
 }
 
-type test struct {
-	lvl    Level
-	msg    string
-	flds   []Field
-	want   string
-	printf string
-}
-
 func TestConsoleLogger1(t *testing.T) {
 	SetExitFunc(func(int) {})
 	SetWithErrorFn(errorsWithError)
+
 	tests := getLogTests1()
 	buff := new(bytes.Buffer)
 	th := &testHandler{

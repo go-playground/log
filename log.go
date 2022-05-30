@@ -5,8 +5,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (
@@ -16,15 +14,13 @@ var (
 		},
 	}}
 	defaultHandlerRegistered = false
-	defaultHandler           *console
+	defaultHandler           *Console
 )
 
 func init() {
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
-		defaultHandler = newDefaultLogger()
-		AddHandler(defaultHandler, AllLevels...)
-		defaultHandlerRegistered = true
-	}
+	defaultHandler = NewDefaultLogger(true)
+	AddHandler(defaultHandler, AllLevels...)
+	defaultHandlerRegistered = true
 }
 
 const (
@@ -114,8 +110,8 @@ func AddHandler(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
 	if defaultHandlerRegistered {
-		removeHandler(defaultHandler)
-		defaultHandler.Close()
+		removeHandler(h)
+		defaultHandler.closeAlreadyLocked()
 		defaultHandler = nil
 		defaultHandlerRegistered = false
 	}
@@ -190,8 +186,8 @@ func WithFields(fields ...Field) Entry {
 	return ne
 }
 
-// WithTrace withh add duration of how long the between this function call and
-// the susequent log
+// WithTrace with add duration of how long the between this function call and
+// the subsequent log
 func WithTrace() Entry {
 	ne := newEntryWithFields(logFields)
 	ne.start = time.Now()

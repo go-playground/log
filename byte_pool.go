@@ -2,8 +2,8 @@ package log
 
 import "sync"
 
-// BytePool represents a reusable byte pool. It is a centralized global instance for this package and can be accessed by
-// calling log.BytePool(). It is intended to be used by Handlers.
+// ByteArrayPool represents a reusable byte pool. It is a centralized global instance for this package and can be
+// accessed by calling log.BytePool(). It is intended to be used by Handlers.
 type ByteArrayPool struct {
 	pool *sync.Pool
 }
