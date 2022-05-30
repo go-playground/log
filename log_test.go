@@ -359,18 +359,18 @@ func TestWithError(t *testing.T) {
 
 	terr := fmt.Errorf("this is an %s", "err")
 	WithError(terr).Info()
-	if !strings.HasSuffix(buff.String(), "log_test.go:368\n") {
-		t.Errorf("Expected '%s' Got '%s'", "log_test.go:368\n", buff.String())
+	if !strings.HasSuffix(buff.String(), "log_test.go:361:TestWithError this is an err\n") {
+		t.Errorf("Expected '%s' Got '%s'", "log_test.go:361:TestWithError this is an err\n", buff.String())
 	}
 	buff.Reset()
 	Entry{}.WithError(terr).Info()
-	if !strings.HasSuffix(buff.String(), "log_test.go:373\n") {
-		t.Errorf("Expected '%s' Got '%s'", "log_test.go:373\n", buff.String())
+	if !strings.HasSuffix(buff.String(), "log_test.go:366:TestWithError this is an err\n") {
+		t.Errorf("Expected '%s' Got '%s'", "log_test.go:366:TestWithError this is an err\n", buff.String())
 	}
 	buff.Reset()
 	WithError(errors.Wrap(terr, "wrapped error")).Info()
-	if !strings.HasSuffix(buff.String(), "log_test.go:378\n") || !strings.HasPrefix(buff.String(), "INFO  error=wrapped error: this is an err source=TestWithError:") {
-		t.Errorf("Expected '%s' Got '%s'", "log_test.go:378\n", buff.String())
+	if !strings.HasSuffix(buff.String(), "log_test.go:371:TestWithError wrapped error: this is an err\n") || !strings.HasPrefix(buff.String(), "INFO  source=") {
+		t.Errorf("Expected '%s' Got '%s'", "log_test.go:371:TestWithError wrapped error: this is an err\n", buff.String())
 	}
 }
 
@@ -992,7 +992,7 @@ func TestWrappedError(t *testing.T) {
 	err := fmt.Errorf("this is an %s", "error")
 	err = errors.Wrap(err, "prefix").AddTypes("Permanent", "Internal").AddTag("key", "value")
 	WithError(err).Error("test")
-	expected := "log_test.go:1000 key=value types=Permanent,Internal\n"
+	expected := "log_test.go:993:TestWrappedError prefix: this is an error key=value types=Permanent,Internal\n"
 	if !strings.HasSuffix(buff.String(), expected) {
 		t.Errorf("got %s Expected %s", buff.String(), expected)
 	}

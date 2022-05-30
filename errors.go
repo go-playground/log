@@ -10,6 +10,7 @@ import (
 
 func errorsWithError(e Entry, err error) Entry {
 	ne := newEntry(e)
+	frame := runtimeext.StackLevel(2)
 
 	switch t := err.(type) {
 	case errors.Chain:
@@ -39,7 +40,7 @@ func errorsWithError(e Entry, err error) Entry {
 				types = append(types, ',')
 			}
 		}
-		frame := runtimeext.StackLevel(2)
+
 		b2 := BytePool().Get()
 		b2 = extractSource(b2, frame)
 		ne.Fields = append(ne.Fields, Field{Key: "source", Value: string(b2[:len(b2)-1])})
@@ -53,7 +54,6 @@ func errorsWithError(e Entry, err error) Entry {
 		}
 
 	default:
-		frame := runtimeext.StackLevel(2)
 		b := BytePool().Get()
 		b = extractSource(b, frame)
 		b = append(b, err.Error()...)
