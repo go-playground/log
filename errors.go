@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-playground/errors/v5"
 	runtimeext "github.com/go-playground/pkg/v5/runtime"
-	unsafeext "github.com/go-playground/pkg/v5/unsafe"
 )
 
 func errorsWithError(e Entry, err error) Entry {
@@ -19,10 +18,10 @@ func errorsWithError(e Entry, err error) Entry {
 		tags := make([]Field, 0, len(t))
 		dedupeTags := make(map[Field]bool)
 		dedupeType := make(map[string]bool)
-		buff := BytePool().Get()
+		errorBuff := BytePool().Get()
 		for _, e := range t {
-			buff.B = formatLink(e, buff.B)
-			buff.B = append(buff.B, ' ')
+			errorBuff.B = formatLink(e, errorBuff.B)
+			errorBuff.B = append(errorBuff.B, ' ')
 
 			for _, tag := range e.Tags {
 				field := Field{Key: tag.Key, Value: tag.Value}
@@ -42,24 +41,24 @@ func errorsWithError(e Entry, err error) Entry {
 			}
 		}
 
-		buff2 := BytePool().Get()
-		buff2.B = extractSource(buff2.B, frame)
-		ne.Fields = append(ne.Fields, Field{Key: "source", Value: unsafeext.BytesToString(buff2.B[:len(buff2.B)-1])})
-		BytePool().Put(buff2)
-		ne.Fields = append(ne.Fields, Field{Key: "error", Value: unsafeext.BytesToString(buff.B[:len(buff.B)-1])})
-		BytePool().Put(buff)
+		sourceBuff := BytePool().Get()
+		sourceBuff.B = extractSource(sourceBuff.B, frame)
+		ne.Fields = append(ne.Fields, Field{Key: "source", Value: string(sourceBuff.B[:len(sourceBuff.B)-1])})
+		BytePool().Put(sourceBuff)
+		ne.Fields = append(ne.Fields, Field{Key: "error", Value: string(errorBuff.B[:len(errorBuff.B)-1])})
+		BytePool().Put(errorBuff)
 
 		ne.Fields = append(ne.Fields, tags...) // we do it this way to maintain order of error, source as first fields
 		if len(types) > 0 {
-			ne.Fields = append(ne.Fields, Field{Key: "types", Value: unsafeext.BytesToString(types[:len(types)-1])})
+			ne.Fields = append(ne.Fields, Field{Key: "types", Value: string(types[:len(types)-1])})
 		}
 
 	default:
-		buff := BytePool().Get()
-		buff.B = extractSource(buff.B, frame)
-		buff.B = append(buff.B, err.Error()...)
-		ne.Fields = append(ne.Fields, Field{Key: "error", Value: string(buff.B)})
-		BytePool().Put(buff)
+		errorBuff := BytePool().Get()
+		errorBuff.B = extractSource(errorBuff.B, frame)
+		errorBuff.B = append(errorBuff.B, err.Error()...)
+		ne.Fields = append(ne.Fields, Field{Key: "error", Value: string(errorBuff.B)})
+		BytePool().Put(errorBuff)
 	}
 	return ne
 }
