@@ -82,7 +82,7 @@ func (c *Logger) handleStdLogger(ready chan<- struct{}) {
 	}()
 
 	for scanner.Scan() {
-		WithField("stdlog", true).Info(scanner.Text())
+		WithField("stdlog", true).Notice(scanner.Text())
 	}
 	_ = c.r.Close()
 	_ = w.Close()
