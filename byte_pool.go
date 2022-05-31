@@ -17,6 +17,7 @@ func (p *byteArrayPool) Put(buff *Buffer) {
 	p.pool.Put(buff)
 }
 
+// Buffer is a mere wrapper for a byte slice. It is intended to be used by Handlers.
 type Buffer struct {
 	B []byte
 }

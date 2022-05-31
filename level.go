@@ -1,6 +1,8 @@
 package log
 
-import "bytes"
+import (
+	"bytes"
+)
 
 // AllLevels is an array of all log levels, for easier registering of all levels to a handler
 var AllLevels = []Level{
@@ -48,7 +50,7 @@ func (l Level) String() string {
 	case FatalLevel:
 		return "FATAL"
 	default:
-		return "Unknow Level"
+		return "Unknown Level"
 	}
 }
 

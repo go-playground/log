@@ -15,16 +15,13 @@ var (
 			}
 		},
 	}}
-	defaultHandlerRegistered = false
-	defaultHandler           *Console
+	defaultHandler *Console
 )
 
 func init() {
-	if defaultHandler == nil {
-		defaultHandler = NewDefaultLogger(true)
-		AddHandler(defaultHandler, AllLevels...)
-		defaultHandlerRegistered = true
-	}
+	h := NewDefaultLogger(true)
+	AddHandler(h, AllLevels...)
+	defaultHandler = h
 }
 
 const (
@@ -113,11 +110,10 @@ func F(key string, value interface{}) Field {
 func AddHandler(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
-	if defaultHandlerRegistered {
+	if defaultHandler != nil {
 		removeHandler(h)
 		_ = defaultHandler.closeAlreadyLocked()
 		defaultHandler = nil
-		defaultHandlerRegistered = false
 	}
 	for _, level := range levels {
 		handler := append(logHandlers[level], h)

@@ -273,7 +273,7 @@ func TestLevel(t *testing.T) {
 	}{
 		{
 			value: Level(255).String(),
-			want:  "Unknow Level",
+			want:  "Unknown Level",
 		},
 		{
 			value: DebugLevel.String(),
@@ -931,7 +931,7 @@ func TestParseLevel(t *testing.T) {
 	}{
 		{
 			level: Level(255),
-			value: "Unknow Level",
+			value: "Unknown Level",
 		},
 		{
 			level: DebugLevel,
