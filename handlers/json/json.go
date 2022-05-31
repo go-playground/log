@@ -2,23 +2,23 @@
 package json
 
 import (
-	jsn "encoding/json"
+	stdjson "encoding/json"
 	"io"
 	"sync"
 
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
 )
 
 // Handler implementation.
 type Handler struct {
-	*jsn.Encoder
 	m sync.Mutex
+	*stdjson.Encoder
 }
 
 // New handler.
 func New(w io.Writer) *Handler {
 	return &Handler{
-		Encoder: jsn.NewEncoder(w),
+		Encoder: stdjson.NewEncoder(w),
 	}
 }
 

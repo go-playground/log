@@ -7,8 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-playground/log/v7"
-	"github.com/go-playground/log/v7/handlers/console"
+	"github.com/go-playground/log/v8"
 )
 
 var errExample = errors.New("fail")
@@ -31,9 +30,7 @@ var _jane = user{
 // annoying because you have to manipulate the TestMain before
 // running the benchmark you want.
 func TestMain(m *testing.M) {
-	cLog := console.New(false)
-	cLog.SetDisplayColor(false)
-	cLog.SetWriter(ioutil.Discard)
+	cLog := log.NewBuilder().WithGoSTDErrLogs(false).WithWriter(ioutil.Discard).Build()
 	log.AddHandler(cLog, log.AllLevels...)
 	os.Exit(m.Run())
 }

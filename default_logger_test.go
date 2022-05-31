@@ -10,26 +10,24 @@ import (
 	"time"
 )
 
-// NOTES:
-// - Run "go test" to run tests
-// - Run "gocov test | gocov report" to report on test converage by file
-// - Run "gocov test | gocov annotate -" to report on all code and functions, those ,marked with "MISS" were never called
+//NOTES:
+//- Run "go test" to run tests
+//- Run "gocov test | gocov report" to report on test converage by file
+//- Run "gocov test | gocov annotate -" to report on all code and functions, those ,marked with "MISS" were never called
 //
-// or
-// -- may be a good idea to change to output path to somewherelike /tmp
-// go test -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
+//or
+//-- may be a good idea to change to output path to somewherelike /tmp
+//go test -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
 
-func TestDefaultLogger(t *testing.T) {
-	SetExitFunc(func(int) {})
-	tests := getConsoleLoggerColorTests()
+func TestConsoleLogger(t *testing.T) {
+	tests := getConsoleLoggerTests()
 	buff := new(buffer)
-	defaultLoggerWriter = buff
-	defaultLoggerTimeFormat = ""
-	cLog := newDefaultLogger()
-	defer func() { cLog.Close() }()
 
+	SetExitFunc(func(int) {})
+
+	cLog := NewBuilder().WithWriter(buff).WithTimestampFormat("").Build()
 	AddHandler(cLog, AllLevels...)
-
+	defer func() { _ = cLog.Close() }()
 	for i, tt := range tests {
 
 		buff.Reset()
@@ -71,17 +69,11 @@ func TestDefaultLogger(t *testing.T) {
 				l.Errorf(tt.printf, tt.msg)
 			}
 		case PanicLevel:
-			func() {
-				defer func() {
-					_ = recover()
-				}()
-
-				if len(tt.printf) == 0 {
-					l.Panic(tt.msg)
-				} else {
-					l.Panicf(tt.printf, tt.msg)
-				}
-			}()
+			if len(tt.printf) == 0 {
+				l.Panic(tt.msg)
+			} else {
+				l.Panicf(tt.printf, tt.msg)
+			}
 		case AlertLevel:
 			if len(tt.printf) == 0 {
 				l.Alert(tt.msg)
@@ -98,10 +90,7 @@ func TestDefaultLogger(t *testing.T) {
 
 func TestConsoleSTDLogCapturing(t *testing.T) {
 	buff := new(buffer)
-	defaultLoggerWriter = buff
-	defaultLoggerTimeFormat = "MST"
-	cLog := newDefaultLogger()
-	defer func() { cLog.Close() }()
+	cLog := NewBuilder().WithWriter(buff).WithTimestampFormat("MST").Build()
 	AddHandler(cLog, AllLevels...)
 
 	stdlog.Println("STD LOG message")
@@ -117,107 +106,106 @@ func TestConsoleSTDLogCapturing(t *testing.T) {
 	}
 }
 
-func getConsoleLoggerColorTests() []test {
+type test struct {
+	lvl    Level
+	msg    string
+	flds   []Field
+	want   string
+	printf string
+}
+
+func getConsoleLoggerTests() []test {
 	return []test{
+		{
+			lvl:  DebugLevel,
+			msg:  "debug",
+			flds: nil,
+			want: "  DEBUG debug\n",
+		},
 		{
 			lvl:    DebugLevel,
 			msg:    "debugf",
 			printf: "%s",
 			flds:   nil,
-			want: " [32m DEBUG[0m debugf\n",
+			want:   "  DEBUG debugf\n",
 		},
 		{
-			lvl:  DebugLevel,
-			msg:  "debug",
+			lvl:  InfoLevel,
+			msg:  "info",
 			flds: nil,
-			want: " [32m DEBUG[0m debug\n",
+			want: "   INFO info\n",
 		},
 		{
 			lvl:    InfoLevel,
 			msg:    "infof",
 			printf: "%s",
 			flds:   nil,
-			want: " [34m  INFO[0m infof\n",
+			want:   "   INFO infof\n",
 		},
 		{
-			lvl:  InfoLevel,
-			msg:  "info",
+			lvl:  NoticeLevel,
+			msg:  "notice",
 			flds: nil,
-			want: " [34m  INFO[0m info\n",
+			want: " NOTICE notice\n",
 		},
 		{
 			lvl:    NoticeLevel,
 			msg:    "noticef",
 			printf: "%s",
 			flds:   nil,
-			want: " [36;1mNOTICE[0m noticef\n",
+			want:   " NOTICE noticef\n",
 		},
 		{
-			lvl:  NoticeLevel,
-			msg:  "notice",
+			lvl:  WarnLevel,
+			msg:  "warn",
 			flds: nil,
-			want: " [36;1mNOTICE[0m notice\n",
+			want: "   WARN warn\n",
 		},
 		{
 			lvl:    WarnLevel,
 			msg:    "warnf",
 			printf: "%s",
 			flds:   nil,
-			want: " [33;1m  WARN[0m warnf\n",
+			want:   "   WARN warnf\n",
 		},
 		{
-			lvl:  WarnLevel,
-			msg:  "warn",
+			lvl:  ErrorLevel,
+			msg:  "error",
 			flds: nil,
-			want: " [33;1m  WARN[0m warn\n",
+			want: "  ERROR error\n",
 		},
 		{
 			lvl:    ErrorLevel,
 			msg:    "errorf",
 			printf: "%s",
 			flds:   nil,
-			want: " [31;1m ERROR[0m errorf\n",
+			want:   "  ERROR errorf\n",
 		},
 		{
-			lvl:  ErrorLevel,
-			msg:  "error",
+			lvl:  AlertLevel,
+			msg:  "alert",
 			flds: nil,
-			want: " [31;1m ERROR[0m error\n",
+			want: "  ALERT alert\n",
 		},
 		{
 			lvl:    AlertLevel,
 			msg:    "alertf",
 			printf: "%s",
 			flds:   nil,
-			want: " [31m[4m ALERT[0m alertf\n",
+			want:   "  ALERT alertf\n",
 		},
 		{
-			lvl:  AlertLevel,
-			msg:  "alert",
+			lvl:  PanicLevel,
+			msg:  "panic",
 			flds: nil,
-			want: " [31m[4m ALERT[0m alert\n",
+			want: "  PANIC panic\n",
 		},
 		{
 			lvl:    PanicLevel,
 			msg:    "panicf",
 			printf: "%s",
 			flds:   nil,
-			want: " [31m PANIC[0m panicf\n",
-		},
-		{
-			lvl:  PanicLevel,
-			msg:  "panic",
-			flds: nil,
-			want: " [31m PANIC[0m panic\n",
-		},
-		{
-			lvl:    DebugLevel,
-			msg:    "debugf",
-			printf: "%s",
-			flds: []Field{
-				F("key", "value"),
-			},
-			want: " [32m DEBUG[0m debugf [32mkey[0m=value\n",
+			want:   "  PANIC panicf\n",
 		},
 		{
 			lvl: DebugLevel,
@@ -225,7 +213,24 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [32m DEBUG[0m debug [32mkey[0m=value\n",
+			want: "  DEBUG debug key=value\n",
+		},
+		{
+			lvl:    DebugLevel,
+			msg:    "debugf",
+			printf: "%s",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "  DEBUG debugf key=value\n",
+		},
+		{
+			lvl: InfoLevel,
+			msg: "info",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "   INFO info key=value\n",
 		},
 		{
 			lvl:    InfoLevel,
@@ -234,15 +239,15 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [34m  INFO[0m infof [34mkey[0m=value\n",
+			want: "   INFO infof key=value\n",
 		},
 		{
-			lvl: InfoLevel,
-			msg: "info",
+			lvl: NoticeLevel,
+			msg: "notice",
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [34m  INFO[0m info [34mkey[0m=value\n",
+			want: " NOTICE notice key=value\n",
 		},
 		{
 			lvl:    NoticeLevel,
@@ -251,15 +256,15 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [36;1mNOTICE[0m noticef [36;1mkey[0m=value\n",
+			want: " NOTICE noticef key=value\n",
 		},
 		{
-			lvl: NoticeLevel,
-			msg: "notice",
+			lvl: WarnLevel,
+			msg: "warn",
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [36;1mNOTICE[0m notice [36;1mkey[0m=value\n",
+			want: "   WARN warn key=value\n",
 		},
 		{
 			lvl:    WarnLevel,
@@ -268,15 +273,15 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [33;1m  WARN[0m warnf [33;1mkey[0m=value\n",
+			want: "   WARN warnf key=value\n",
 		},
 		{
-			lvl: WarnLevel,
-			msg: "warn",
+			lvl: ErrorLevel,
+			msg: "error",
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [33;1m  WARN[0m warn [33;1mkey[0m=value\n",
+			want: "  ERROR error key=value\n",
 		},
 		{
 			lvl:    ErrorLevel,
@@ -285,15 +290,23 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [31;1m ERROR[0m errorf [31;1mkey[0m=value\n",
+			want: "  ERROR errorf key=value\n",
 		},
 		{
-			lvl: ErrorLevel,
-			msg: "error",
+			lvl: AlertLevel,
+			msg: "alert",
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [31;1m ERROR[0m error [31;1mkey[0m=value\n",
+			want: "  ALERT alert key=value\n",
+		},
+		{
+			lvl: AlertLevel,
+			msg: "alert",
+			flds: []Field{
+				F("key", "value"),
+			},
+			want: "  ALERT alert key=value\n",
 		},
 		{
 			lvl:    AlertLevel,
@@ -302,15 +315,7 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [31m[4m ALERT[0m alertf [31m[4mkey[0m=value\n",
-		},
-		{
-			lvl: AlertLevel,
-			msg: "alert",
-			flds: []Field{
-				F("key", "value"),
-			},
-			want: " [31m[4m ALERT[0m alert [31m[4mkey[0m=value\n",
+			want: "  ALERT alertf key=value\n",
 		},
 		{
 			lvl:    PanicLevel,
@@ -319,7 +324,7 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [31m PANIC[0m panicf [31mkey[0m=value\n",
+			want: "  PANIC panicf key=value\n",
 		},
 		{
 			lvl: PanicLevel,
@@ -327,7 +332,7 @@ func getConsoleLoggerColorTests() []test {
 			flds: []Field{
 				F("key", "value"),
 			},
-			want: " [31m PANIC[0m panic [31mkey[0m=value\n",
+			want: "  PANIC panic key=value\n",
 		},
 		{
 			lvl: DebugLevel,
@@ -344,12 +349,10 @@ func getConsoleLoggerColorTests() []test {
 				F("key", uint16(3)),
 				F("key", uint32(4)),
 				F("key", uint64(5)),
-				F("key", float32(5.33)),
-				F("key", float64(5.34)),
 				F("key", true),
 				F("key", struct{ value string }{"struct"}),
 			},
-			want: " [32m DEBUG[0m debug [32mkey[0m=string [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=1 [32mkey[0m=2 [32mkey[0m=3 [32mkey[0m=4 [32mkey[0m=5 [32mkey[0m=5.33 [32mkey[0m=5.34 [32mkey[0m=true [32mkey[0m={struct}\n",
+			want: "  DEBUG debug key=string key=1 key=2 key=3 key=4 key=5 key=1 key=2 key=3 key=4 key=5 key=true key={struct}\n",
 		},
 	}
 }

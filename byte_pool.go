@@ -2,16 +2,22 @@ package log
 
 import "sync"
 
-// BytePool represents a reusable byte pool. It is a centralized global instance for this package and can be accessed by
-// calling log.BytePool(). It is intended to be used by Handlers.
-type ByteArrayPool struct {
+// byteArrayPool represents a reusable byte pool. It is a centralized global instance for this package and can be
+// accessed by calling log.BytePool(). It is intended to be used by Handlers.
+type byteArrayPool struct {
 	pool *sync.Pool
 }
 
-func (p *ByteArrayPool) Get() []byte {
-	return p.pool.Get().([]byte)
+func (p *byteArrayPool) Get() *Buffer {
+	return p.pool.Get().(*Buffer)
 }
 
-func (p *ByteArrayPool) Put(b []byte) {
-	p.pool.Put(b[:0])
+func (p *byteArrayPool) Put(buff *Buffer) {
+	buff.B = buff.B[:0]
+	p.pool.Put(buff)
+}
+
+// Buffer is a mere wrapper for a byte slice. It is intended to be used by Handlers.
+type Buffer struct {
+	B []byte
 }

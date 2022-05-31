@@ -5,32 +5,29 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (
-	bytePool = &ByteArrayPool{pool: &sync.Pool{
+	bytePool = &byteArrayPool{pool: &sync.Pool{
 		New: func() interface{} {
-			return make([]byte, 0, 32)
+			return &Buffer{
+				B: make([]byte, 0, 32),
+			}
 		},
 	}}
-	defaultHandlerRegistered = false
-	defaultHandler           *console
+	defaultHandler *Logger
 )
 
 func init() {
-	if terminal.IsTerminal(int(os.Stdout.Fd())) {
-		defaultHandler = newDefaultLogger()
-		AddHandler(defaultHandler, AllLevels...)
-		defaultHandlerRegistered = true
-	}
+	h := NewBuilder().Build()
+	AddHandler(h, AllLevels...)
+	defaultHandler = h
 }
 
 const (
 	// DefaultTimeFormat is the default time format when parsing Time values.
 	// it is exposed to allow handlers to use and not have to redefine
-	DefaultTimeFormat = "2006-01-02T15:04:05.000000000Z07:00"
+	DefaultTimeFormat = "2006-01-02T15:04:05.000000000Z07:00" // RFC3339Nano
 )
 
 var (
@@ -54,7 +51,7 @@ type Field struct {
 
 // SetExitFunc sets the provided function as the exit function used in Fatal(),
 // Fatalf(), Panic() and Panicf(). This is primarily used when wrapping this library,
-// you can set this to to enable testing (with coverage) of your Fatal() and Fatalf()
+// you can set this to enable testing (with coverage) of your Fatal() and Fatalf()
 // methods.
 func SetExitFunc(fn func(code int)) {
 	exitFunc = fn
@@ -82,7 +79,7 @@ func GetContext(ctx context.Context) Entry {
 
 // BytePool returns a sync.Pool of bytes that multiple handlers can use in order to reduce allocation and keep
 // a central copy for reuse.
-func BytePool() *ByteArrayPool {
+func BytePool() *byteArrayPool {
 	return bytePool
 }
 
@@ -108,16 +105,15 @@ func F(key string, value interface{}) Field {
 	return Field{Key: key, Value: value}
 }
 
-// AddHandler adds a new log handler and accepts which log levels that
-// handler will be triggered for
+// AddHandler adds a new log handlers and accepts which log levels that
+// handlers will be triggered for
 func AddHandler(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
-	if defaultHandlerRegistered {
-		removeHandler(defaultHandler)
-		defaultHandler.Close()
+	if defaultHandler != nil {
+		removeHandler(h)
+		_ = defaultHandler.closeAlreadyLocked()
 		defaultHandler = nil
-		defaultHandlerRegistered = false
 	}
 	for _, level := range levels {
 		handler := append(logHandlers[level], h)
@@ -150,7 +146,7 @@ OUTER:
 }
 
 // RemoveHandlerLevels removes the supplied levels, if no more levels exists for the handler
-// it will no longer be registered and need to to added via AddHandler again.
+// it will no longer be registered and need to added via AddHandler again.
 func RemoveHandlerLevels(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
@@ -190,8 +186,8 @@ func WithFields(fields ...Field) Entry {
 	return ne
 }
 
-// WithTrace withh add duration of how long the between this function call and
-// the susequent log
+// WithTrace with add duration of how long the between this function call and
+// the subsequent log
 func WithTrace() Entry {
 	ne := newEntryWithFields(logFields)
 	ne.start = time.Now()
@@ -222,7 +218,7 @@ func Info(v ...interface{}) {
 	e.Info(v...)
 }
 
-// Infof logs a normal. information, entry with formatiing
+// Infof logs a normal. information, entry with formatting
 func Infof(s string, v ...interface{}) {
 	e := newEntryWithFields(logFields)
 	e.Infof(s, v...)
@@ -240,13 +236,13 @@ func Noticef(s string, v ...interface{}) {
 	e.Noticef(s, v...)
 }
 
-// Warn logs a warn log entry
+// Warn logs a warning log entry
 func Warn(v ...interface{}) {
 	e := newEntryWithFields(logFields)
 	e.Warn(v...)
 }
 
-// Warnf logs a warn log entry with formatting
+// Warnf logs a warning log entry with formatting
 func Warnf(s string, v ...interface{}) {
 	e := newEntryWithFields(logFields)
 	e.Warnf(s, v...)

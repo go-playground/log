@@ -40,17 +40,10 @@ func (th *testHandler) Log(e Entry) {
 	}
 }
 
-type test struct {
-	lvl    Level
-	msg    string
-	flds   []Field
-	want   string
-	printf string
-}
-
 func TestConsoleLogger1(t *testing.T) {
 	SetExitFunc(func(int) {})
 	SetWithErrorFn(errorsWithError)
+
 	tests := getLogTests1()
 	buff := new(bytes.Buffer)
 	th := &testHandler{
@@ -280,7 +273,7 @@ func TestLevel(t *testing.T) {
 	}{
 		{
 			value: Level(255).String(),
-			want:  "Unknow Level",
+			want:  "Unknown Level",
 		},
 		{
 			value: DebugLevel.String(),
@@ -366,18 +359,18 @@ func TestWithError(t *testing.T) {
 
 	terr := fmt.Errorf("this is an %s", "err")
 	WithError(terr).Info()
-	if !strings.HasSuffix(buff.String(), "log_test.go:368\n") {
-		t.Errorf("Expected '%s' Got '%s'", "log_test.go:368\n", buff.String())
+	if !strings.HasSuffix(buff.String(), "log_test.go:361:TestWithError this is an err\n") {
+		t.Errorf("Expected '%s' Got '%s'", "log_test.go:361:TestWithError this is an err\n", buff.String())
 	}
 	buff.Reset()
 	Entry{}.WithError(terr).Info()
-	if !strings.HasSuffix(buff.String(), "log_test.go:373\n") {
-		t.Errorf("Expected '%s' Got '%s'", "log_test.go:373\n", buff.String())
+	if !strings.HasSuffix(buff.String(), "log_test.go:366:TestWithError this is an err\n") {
+		t.Errorf("Expected '%s' Got '%s'", "log_test.go:366:TestWithError this is an err\n", buff.String())
 	}
 	buff.Reset()
 	WithError(errors.Wrap(terr, "wrapped error")).Info()
-	if !strings.HasSuffix(buff.String(), "log_test.go:378\n") || !strings.HasPrefix(buff.String(), "INFO  error=wrapped error: this is an err source=TestWithError:") {
-		t.Errorf("Expected '%s' Got '%s'", "log_test.go:378\n", buff.String())
+	if !strings.HasSuffix(buff.String(), "log_test.go:371:TestWithError wrapped error: this is an err\n") || !strings.HasPrefix(buff.String(), "INFO  source=") {
+		t.Errorf("Expected '%s' Got '%s'", "log_test.go:371:TestWithError wrapped error: this is an err\n", buff.String())
 	}
 }
 
@@ -938,7 +931,7 @@ func TestParseLevel(t *testing.T) {
 	}{
 		{
 			level: Level(255),
-			value: "Unknow Level",
+			value: "Unknown Level",
 		},
 		{
 			level: DebugLevel,
@@ -999,7 +992,7 @@ func TestWrappedError(t *testing.T) {
 	err := fmt.Errorf("this is an %s", "error")
 	err = errors.Wrap(err, "prefix").AddTypes("Permanent", "Internal").AddTag("key", "value")
 	WithError(err).Error("test")
-	expected := "log_test.go:1000 key=value types=Permanent,Internal\n"
+	expected := "log_test.go:993:TestWrappedError prefix: this is an error key=value types=Permanent,Internal\n"
 	if !strings.HasSuffix(buff.String(), expected) {
 		t.Errorf("got %s Expected %s", buff.String(), expected)
 	}
@@ -1054,10 +1047,10 @@ func TestRemoveHandlerLevels(t *testing.T) {
 	AddHandler(th2, InfoLevel)
 	RemoveHandlerLevels(th, InfoLevel)
 	if len(logHandlers) != 1 {
-		t.Error("expected 1 handler left")
+		t.Error("expected 1 handlers left")
 	}
 	if len(logHandlers[InfoLevel]) != 1 {
-		t.Error("expected 1 handler with InfoLevel left")
+		t.Error("expected 1 handlers with InfoLevel left")
 	}
 	RemoveHandlerLevels(th2, InfoLevel)
 	if len(logHandlers) != 0 {
@@ -1072,7 +1065,7 @@ func TestRemoveHandlerLevels(t *testing.T) {
 
 	for _, handlers := range logHandlers {
 		if len(handlers) != 1 {
-			t.Error("expected 1 handler for log level")
+			t.Error("expected 1 handlers for log level")
 		}
 	}
 }

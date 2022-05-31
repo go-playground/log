@@ -1,8 +1,10 @@
 package main
 
 import (
+	"io"
+
 	"github.com/go-playground/errors/v5"
-	"github.com/go-playground/log/v7"
+	"github.com/go-playground/log/v8"
 )
 
 func main() {
@@ -18,9 +20,14 @@ func main() {
 	log.Alert("alert")
 	// log.Fatal("fatal") // this will call os.Exit(1)
 
-	err := errors.New("the is an error")
+	err := errors.New("this is the inner error").AddTags(errors.T("inner", "tag"))
+	err = errors.Wrap(err, "this is the wrapping error").AddTags(errors.T("outer", "tag"))
+
 	// logging with fields can be used with any of the above
 	log.WithError(err).WithFields(log.F("key", "value")).Info("test info")
+
+	// log unwrapped error
+	log.WithError(io.EOF).Error("unwrapped error")
 
 	// predefined global fields
 	log.WithDefaultFields(log.Fields{
