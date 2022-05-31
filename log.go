@@ -5,6 +5,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"golang.org/x/term"
 )
 
 var (
@@ -19,9 +21,11 @@ var (
 )
 
 func init() {
-	h := NewBuilder().Build()
-	AddHandler(h, AllLevels...)
-	defaultHandler = h
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		h := NewBuilder().Build()
+		AddHandler(h, AllLevels...)
+		defaultHandler = h
+	}
 }
 
 const (
