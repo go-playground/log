@@ -30,8 +30,7 @@ var _jane = user{
 // annoying because you have to manipulate the TestMain before
 // running the benchmark you want.
 func TestMain(m *testing.M) {
-	cLog := log.NewDefaultLogger(false)
-	cLog.SetWriter(ioutil.Discard)
+	cLog := log.NewBuilder().WithGoSTDErrLogs(false).WithWriter(ioutil.Discard).Build()
 	log.AddHandler(cLog, log.AllLevels...)
 	os.Exit(m.Run())
 }

@@ -18,21 +18,43 @@ const (
 	v       = "%v"
 )
 
-// Console is an instance of the console logger
-type Console struct {
-	m               sync.Mutex
+// Builder is used to create a new console logger
+type Builder struct {
 	writer          io.Writer
-	r               *io.PipeReader
 	timestampFormat string
+	redirect        bool
 }
 
-// NewDefaultLogger returns a new instance of the console logger
-func NewDefaultLogger(redirectGoStdErrLogs bool) *Console {
-	c := &Console{
+// NewBuilder creates a new Builder for configuring and creating a new console logger
+func NewBuilder() *Builder {
+	return &Builder{
 		writer:          os.Stderr,
-		timestampFormat: "2006-01-02T15:04:05.000000000Z07:00", // RFC3339Nano
+		timestampFormat: DefaultTimeFormat,
+		redirect:        true,
 	}
-	if redirectGoStdErrLogs {
+}
+
+func (b *Builder) WithGoSTDErrLogs(redirect bool) *Builder {
+	b.redirect = redirect
+	return b
+}
+
+func (b *Builder) WithWriter(writer io.Writer) *Builder {
+	b.writer = writer
+	return b
+}
+
+func (b *Builder) WithTimestampFormat(format string) *Builder {
+	b.timestampFormat = format
+	return b
+}
+
+func (b *Builder) Build() *Logger {
+	c := &Logger{
+		writer:          b.writer,
+		timestampFormat: b.timestampFormat,
+	}
+	if b.redirect {
 		ready := make(chan struct{})
 		go c.handleStdLogger(ready)
 		<-ready // have to wait, it was running too quickly and some messages can be lost
@@ -40,20 +62,16 @@ func NewDefaultLogger(redirectGoStdErrLogs bool) *Console {
 	return c
 }
 
-// SetTimestampFormat sets Console's timestamp output format
-// Default is : "2006-01-02T15:04:05.000000000Z07:00"
-func (c *Console) SetTimestampFormat(format string) {
-	c.timestampFormat = format
-}
-
-// SetWriter sets Console's writer
-// Default is : os.Stderr
-func (c *Console) SetWriter(w io.Writer) {
-	c.writer = w
+// Logger is an instance of the console logger
+type Logger struct {
+	m               sync.Mutex
+	writer          io.Writer
+	r               *io.PipeReader
+	timestampFormat string
 }
 
 // this will redirect the output of
-func (c *Console) handleStdLogger(ready chan<- struct{}) {
+func (c *Logger) handleStdLogger(ready chan<- struct{}) {
 	var w *io.PipeWriter
 	c.r, w = io.Pipe()
 	stdlog.SetOutput(w)
@@ -71,7 +89,7 @@ func (c *Console) handleStdLogger(ready chan<- struct{}) {
 }
 
 // Log handles the log entry
-func (c *Console) Log(e Entry) {
+func (c *Logger) Log(e Entry) {
 	var lvl string
 	var i int
 	buff := BytePool().Get()
@@ -136,7 +154,7 @@ func (c *Console) Log(e Entry) {
 }
 
 // Close cleans up any resources and de-registers the handler with the logger
-func (c *Console) Close() error {
+func (c *Logger) Close() error {
 	RemoveHandler(c)
 	// reset the output back to original
 	// since we reset the output prior to closing we don't have to wait
@@ -147,7 +165,7 @@ func (c *Console) Close() error {
 	return nil
 }
 
-func (c *Console) closeAlreadyLocked() error {
+func (c *Logger) closeAlreadyLocked() error {
 	removeHandler(c)
 	// reset the output back to original
 	// since we reset the output prior to closing we don't have to wait

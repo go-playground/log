@@ -15,11 +15,11 @@ var (
 			}
 		},
 	}}
-	defaultHandler *Console
+	defaultHandler *Logger
 )
 
 func init() {
-	h := NewDefaultLogger(true)
+	h := NewBuilder().Build()
 	AddHandler(h, AllLevels...)
 	defaultHandler = h
 }
@@ -27,7 +27,7 @@ func init() {
 const (
 	// DefaultTimeFormat is the default time format when parsing Time values.
 	// it is exposed to allow handlers to use and not have to redefine
-	DefaultTimeFormat = "2006-01-02T15:04:05.000000000Z07:00"
+	DefaultTimeFormat = "2006-01-02T15:04:05.000000000Z07:00" // RFC3339Nano
 )
 
 var (
