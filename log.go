@@ -76,7 +76,7 @@ func SetContext(ctx context.Context, e Entry) context.Context {
 func GetContext(ctx context.Context) Entry {
 	v := ctx.Value(ctxIdent)
 	if v == nil {
-		return newEntryWithFields(nil)
+		return newEntry()
 	}
 	return v.(Entry)
 }
@@ -178,125 +178,123 @@ func WithDefaultFields(fields ...Field) {
 
 // WithField returns a new log entry with the supplied field.
 func WithField(key string, value interface{}) Entry {
-	ne := newEntryWithFields(logFields)
-	ne.Fields = append(ne.Fields, Field{Key: key, Value: value})
+	ne := newEntry(Field{Key: key, Value: value})
 	return ne
 }
 
 // WithFields returns a new log entry with the supplied fields appended
 func WithFields(fields ...Field) Entry {
-	ne := newEntryWithFields(logFields)
-	ne.Fields = append(ne.Fields, fields...)
+	ne := newEntry(fields...)
 	return ne
 }
 
 // WithTrace with add duration of how long the between this function call and
 // the subsequent log
 func WithTrace() Entry {
-	ne := newEntryWithFields(logFields)
+	ne := newEntry()
 	ne.start = time.Now()
 	return ne
 }
 
 // WithError add a minimal stack trace to the log Entry
 func WithError(err error) Entry {
-	ne := newEntryWithFields(logFields)
+	ne := newEntry()
 	return withErrFn(ne, err)
 }
 
 // Debug logs a debug entry
 func Debug(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Debug(v...)
 }
 
 // Debugf logs a debug entry with formatting
 func Debugf(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Debugf(s, v...)
 }
 
 // Info logs a normal. information, entry
 func Info(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Info(v...)
 }
 
 // Infof logs a normal. information, entry with formatting
 func Infof(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Infof(s, v...)
 }
 
 // Notice logs a notice log entry
 func Notice(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Notice(v...)
 }
 
 // Noticef logs a notice log entry with formatting
 func Noticef(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Noticef(s, v...)
 }
 
 // Warn logs a warning log entry
 func Warn(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Warn(v...)
 }
 
 // Warnf logs a warning log entry with formatting
 func Warnf(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Warnf(s, v...)
 }
 
 // Panic logs a panic log entry
 func Panic(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Panic(v...)
 }
 
 // Panicf logs a panic log entry with formatting
 func Panicf(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Panicf(s, v...)
 }
 
 // Alert logs an alert log entry
 func Alert(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Alert(v...)
 }
 
 // Alertf logs an alert log entry with formatting
 func Alertf(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Alertf(s, v...)
 }
 
 // Fatal logs a fatal log entry
 func Fatal(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Fatal(v...)
 }
 
 // Fatalf logs a fatal log entry with formatting
 func Fatalf(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Fatalf(s, v...)
 }
 
 // Error logs an error log entry
 func Error(v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Error(v...)
 }
 
 // Errorf logs an error log entry with formatting
 func Errorf(s string, v ...interface{}) {
-	e := newEntryWithFields(logFields)
+	e := newEntry()
 	e.Errorf(s, v...)
 }
 

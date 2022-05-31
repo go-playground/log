@@ -17,31 +17,31 @@ type Entry struct {
 	start     time.Time
 }
 
-func newEntry(e Entry) Entry {
-	fields := make([]Field, 0, len(e.Fields))
-	e.Fields = append(fields, e.Fields...)
+func (e Entry) clone(fields ...Field) Entry {
+	f := make([]Field, 0, len(e.Fields)+len(fields))
+	e.Fields = append(f, e.Fields...)
+	e.Fields = append(f, fields...)
 	return e
 }
 
-func newEntryWithFields(fields []Field) Entry {
+func newEntry(fields ...Field) Entry {
 	e := Entry{
-		Fields: make([]Field, 0, len(fields)),
+		Fields: make([]Field, 0, len(fields)+len(logFields)),
 	}
+	e.Fields = append(e.Fields, logFields...)
 	e.Fields = append(e.Fields, fields...)
 	return e
 }
 
 // WithField returns a new log entry with the supplied field.
 func (e Entry) WithField(key string, value interface{}) Entry {
-	ne := newEntry(e)
-	ne.Fields = append(ne.Fields, Field{Key: key, Value: value})
+	ne := e.clone(Field{Key: key, Value: value})
 	return ne
 }
 
 // WithFields returns a new log entry with the supplied fields appended
 func (e Entry) WithFields(fields ...Field) Entry {
-	ne := newEntry(e)
-	ne.Fields = append(ne.Fields, fields...)
+	ne := e.clone(fields...)
 	return ne
 }
 
@@ -54,7 +54,7 @@ func (e Entry) WithTrace() Entry {
 
 // WithError add a minimal stack trace to the log Entry
 func (e Entry) WithError(err error) Entry {
-	return withErrFn(e, err)
+	return withErrFn(e.clone(), err)
 }
 
 // Debug logs a debug entry
