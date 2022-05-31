@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI to use GitHub Actions.
 - Documentation.
 - Default timestamp format to RFC3339Nano.
+- Console logger uses builder pattern.
 
 
 [Unreleased]: https://github.com/go-playground/log/compare/v8.0.0...HEAD
