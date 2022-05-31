@@ -9,7 +9,6 @@ import (
 )
 
 func errorsWithError(e Entry, err error) Entry {
-	ne := newEntry(e)
 	frame := runtimeext.StackLevel(2)
 
 	switch t := err.(type) {
@@ -43,24 +42,24 @@ func errorsWithError(e Entry, err error) Entry {
 
 		sourceBuff := BytePool().Get()
 		sourceBuff.B = extractSource(sourceBuff.B, frame)
-		ne.Fields = append(ne.Fields, Field{Key: "source", Value: string(sourceBuff.B[:len(sourceBuff.B)-1])})
+		e.Fields = append(e.Fields, Field{Key: "source", Value: string(sourceBuff.B[:len(sourceBuff.B)-1])})
 		BytePool().Put(sourceBuff)
-		ne.Fields = append(ne.Fields, Field{Key: "error", Value: string(errorBuff.B[:len(errorBuff.B)-1])})
+		e.Fields = append(e.Fields, Field{Key: "error", Value: string(errorBuff.B[:len(errorBuff.B)-1])})
 		BytePool().Put(errorBuff)
 
-		ne.Fields = append(ne.Fields, tags...) // we do it this way to maintain order of error, source as first fields
+		e.Fields = append(e.Fields, tags...) // we do it this way to maintain order of error, source as first fields
 		if len(types) > 0 {
-			ne.Fields = append(ne.Fields, Field{Key: "types", Value: string(types[:len(types)-1])})
+			e.Fields = append(e.Fields, Field{Key: "types", Value: string(types[:len(types)-1])})
 		}
 
 	default:
 		errorBuff := BytePool().Get()
 		errorBuff.B = extractSource(errorBuff.B, frame)
 		errorBuff.B = append(errorBuff.B, err.Error()...)
-		ne.Fields = append(ne.Fields, Field{Key: "error", Value: string(errorBuff.B)})
+		e.Fields = append(e.Fields, Field{Key: "error", Value: string(errorBuff.B)})
 		BytePool().Put(errorBuff)
 	}
-	return ne
+	return e
 }
 
 func extractSource(b []byte, source runtimeext.Frame) []byte {
