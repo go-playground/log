@@ -2,6 +2,7 @@ package log
 
 import (
 	"bytes"
+	"strings"
 )
 
 // AllLevels is an array of all log levels, for easier registering of all levels to a handler
@@ -54,8 +55,9 @@ func (l Level) String() string {
 	}
 }
 
-func level(s string) Level {
-	switch s {
+// ParseLevel parses the provided strings log level or if not supported return 255
+func ParseLevel(s string) Level {
+	switch strings.ToUpper(s) {
 	case "DEBUG":
 		return DebugLevel
 	case "INFO":
@@ -84,6 +86,6 @@ func (l Level) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implementation.
 func (l *Level) UnmarshalJSON(b []byte) error {
-	*l = level(string(bytes.Trim(b, `"`)))
+	*l = ParseLevel(string(bytes.Trim(b, `"`)))
 	return nil
 }
