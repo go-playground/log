@@ -18,38 +18,38 @@ const (
 	v       = "%v"
 )
 
-// Builder is used to create a new console logger
-type Builder struct {
+// ConsoleBuilder is used to create a new console logger
+type ConsoleBuilder struct {
 	writer          io.Writer
 	timestampFormat string
 	redirect        bool
 }
 
-// NewBuilder creates a new Builder for configuring and creating a new console logger
-func NewBuilder() *Builder {
-	return &Builder{
+// NewConsoleBuilder creates a new ConsoleBuilder for configuring and creating a new console logger
+func NewConsoleBuilder() *ConsoleBuilder {
+	return &ConsoleBuilder{
 		writer:          os.Stderr,
 		timestampFormat: DefaultTimeFormat,
 		redirect:        true,
 	}
 }
 
-func (b *Builder) WithGoSTDErrLogs(redirect bool) *Builder {
+func (b *ConsoleBuilder) WithGoSTDErrLogs(redirect bool) *ConsoleBuilder {
 	b.redirect = redirect
 	return b
 }
 
-func (b *Builder) WithWriter(writer io.Writer) *Builder {
+func (b *ConsoleBuilder) WithWriter(writer io.Writer) *ConsoleBuilder {
 	b.writer = writer
 	return b
 }
 
-func (b *Builder) WithTimestampFormat(format string) *Builder {
+func (b *ConsoleBuilder) WithTimestampFormat(format string) *ConsoleBuilder {
 	b.timestampFormat = format
 	return b
 }
 
-func (b *Builder) Build() *Logger {
+func (b *ConsoleBuilder) Build() *Logger {
 	c := &Logger{
 		writer:          b.writer,
 		timestampFormat: b.timestampFormat,

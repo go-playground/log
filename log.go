@@ -22,7 +22,7 @@ var (
 
 func init() {
 	if term.IsTerminal(int(os.Stdin.Fd())) {
-		h := NewBuilder().Build()
+		h := NewConsoleBuilder().Build()
 		AddHandler(h, AllLevels...)
 		defaultHandler = h
 	}
