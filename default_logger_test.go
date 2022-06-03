@@ -27,7 +27,6 @@ func TestConsoleLogger(t *testing.T) {
 
 	cLog := NewConsoleBuilder().WithWriter(buff).WithTimestampFormat("").Build()
 	AddHandler(cLog, AllLevels...)
-	defer func() { _ = cLog.Close() }()
 	for i, tt := range tests {
 
 		buff.Reset()
@@ -90,6 +89,7 @@ func TestConsoleLogger(t *testing.T) {
 
 func TestConsoleSTDLogCapturing(t *testing.T) {
 	buff := new(buffer)
+	RedirectGoStdLog(true)
 	cLog := NewConsoleBuilder().WithWriter(buff).WithTimestampFormat("MST").Build()
 	AddHandler(cLog, AllLevels...)
 

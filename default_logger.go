@@ -1,10 +1,8 @@
 package log
 
 import (
-	"bufio"
 	"fmt"
 	"io"
-	stdlog "log"
 	"os"
 	"strconv"
 	"sync"
@@ -22,7 +20,6 @@ const (
 type ConsoleBuilder struct {
 	writer          io.Writer
 	timestampFormat string
-	redirect        bool
 }
 
 // NewConsoleBuilder creates a new ConsoleBuilder for configuring and creating a new console logger
@@ -30,13 +27,7 @@ func NewConsoleBuilder() *ConsoleBuilder {
 	return &ConsoleBuilder{
 		writer:          os.Stderr,
 		timestampFormat: DefaultTimeFormat,
-		redirect:        true,
 	}
-}
-
-func (b *ConsoleBuilder) WithGoSTDErrLogs(redirect bool) *ConsoleBuilder {
-	b.redirect = redirect
-	return b
 }
 
 func (b *ConsoleBuilder) WithWriter(writer io.Writer) *ConsoleBuilder {
@@ -50,42 +41,17 @@ func (b *ConsoleBuilder) WithTimestampFormat(format string) *ConsoleBuilder {
 }
 
 func (b *ConsoleBuilder) Build() *Logger {
-	c := &Logger{
+	return &Logger{
 		writer:          b.writer,
 		timestampFormat: b.timestampFormat,
 	}
-	if b.redirect {
-		ready := make(chan struct{})
-		go c.handleStdLogger(ready)
-		<-ready // have to wait, it was running too quickly and some messages can be lost
-	}
-	return c
 }
 
 // Logger is an instance of the console logger
 type Logger struct {
 	m               sync.Mutex
 	writer          io.Writer
-	r               *io.PipeReader
 	timestampFormat string
-}
-
-// this will redirect the output of
-func (c *Logger) handleStdLogger(ready chan<- struct{}) {
-	var w *io.PipeWriter
-	c.r, w = io.Pipe()
-	stdlog.SetOutput(w)
-
-	scanner := bufio.NewScanner(c.r)
-	go func() {
-		close(ready)
-	}()
-
-	for scanner.Scan() {
-		WithField("stdlog", true).Notice(scanner.Text())
-	}
-	_ = c.r.Close()
-	_ = w.Close()
 }
 
 // Log handles the log entry
@@ -151,27 +117,4 @@ func (c *Logger) Log(e Entry) {
 	c.m.Unlock()
 
 	BytePool().Put(buff)
-}
-
-// Close cleans up any resources and de-registers the handler with the logger
-func (c *Logger) Close() error {
-	RemoveHandler(c)
-	// reset the output back to original
-	// since we reset the output prior to closing we don't have to wait
-	stdlog.SetOutput(os.Stderr)
-	if c.r != nil {
-		_ = c.r.Close()
-	}
-	return nil
-}
-
-func (c *Logger) closeAlreadyLocked() error {
-	removeHandler(c)
-	// reset the output back to original
-	// since we reset the output prior to closing we don't have to wait
-	stdlog.SetOutput(os.Stderr)
-	if c.r != nil {
-		_ = c.r.Close()
-	}
-	return nil
 }

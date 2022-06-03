@@ -2,12 +2,15 @@ package main
 
 import (
 	"io"
+	stdlog "log"
 
 	"github.com/go-playground/errors/v5"
 	"github.com/go-playground/log/v8"
 )
 
 func main() {
+	log.RedirectGoStdLog(true)
+
 	// Trace
 	defer log.WithTrace().Info("time to run")
 
@@ -44,4 +47,6 @@ func main() {
 	)
 
 	logger.WithField("key", "value").Info("test")
+
+	stdlog.Println("This was redirected from Go STD output!")
 }

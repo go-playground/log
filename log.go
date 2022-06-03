@@ -1,7 +1,10 @@
 package log
 
 import (
+	"bufio"
 	"context"
+	"io"
+	stdlog "log"
 	"os"
 	"sync"
 	"time"
@@ -44,13 +47,52 @@ var (
 	}{
 		name: "log",
 	}
-	rw sync.RWMutex
+	rw           sync.RWMutex
+	stdLogReader *io.PipeReader
 )
 
 // Field is a single Field key and value
 type Field struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
+}
+
+// RedirectGoStdLog is used to redirect Go's internal std log output to this logger. The logs will be emitted using
+// the Notice log level.
+func RedirectGoStdLog(redirect bool) {
+	if (redirect && stdLogReader != nil) || (!redirect && stdLogReader == nil) {
+		// already redirected or already not redirected
+		return
+	}
+	if !redirect {
+		// will stop scanner reading PipeReader
+		_ = stdLogReader.Close()
+		stdLogReader = nil
+		return
+	}
+
+	ready := make(chan struct{})
+
+	// last option is to redirect
+	go func() {
+		var w *io.PipeWriter
+		stdLogReader, w := io.Pipe()
+		defer func() {
+			_ = stdLogReader.Close()
+			_ = w.Close()
+		}()
+
+		stdlog.SetOutput(w)
+		// reset back to original value
+		defer stdlog.SetOutput(os.Stderr)
+
+		scanner := bufio.NewScanner(stdLogReader)
+		close(ready)
+		for scanner.Scan() {
+			WithField("stdlog", true).Notice(scanner.Text())
+		}
+	}()
+	<-ready
 }
 
 // SetExitFunc sets the provided function as the exit function used in Fatal(),
@@ -116,7 +158,6 @@ func AddHandler(h Handler, levels ...Level) {
 	defer rw.Unlock()
 	if defaultHandler != nil {
 		removeHandler(h)
-		_ = defaultHandler.closeAlreadyLocked()
 		defaultHandler = nil
 	}
 	for _, level := range levels {
@@ -149,9 +190,9 @@ OUTER:
 	}
 }
 
-// RemoveHandlerLevels removes the supplied levels, if no more levels exists for the handler
+// removeHandlerLevels removes the supplied levels, if no more levels exists for the handler
 // it will no longer be registered and need to added via AddHandler again.
-func RemoveHandlerLevels(h Handler, levels ...Level) {
+func removeHandlerLevels(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
 OUTER:
