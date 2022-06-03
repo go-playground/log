@@ -6,6 +6,7 @@ import (
 	"io"
 	stdlog "log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,8 +58,7 @@ type Field struct {
 	Value interface{} `json:"value"`
 }
 
-// RedirectGoStdLog is used to redirect Go's internal std log output to this logger. The logs will be emitted using
-// the Notice log level.
+// RedirectGoStdLog is used to redirect Go's internal std log output to this logger.
 func RedirectGoStdLog(redirect bool) {
 	if (redirect && stdLogReader != nil) || (!redirect && stdLogReader == nil) {
 		// already redirected or already not redirected
@@ -89,7 +89,14 @@ func RedirectGoStdLog(redirect bool) {
 		scanner := bufio.NewScanner(stdLogReader)
 		close(ready)
 		for scanner.Scan() {
-			WithField("stdlog", true).Notice(scanner.Text())
+			txt := scanner.Text()
+			if strings.Contains(txt, "error") {
+				WithField("stdlog", true).Error(txt)
+			} else if strings.Contains(txt, "warning") {
+				WithField("stdlog", true).Warn(txt)
+			} else {
+				WithField("stdlog", true).Notice(txt)
+			}
 		}
 	}()
 	<-ready
