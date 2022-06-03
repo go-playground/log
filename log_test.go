@@ -1038,27 +1038,27 @@ func TestRemoveHandlerLevels(t *testing.T) {
 	}
 	logHandlers = map[Level][]Handler{}
 	AddHandler(th, InfoLevel)
-	RemoveHandlerLevels(th, InfoLevel)
+	removeHandlerLevels(th, InfoLevel)
 	if len(logHandlers) != 0 {
 		t.Error("expected 0 handlers")
 	}
 
 	AddHandler(th, InfoLevel)
 	AddHandler(th2, InfoLevel)
-	RemoveHandlerLevels(th, InfoLevel)
+	removeHandlerLevels(th, InfoLevel)
 	if len(logHandlers) != 1 {
 		t.Error("expected 1 handlers left")
 	}
 	if len(logHandlers[InfoLevel]) != 1 {
 		t.Error("expected 1 handlers with InfoLevel left")
 	}
-	RemoveHandlerLevels(th2, InfoLevel)
+	removeHandlerLevels(th2, InfoLevel)
 	if len(logHandlers) != 0 {
 		t.Error("expected 0 handlers")
 	}
 
 	AddHandler(th, AllLevels...)
-	RemoveHandlerLevels(th, DebugLevel)
+	removeHandlerLevels(th, DebugLevel)
 	if len(logHandlers) != 7 {
 		t.Error("expected 7 log levels left")
 	}
