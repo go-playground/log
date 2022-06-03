@@ -49,4 +49,6 @@ func main() {
 	logger.WithField("key", "value").Info("test")
 
 	stdlog.Println("This was redirected from Go STD output!")
+	log.RedirectGoStdLog(false)
+	stdlog.Println("This was NOT redirected from Go STD output!")
 }

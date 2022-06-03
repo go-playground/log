@@ -48,8 +48,9 @@ var (
 	}{
 		name: "log",
 	}
-	rw           sync.RWMutex
-	stdLogReader *io.PipeReader
+	rw               sync.RWMutex
+	stdLogWriter     *io.PipeWriter
+	redirectComplete chan struct{}
 )
 
 // Field is a single Field key and value
@@ -60,33 +61,37 @@ type Field struct {
 
 // RedirectGoStdLog is used to redirect Go's internal std log output to this logger.
 func RedirectGoStdLog(redirect bool) {
-	if (redirect && stdLogReader != nil) || (!redirect && stdLogReader == nil) {
+	if (redirect && stdLogWriter != nil) || (!redirect && stdLogWriter == nil) {
 		// already redirected or already not redirected
 		return
 	}
 	if !redirect {
+		stdlog.SetOutput(os.Stderr)
 		// will stop scanner reading PipeReader
-		_ = stdLogReader.Close()
-		stdLogReader = nil
+		_ = stdLogWriter.Close()
+		stdLogWriter = nil
+		<-redirectComplete
 		return
 	}
 
 	ready := make(chan struct{})
+	redirectComplete = make(chan struct{})
 
 	// last option is to redirect
 	go func() {
-		var w *io.PipeWriter
-		stdLogReader, w := io.Pipe()
+		var r *io.PipeReader
+		r, stdLogWriter = io.Pipe()
 		defer func() {
-			_ = stdLogReader.Close()
-			_ = w.Close()
+			_ = r.Close()
 		}()
 
-		stdlog.SetOutput(w)
-		// reset back to original value
-		defer stdlog.SetOutput(os.Stderr)
+		stdlog.SetOutput(stdLogWriter)
+		defer func() {
+			close(redirectComplete)
+			redirectComplete = nil
+		}()
 
-		scanner := bufio.NewScanner(stdLogReader)
+		scanner := bufio.NewScanner(r)
 		close(ready)
 		for scanner.Scan() {
 			txt := scanner.Text()
