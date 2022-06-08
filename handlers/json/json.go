@@ -28,9 +28,3 @@ func (h *Handler) Log(e log.Entry) {
 	_ = h.Encoder.Encode(e)
 	h.m.Unlock()
 }
-
-// Close cleans up any resources and de-registers the handler with the logger
-func (h *Handler) Close() error {
-	log.RemoveHandler(h)
-	return nil
-}

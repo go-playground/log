@@ -11,7 +11,6 @@ import (
 func TestJSONLogger(t *testing.T) {
 	var buff bytes.Buffer
 	l := New(&buff)
-	defer func() { _ = l.Close() }()
 	log.AddHandler(l, log.AllLevels...)
 	log.WithField("key", "value").Debug("debug")
 	expected := `{"message":"debug","timestamp":"","fields":[{"key":"key","value":"value"}],"level":"DEBUG"}`
