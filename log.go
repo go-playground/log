@@ -17,7 +17,7 @@ var (
 	bytePool = &byteArrayPool{pool: &sync.Pool{
 		New: func() interface{} {
 			return &Buffer{
-				B: make([]byte, 0, 32),
+				B: make([]byte, 0, 1024),
 			}
 		},
 	}}
