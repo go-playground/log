@@ -34,8 +34,8 @@ func main() {
 
 	// predefined global fields
 	log.WithDefaultFields(log.Fields{
-		{"program", "test"},
-		{"version", "0.1.3"},
+		log.F("program", "test"),
+		log.F("version", "0.1.3"),
 	}...)
 
 	log.WithField("key", "value").Info("testing default fields")
