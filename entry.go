@@ -20,7 +20,7 @@ type Entry struct {
 func (e Entry) clone(fields ...Field) Entry {
 	f := make([]Field, 0, len(e.Fields)+len(fields))
 	e.Fields = append(f, e.Fields...)
-	e.Fields = append(f, fields...)
+	e.Fields = append(e.Fields, fields...)
 	return e
 }
 
