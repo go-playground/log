@@ -18,18 +18,17 @@ type Entry struct {
 }
 
 func (e Entry) clone(fields ...Field) Entry {
-	f := make([]Field, 0, len(e.Fields)+len(fields))
-	e.Fields = append(f, e.Fields...)
-	e.Fields = append(e.Fields, fields...)
+	f := make([]Field, len(e.Fields)+len(fields))
+	copy(f[copy(f, e.Fields):], fields)
+	e.Fields = f
 	return e
 }
 
 func newEntry(fields ...Field) Entry {
 	e := Entry{
-		Fields: make([]Field, 0, len(fields)+len(logFields)),
+		Fields: make([]Field, len(fields)+len(logFields)),
 	}
-	e.Fields = append(e.Fields, logFields...)
-	e.Fields = append(e.Fields, fields...)
+	copy(e.Fields[copy(e.Fields, logFields):], fields)
 	return e
 }
 

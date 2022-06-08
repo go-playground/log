@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-playground/log/v8"
+	"github.com/go-playground/log/v8/handlers/json"
 )
 
 var errExample = errors.New("fail")
@@ -36,7 +37,7 @@ func TestMain(m *testing.M) {
 }
 
 func BenchmarkLogConsoleTenFieldsParallel(b *testing.B) {
-
+	log.AddHandler(log.NewConsoleBuilder().WithWriter(ioutil.Discard).Build(), log.AllLevels...)
 	b.ResetTimer()
 	// log setup in TestMain
 	b.RunParallel(func(pb *testing.PB) {
@@ -60,6 +61,20 @@ func BenchmarkLogConsoleTenFieldsParallel(b *testing.B) {
 
 func BenchmarkLogConsoleSimpleParallel(b *testing.B) {
 
+	log.AddHandler(log.NewConsoleBuilder().WithWriter(ioutil.Discard).Build(), log.AllLevels...)
+	b.ResetTimer()
+	// log setup in TestMain
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			log.Info("Go fast.")
+		}
+
+	})
+}
+
+func BenchmarkLogJSONSimpleParallel(b *testing.B) {
+
+	log.AddHandler(json.New(ioutil.Discard), log.AllLevels...)
 	b.ResetTimer()
 	// log setup in TestMain
 	b.RunParallel(func(pb *testing.PB) {

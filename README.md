@@ -1,5 +1,5 @@
 ## log
-<img align="right" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-8.0.0-green.svg)
+<img align="center" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-8.0.0-green.svg)
 [![Test](https://github.com/go-playground/log/actions/workflows/go.yml/badge.svg)](https://github.com/go-playground/log/actions/workflows/go.yml)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -40,12 +40,15 @@ package main
 
 import (
 	"io"
+	stdlog "log"
 
 	"github.com/go-playground/errors/v5"
 	"github.com/go-playground/log/v8"
 )
 
 func main() {
+	log.RedirectGoStdLog(true)
+
 	// Trace
 	defer log.WithTrace().Info("time to run")
 
@@ -69,8 +72,8 @@ func main() {
 
 	// predefined global fields
 	log.WithDefaultFields(log.Fields{
-		{"program", "test"},
-		{"version", "0.1.3"},
+		log.F("program", "test"),
+		log.F("version", "0.1.3"),
 	}...)
 
 	log.WithField("key", "value").Info("testing default fields")
@@ -82,6 +85,10 @@ func main() {
 	)
 
 	logger.WithField("key", "value").Info("test")
+
+	stdlog.Println("This was redirected from Go STD output!")
+	log.RedirectGoStdLog(false)
+	stdlog.Println("This was NOT redirected from Go STD output!")
 }
 ```
 
@@ -173,17 +180,3 @@ Pull requests for new handlers are welcome when they don't pull in dependencies,
 Package Versioning
 ----------
 This package strictly adheres to semantic versioning guidelines.
-
-Benchmarks
-----------
-###### Run on Macbook Pro 15-inch 2017 using go version go1.9.4 darwin/amd64
-NOTE: only putting benchmarks at others request, by no means does the number of allocations 
-make one log library better than another!
-```go
-go test --bench=. -benchmem=true
-goos: darwin
-goarch: arm64
-pkg: github.com/go-playground/log/v8/benchmarks
-BenchmarkLogConsoleTenFieldsParallel-8           2392591               503.3 ns/op           648 B/op         12 allocs/op
-BenchmarkLogConsoleSimpleParallel-8              4595101               269.9 ns/op            56 B/op          2 allocs/op
-```

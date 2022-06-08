@@ -17,7 +17,7 @@ var (
 	bytePool = &byteArrayPool{pool: &sync.Pool{
 		New: func() interface{} {
 			return &Buffer{
-				B: make([]byte, 0, 32),
+				B: make([]byte, 0, 1024),
 			}
 		},
 	}}
@@ -224,7 +224,7 @@ OUTER:
 	}
 }
 
-// WithDefaultFields adds fields to the underlying logger instance
+// WithDefaultFields adds fields to the underlying logger instance that will be automatically added to ALL log entries.
 func WithDefaultFields(fields ...Field) {
 	logFields = append(logFields, fields...)
 }

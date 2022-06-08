@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [8.0.0] - 2022-05-30
+## [8.0.0] - 2022-06-07
 ### Added
 - Automatic file, line and package addition to error log when using `WithError`.
 
@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation.
 - Default timestamp format to RFC3339Nano.
 - Console logger uses builder pattern.
+- Removed colors from built in console logger.
+- Removed ability to remove individual log levels externally; RemoveHandler+AddHandler can do the same.
 
 
 [Unreleased]: https://github.com/go-playground/log/compare/v8.0.0...HEAD
