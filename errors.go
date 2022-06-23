@@ -24,13 +24,12 @@ func errorsWithError(e Entry, err error) Entry {
 			errorBuff.B = append(errorBuff.B, ' ')
 
 			for _, tag := range e.Tags {
-				field := Field{Key: tag.Key, Value: tag.Value}
 				key := fmt.Sprintf("%s#%v", tag.Key, tag.Value)
 				if dedupeTags[key] {
 					continue
 				}
 				dedupeTags[key] = true
-				tags = append(tags, field)
+				tags = append(tags, Field{Key: tag.Key, Value: tag.Value})
 			}
 			for _, typ := range e.Types {
 				if dedupeType[typ] {
