@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -15,7 +16,7 @@ func errorsWithError(e Entry, err error) Entry {
 	case errors.Chain:
 		types := make([]byte, 0, 32)
 		tags := make([]Field, 0, len(t))
-		dedupeTags := make(map[Field]bool)
+		dedupeTags := make(map[string]bool)
 		dedupeType := make(map[string]bool)
 		errorBuff := BytePool().Get()
 		for _, e := range t {
@@ -24,10 +25,11 @@ func errorsWithError(e Entry, err error) Entry {
 
 			for _, tag := range e.Tags {
 				field := Field{Key: tag.Key, Value: tag.Value}
-				if dedupeTags[field] {
+				key := fmt.Sprintf("%s#%v", tag.Key, tag.Value)
+				if dedupeTags[key] {
 					continue
 				}
-				dedupeTags[field] = true
+				dedupeTags[key] = true
 				tags = append(tags, field)
 			}
 			for _, typ := range e.Types {
