@@ -24,7 +24,7 @@ func errorsWithError(e Entry, err error) Entry {
 			errorBuff.B = append(errorBuff.B, ' ')
 
 			for _, tag := range e.Tags {
-				key := fmt.Sprintf("%s#%v", tag.Key, tag.Value)
+				key := fmt.Sprintf("%s-%v", tag.Key, tag.Value)
 				if dedupeTags[key] {
 					continue
 				}
