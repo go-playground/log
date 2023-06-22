@@ -169,7 +169,7 @@ func AddHandler(h Handler, levels ...Level) {
 	rw.Lock()
 	defer rw.Unlock()
 	if defaultHandler != nil {
-		removeHandler(h)
+		removeHandler(defaultHandler)
 		defaultHandler = nil
 	}
 	for _, level := range levels {
