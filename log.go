@@ -150,6 +150,9 @@ func HandleEntry(e Entry) {
 	}
 	e.Timestamp = time.Now()
 
+	//Adding colors for each output level
+	ColorizeLevel(e.Level)
+
 	rw.RLock()
 	for _, h := range logHandlers[e.Level] {
 		h.Log(e)
