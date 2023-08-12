@@ -44,12 +44,12 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 			return true
 		})
 	}
-	if record.PC != 0 {
+	if record.Level >= slog.LevelError && record.PC != 0 {
 		fs := runtime.CallersFrames([]uintptr{record.PC})
 		f, _ := fs.Next()
 		sourceBuff := BytePool().Get()
 		sourceBuff.B = extractSource(sourceBuff.B, runtimeext.Frame{Frame: f})
-		fields = append(fields, Field{Key: "source", Value: string(sourceBuff.B[:len(sourceBuff.B)-1])})
+		fields = append(fields, Field{Key: slog.SourceKey, Value: string(sourceBuff.B[:len(sourceBuff.B)-1])})
 		BytePool().Put(sourceBuff)
 	}
 	e := s.e.clone(fields...)
@@ -114,31 +114,61 @@ func convertSlogLevel(level slog.Level) Level {
 		return DebugLevel
 	case slog.LevelInfo:
 		return InfoLevel
+	case SlogNoticeLevel:
+		return NoticeLevel
 	case slog.LevelWarn:
 		return WarnLevel
 	case slog.LevelError:
 		return ErrorLevel
+	case SlogPanicLevel:
+		return PanicLevel
+	case SlogAlertLevel:
+		return AlertLevel
+	case SlogFatalLevel:
+		return FatalLevel
 	default:
 		switch {
 		case level > slog.LevelInfo && level < slog.LevelWarn:
 			return NoticeLevel
-		case level > slog.LevelError && level < slog.LevelError+4:
+		case level > slog.LevelError && level <= SlogPanicLevel:
 			return PanicLevel
-		case level > slog.LevelError+4 && level < slog.LevelError+8:
+		case level > SlogPanicLevel && level <= SlogAlertLevel:
 			return AlertLevel
-		case level > slog.LevelError+8 && level < slog.LevelError+16:
+		case level > SlogAlertLevel && level <= SlogFatalLevel:
 			return FatalLevel
 		}
-		return ErrorLevel
+		return InfoLevel
 	}
 }
 
+var (
+	prevSlogLogger *slog.Logger
+)
+
 // RedirectGoStdLog is used to redirect Go's internal std log output to this logger AND registers a handler for slog
 // that redirects slog output to this logger.
+//
+// If you intend to use this log interface with another slog handler then you should not use this function and instead
+// register a handler with slog directly and register the slog redirect, found under the handlers package or other
+// custom redirect handler with this logger.
 func RedirectGoStdLog(redirect bool) {
 	if redirect {
+		prevSlogLogger = slog.Default()
 		slog.SetDefault(slog.New(&slogHandler{e: newEntry()}))
-	} else {
-		slog.SetDefault(slog.Default())
+	} else if prevSlogLogger != nil {
+		slog.SetDefault(prevSlogLogger)
+		prevSlogLogger = nil
 	}
 }
+
+// slog log levels.
+const (
+	SlogDebugLevel  slog.Level = slog.LevelDebug
+	SlogInfoLevel   slog.Level = slog.LevelInfo
+	SlogWarnLevel   slog.Level = slog.LevelWarn
+	SlogErrorLevel  slog.Level = slog.LevelError
+	SlogNoticeLevel slog.Level = slog.LevelInfo + 2
+	SlogPanicLevel  slog.Level = slog.LevelError + 4
+	SlogAlertLevel  slog.Level = SlogPanicLevel + 4
+	SlogFatalLevel  slog.Level = SlogAlertLevel + 4 // same as syslog CRITICAL
+)
