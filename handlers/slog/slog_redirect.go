@@ -25,11 +25,6 @@ func New(handler slog.Handler) *Handler {
 
 // Log handles the log entry
 func (h *Handler) Log(e log.Entry) {
-	attrs := make([]slog.Attr, 0, len(e.Fields))
-	for _, f := range e.Fields {
-		attrs = append(attrs, slog.Any(f.Key, f.Value))
-	}
-
 	r := slog.NewRecord(e.Timestamp, slog.Level(e.Level), e.Message, 0)
 	r.AddAttrs(h.convertFields(e.Fields)...)
 	_ = h.handler.Handle(context.Background(), r)
