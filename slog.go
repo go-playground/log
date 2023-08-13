@@ -86,7 +86,15 @@ func (s *slogHandler) convertAttrToField(attr slog.Attr) Field {
 
 	switch attr.Value.Kind() {
 	case slog.KindLogValuer:
-		value = attr.Value.LogValuer().LogValue()
+		lv := attr.Value.LogValuer().LogValue()
+		for lv.Kind() == slog.KindLogValuer {
+			lv = lv.LogValuer().LogValue()
+		}
+		if lv.Kind() == slog.KindGroup {
+			value = s.convertAttrsToFields(lv.Group())
+		} else {
+			value = lv
+		}
 	default:
 		value = attr.Value.Any()
 	}
