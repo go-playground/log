@@ -6,6 +6,8 @@ package log
 import (
 	"bufio"
 	"io"
+	stdlog "log"
+	"os"
 	"strings"
 )
 
