@@ -94,7 +94,9 @@ func HandleEntry(e Entry) {
 	if !e.start.IsZero() {
 		e = e.WithField("duration", time.Since(e.start))
 	}
-	e.Timestamp = time.Now()
+	if e.Timestamp.IsZero() {
+		e.Timestamp = time.Now()
+	}
 
 	rw.RLock()
 	for _, h := range logHandlers[e.Level] {

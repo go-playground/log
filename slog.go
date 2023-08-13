@@ -51,6 +51,7 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 	e := s.e.clone(fields...)
 	e.Message = record.Message
 	e.Level = convertSlogLevel(record.Level)
+	e.Timestamp = record.Time
 	HandleEntry(e)
 	return nil
 }

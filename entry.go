@@ -21,6 +21,7 @@ func (e Entry) clone(fields ...Field) Entry {
 	f := make([]Field, len(e.Fields)+len(fields))
 	copy(f[copy(f, e.Fields):], fields)
 	e.Fields = f
+	e.Timestamp = time.Time{}
 	return e
 }
 
