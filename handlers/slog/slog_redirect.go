@@ -32,7 +32,7 @@ func (h *Handler) Log(e log.Entry) {
 
 	r := slog.NewRecord(e.Timestamp, slog.Level(e.Level), e.Message, 0)
 	r.AddAttrs(h.convertFields(e.Fields)...)
-	h.handler.Handle(context.Background(), r)
+	_ = h.handler.Handle(context.Background(), r)
 }
 
 func (h *Handler) convertFields(fields []log.Field) []slog.Attr {
