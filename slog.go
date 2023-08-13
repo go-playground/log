@@ -29,6 +29,7 @@ func (s *slogHandler) Enabled(_ context.Context, level slog.Level) bool {
 func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 
 	var fields []Field
+
 	if record.NumAttrs() > 0 {
 		fields = make([]Field, 0, record.NumAttrs())
 		record.Attrs(func(attr slog.Attr) bool {
@@ -48,10 +49,12 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 		fields = append(fields, Field{Key: slog.SourceKey, Value: string(sourceBuff.B[:len(sourceBuff.B)-1])})
 		BytePool().Put(sourceBuff)
 	}
+
 	e := s.e.clone(fields...)
 	e.Message = record.Message
 	e.Level = convertSlogLevel(record.Level)
 	e.Timestamp = record.Time
+
 	HandleEntry(e)
 	return nil
 }
