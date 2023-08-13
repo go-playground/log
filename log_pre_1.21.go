@@ -3,6 +3,12 @@
 
 package log
 
+import (
+	"bufio"
+	"io"
+	"strings"
+)
+
 var (
 	stdLogWriter     *io.PipeWriter
 	redirectComplete chan struct{}
@@ -11,7 +17,6 @@ var (
 // RedirectGoStdLog is used to redirect Go's internal std log output to this logger AND registers a handler for slog
 // that redirects slog output to this logger.
 func RedirectGoStdLog(redirect bool) {
-	slog.SetDefault(slog.New(&slogHandler{e: newEntry()}))
 	if (redirect && stdLogWriter != nil) || (!redirect && stdLogWriter == nil) {
 		// already redirected or already not redirected
 		return
