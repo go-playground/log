@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-playground/log/v8"
+	log "github.com/go-playground/log/v8"
 	"github.com/go-playground/log/v8/handlers/json"
 )
 

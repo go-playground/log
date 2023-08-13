@@ -5,7 +5,7 @@ package slog
 
 import (
 	"context"
-	"github.com/go-playground/log/v8"
+	log "github.com/go-playground/log/v8"
 	"log/slog"
 )
 
