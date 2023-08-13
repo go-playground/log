@@ -109,6 +109,11 @@ func F(key string, value interface{}) Field {
 	return Field{Key: key, Value: value}
 }
 
+// G creates a new group of fields using the supplied key as the groups name.
+func G(key string, fields ...Field) Field {
+	return F(key, fields)
+}
+
 // AddHandler adds a new log handlers and accepts which log levels that
 // handlers will be triggered for
 func AddHandler(h Handler, levels ...Level) {

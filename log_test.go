@@ -393,7 +393,7 @@ func TestWithTrace(t *testing.T) {
 	}
 }
 
-func TestDefaultFields(t *testing.T) {
+func TestDefaultsAndGroupFields(t *testing.T) {
 	logHandlers = map[Level][]Handler{}
 	buff := new(bytes.Buffer)
 	th := &testHandler{
@@ -401,9 +401,9 @@ func TestDefaultFields(t *testing.T) {
 	}
 	AddHandler(th, AllLevels...)
 	WithDefaultFields(F("key", "value"))
-	Info("info")
-	if buff.String() != "INFO info key=value\n" {
-		t.Errorf("Expected '%s' Got '%s'", "INFO info key=value\n", buff.String())
+	WithFields(G("group", F("gkey", "gvalue"))).Info("info")
+	if buff.String() != "INFO info key=value group=[{gkey gvalue}]\n" {
+		t.Errorf("Expected '%s' Got '%s'", "INFO info key=value group=[{gkey gvalue}]\n", buff.String())
 	}
 }
 

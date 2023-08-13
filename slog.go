@@ -33,14 +33,10 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 		fields = make([]Field, 0, record.NumAttrs())
 		record.Attrs(func(attr slog.Attr) bool {
 			if attr.Value.Kind() == slog.KindGroup {
-				g := attr.Key
-				if s.group != "" {
-					g = s.group + "." + g
-				}
-				fields = append(fields, s.convertAttrsToFields(g, attr.Value.Group())...)
+				fields = append(fields, Field{Key: attr.Key, Value: s.convertAttrsToFields(attr.Value.Group())})
 				return true
 			}
-			fields = append(fields, s.convertAttrToField(s.group, attr))
+			fields = append(fields, s.convertAttrToField(attr))
 			return true
 		})
 	}
@@ -61,31 +57,27 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 
 func (s *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &slogHandler{
-		e:     s.e.clone(s.convertAttrsToFields(s.group, attrs)...),
+		e:     s.e.clone(s.convertAttrsToFields(attrs)...),
 		group: s.group,
 	}
 }
 
-func (s *slogHandler) convertAttrsToFields(group string, attrs []slog.Attr) []Field {
+func (s *slogHandler) convertAttrsToFields(attrs []slog.Attr) []Field {
 	fields := make([]Field, 0, len(attrs))
 
 	for _, attr := range attrs {
 		switch attr.Value.Kind() {
 		case slog.KindGroup:
-			g := attr.Key
-			if group != "" {
-				g = group + "." + g
-			}
-			fields = append(fields, s.convertAttrsToFields(g, attr.Value.Group())...)
+			fields = append(fields, Field{Key: attr.Key, Value: s.convertAttrsToFields(attr.Value.Group())})
 			continue
 		default:
-			fields = append(fields, s.convertAttrToField(group, attr))
+			fields = append(fields, s.convertAttrToField(attr))
 		}
 	}
 	return fields
 }
 
-func (s *slogHandler) convertAttrToField(group string, attr slog.Attr) Field {
+func (s *slogHandler) convertAttrToField(attr slog.Attr) Field {
 	var value any
 
 	switch attr.Value.Kind() {
@@ -94,11 +86,7 @@ func (s *slogHandler) convertAttrToField(group string, attr slog.Attr) Field {
 	default:
 		value = attr.Value.Any()
 	}
-	if group == "" {
-		return Field{Key: attr.Key, Value: value}
-	} else {
-		return Field{Key: group + "." + attr.Key, Value: value}
-	}
+	return Field{Key: attr.Key, Value: value}
 }
 
 func (s *slogHandler) WithGroup(name string) slog.Handler {

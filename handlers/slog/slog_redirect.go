@@ -31,8 +31,26 @@ func (h *Handler) Log(e log.Entry) {
 	}
 
 	r := slog.NewRecord(e.Timestamp, slog.Level(e.Level), e.Message, 0)
-	r.AddAttrs(attrs...)
+	r.AddAttrs(h.convertFields(e.Fields)...)
 	h.handler.Handle(context.Background(), r)
+}
+
+func (h *Handler) convertFields(fields []log.Field) []slog.Attr {
+	attrs := make([]slog.Attr, 0, len(fields))
+	for _, f := range fields {
+		switch t := f.Value.(type) {
+		case []log.Field:
+			a := h.convertFields(t)
+			arr := make([]any, 0, len(a))
+			for _, v := range a {
+				arr = append(arr, v)
+			}
+			attrs = append(attrs, slog.Group(f.Key, arr...))
+		default:
+			attrs = append(attrs, slog.Any(f.Key, f.Value))
+		}
+	}
+	return attrs
 }
 
 // ReplaceAttrFn can be used with slog.HandlerOptions to replace attributes.
