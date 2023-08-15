@@ -5,7 +5,6 @@ package log
 
 import (
 	"context"
-	"fmt"
 	runtimeext "github.com/go-playground/pkg/v5/runtime"
 	"log/slog"
 	"runtime"
@@ -65,7 +64,6 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 		current = G(group.Key, append(copied, current)...)
 	}
 
-	fmt.Printf("%+v\n", current)
 	var e Entry
 	if current.Key == "" {
 		e = Entry{Fields: current.Value.([]Field)}
