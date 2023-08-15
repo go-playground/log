@@ -5,6 +5,7 @@ package log
 
 import (
 	"context"
+	"fmt"
 	runtimeext "github.com/go-playground/pkg/v5/runtime"
 	"log/slog"
 	"runtime"
@@ -29,12 +30,17 @@ func (s *slogHandler) Enabled(_ context.Context, level slog.Level) bool {
 
 func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 
-	group := s.groups[len(s.groups)-1]
-	last := group.Value.([]Field)
-	fields := make([]Field, len(last), len(last)+record.NumAttrs()+1)
-	copy(fields, last)
+	var current Field
+	if len(s.groups) == 0 {
+		current = G("")
+	} else {
+		group := s.groups[len(s.groups)-1]
+		last := group.Value.([]Field)
+		fields := make([]Field, len(last), len(last)+record.NumAttrs()+1)
+		copy(fields, last)
 
-	current := F(group.Key, fields)
+		current = F(group.Key, fields)
+	}
 
 	if record.NumAttrs() > 0 {
 		record.Attrs(func(attr slog.Attr) bool {
@@ -59,7 +65,13 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 		current = G(group.Key, append(copied, current)...)
 	}
 
-	e := Entry{Fields: current.Value.([]Field)}
+	fmt.Printf("%+v\n", current)
+	var e Entry
+	if current.Key == "" {
+		e = Entry{Fields: current.Value.([]Field)}
+	} else {
+		e = Entry{Fields: []Field{current}}
+	}
 	e.Message = record.Message
 	e.Level = convertSlogLevel(record.Level)
 	e.Timestamp = record.Time
@@ -69,15 +81,20 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 }
 
 func (s *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	groups := make([]Field, len(s.groups))
-	copy(groups, s.groups)
+	var groups []Field
+	if len(s.groups) == 0 {
+		groups = []Field{G("", s.convertAttrsToFields(nil, attrs)...)}
+	} else {
+		groups = make([]Field, len(s.groups))
+		copy(groups, s.groups)
 
-	l := len(groups) - 1
-	current := groups[l]
-	currentFields := current.Value.([]Field)
-	copiedFields := make([]Field, len(currentFields), len(currentFields)+len(attrs))
-	copy(copiedFields, currentFields)
-	groups[l].Value = s.convertAttrsToFields(copiedFields, attrs)
+		l := len(groups) - 1
+		current := groups[l]
+		currentFields := current.Value.([]Field)
+		copiedFields := make([]Field, len(currentFields), len(currentFields)+len(attrs))
+		copy(copiedFields, currentFields)
+		groups[l].Value = s.convertAttrsToFields(copiedFields, attrs)
+	}
 
 	return &slogHandler{
 		groups: groups,
@@ -170,7 +187,7 @@ var (
 func RedirectGoStdLog(redirect bool) {
 	if redirect {
 		prevSlogLogger = slog.Default()
-		slog.SetDefault(slog.New(&slogHandler{groups: []Field{G("")}}))
+		slog.SetDefault(slog.New(&slogHandler{}))
 	} else if prevSlogLogger != nil {
 		slog.SetDefault(prevSlogLogger)
 		prevSlogLogger = nil
