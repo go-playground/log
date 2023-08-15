@@ -13,8 +13,9 @@ import (
 var _ slog.Handler = (*slogHandler)(nil)
 
 type slogHandler struct {
-	e     Entry
-	group string
+	// List of Groups, each subsequent group belongs to the previous group, except the first
+	// which are the top level fields fields before any grouping.
+	groups []Field
 }
 
 // Enabled returns if the current logging level is enabled. In the case of this log package in this Level has a
@@ -28,16 +29,16 @@ func (s *slogHandler) Enabled(_ context.Context, level slog.Level) bool {
 
 func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 
-	var fields []Field
+	group := s.groups[len(s.groups)-1]
+	last := group.Value.([]Field)
+	fields := make([]Field, len(last), len(last)+record.NumAttrs()+1)
+	copy(fields, last)
+
+	current := F(group.Key, fields)
 
 	if record.NumAttrs() > 0 {
-		fields = make([]Field, 0, record.NumAttrs())
 		record.Attrs(func(attr slog.Attr) bool {
-			if attr.Value.Kind() == slog.KindGroup {
-				fields = append(fields, Field{Key: attr.Key, Value: s.convertAttrsToFields(attr.Value.Group())})
-				return true
-			}
-			fields = append(fields, s.convertAttrToField(attr))
+			current.Value = s.convertAttrToField(current.Value.([]Field), attr)
 			return true
 		})
 	}
@@ -46,11 +47,19 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 		f, _ := fs.Next()
 		sourceBuff := BytePool().Get()
 		sourceBuff.B = extractSource(sourceBuff.B, runtimeext.Frame{Frame: f})
-		fields = append(fields, Field{Key: slog.SourceKey, Value: string(sourceBuff.B[:len(sourceBuff.B)-1])})
+		current.Value = append(current.Value.([]Field), F(slog.SourceKey, string(sourceBuff.B[:len(sourceBuff.B)-1])))
 		BytePool().Put(sourceBuff)
 	}
 
-	e := s.e.clone(fields...)
+	for i := len(s.groups) - 2; i >= 0; i-- {
+		group := s.groups[i]
+		gf := group.Value.([]Field)
+		copied := make([]Field, len(gf), len(gf)+1)
+		copy(copied, gf)
+		current = G(group.Key, append(copied, current)...)
+	}
+
+	e := Entry{Fields: current.Value.([]Field)}
 	e.Message = record.Message
 	e.Level = convertSlogLevel(record.Level)
 	e.Timestamp = record.Time
@@ -60,51 +69,58 @@ func (s *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 }
 
 func (s *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	groups := make([]Field, len(s.groups))
+	copy(groups, s.groups)
+
+	l := len(groups) - 1
+	current := groups[l]
+	currentFields := current.Value.([]Field)
+	copiedFields := make([]Field, len(currentFields), len(currentFields)+len(attrs))
+	copy(copiedFields, currentFields)
+	groups[l].Value = s.convertAttrsToFields(copiedFields, attrs)
+
 	return &slogHandler{
-		e:     s.e.clone(s.convertAttrsToFields(attrs)...),
-		group: s.group,
+		groups: groups,
 	}
 }
 
-func (s *slogHandler) convertAttrsToFields(attrs []slog.Attr) []Field {
-	fields := make([]Field, 0, len(attrs))
-
+func (s *slogHandler) convertAttrsToFields(fields []Field, attrs []slog.Attr) []Field {
 	for _, attr := range attrs {
-		switch attr.Value.Kind() {
-		case slog.KindGroup:
-			fields = append(fields, Field{Key: attr.Key, Value: s.convertAttrsToFields(attr.Value.Group())})
+		if attr.Key == "" {
 			continue
-		default:
-			fields = append(fields, s.convertAttrToField(attr))
 		}
+		if attr.Key == slog.TimeKey && attr.Value.Time().IsZero() {
+			continue
+		}
+		fields = s.convertAttrToField(fields, attr)
 	}
 	return fields
 }
 
-func (s *slogHandler) convertAttrToField(attr slog.Attr) Field {
+func (s *slogHandler) convertAttrToField(fields []Field, attr slog.Attr) []Field {
 	var value any
 
 	switch attr.Value.Kind() {
 	case slog.KindLogValuer:
-		lv := attr.Value.LogValuer().LogValue()
-		for lv.Kind() == slog.KindLogValuer {
-			lv = lv.LogValuer().LogValue()
-		}
-		if lv.Kind() == slog.KindGroup {
-			value = s.convertAttrsToFields(lv.Group())
-		} else {
-			value = lv
-		}
+		return s.convertAttrToField(fields, slog.Attr{Key: attr.Key, Value: attr.Value.LogValuer().LogValue()})
+
+	case slog.KindGroup:
+		attrs := attr.Value.Group()
+		groupedFields := make([]Field, 0, len(attrs))
+		value = s.convertAttrsToFields(groupedFields, attrs)
+
 	default:
 		value = attr.Value.Any()
 	}
-	return Field{Key: attr.Key, Value: value}
+	return append(fields, F(attr.Key, value))
 }
 
 func (s *slogHandler) WithGroup(name string) slog.Handler {
+	groups := make([]Field, len(s.groups), len(s.groups)+1)
+	copy(groups, s.groups)
+
 	return &slogHandler{
-		e:     s.e.clone(),
-		group: name,
+		groups: append(groups, G(name)),
 	}
 }
 
@@ -154,7 +170,7 @@ var (
 func RedirectGoStdLog(redirect bool) {
 	if redirect {
 		prevSlogLogger = slog.Default()
-		slog.SetDefault(slog.New(&slogHandler{e: newEntry()}))
+		slog.SetDefault(slog.New(&slogHandler{groups: []Field{G("")}}))
 	} else if prevSlogLogger != nil {
 		slog.SetDefault(prevSlogLogger)
 		prevSlogLogger = nil

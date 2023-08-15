@@ -12,7 +12,6 @@ func main() {
 
 	// This example demonstrates how to redirect the std log and slog to this logger and output back out to any
 	// slog.Handler, as well as any other handler(s) registered with this logger.
-
 	log.AddHandler(slogredirect.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		ReplaceAttr: slogredirect.ReplaceAttrFn, // for custom log level output
 	})), log.AllLevels...)
