@@ -54,16 +54,6 @@ var ReplaceAttrFn = func(groups []string, a slog.Attr) slog.Attr {
 	if a.Key == slog.LevelKey {
 		level := log.Level(a.Value.Any().(slog.Level))
 		a.Value = slog.StringValue(level.String())
-		//switch {
-		//case level > slog.LevelInfo && level < slog.LevelWarn:
-		//	a.Value = slog.StringValue(log.NoticeLevel.String())
-		//case level > slog.LevelError && level <= log.SlogPanicLevel:
-		//	a.Value = slog.StringValue(log.PanicLevel.String())
-		//case level > log.SlogPanicLevel && level <= log.SlogAlertLevel:
-		//	a.Value = slog.StringValue(log.AlertLevel.String())
-		//case level > log.SlogAlertLevel && level <= log.SlogFatalLevel:
-		//	a.Value = slog.StringValue(log.FatalLevel.String())
-		//}
 	}
 	return a
 }

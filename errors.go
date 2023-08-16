@@ -102,13 +102,11 @@ func formatLink(l *errors.Link, b []byte) []byte {
 	b = extractSource(b, l.Source)
 	if l.Prefix != "" {
 		b = append(b, l.Prefix...)
-	}
 
-	if _, ok := l.Err.(errors.Chain); !ok {
-		if l.Prefix != "" {
+		if l.Err != nil {
 			b = append(b, ": "...)
+			b = append(b, l.Err.Error()...)
 		}
-		b = append(b, l.Err.Error()...)
 	}
 	return b
 }
