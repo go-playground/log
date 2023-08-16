@@ -1,5 +1,5 @@
-github.com/go-playground/errors/v5 v5.3.1 h1:J2qU+9Whg863g3SATXKSJyFA91Zz85pYD3+obr5Oodk=
-github.com/go-playground/errors/v5 v5.3.1/go.mod h1:LcLhmzQ/RuEntAs9r38NSV+xtbHffhMx/1yuuEroc7M=
+github.com/go-playground/errors/v5 v5.3.2 h1:B3fsF2CAUrc9XI6L95MtEs20qC5q5tPEFgNBGDwhZMc=
+github.com/go-playground/errors/v5 v5.3.2/go.mod h1:LcLhmzQ/RuEntAs9r38NSV+xtbHffhMx/1yuuEroc7M=
 github.com/go-playground/pkg/v5 v5.21.2 h1:DgVr88oMI3pfMFkEN9E6hp9YGG8NHc+019LRJfnUOfU=
 github.com/go-playground/pkg/v5 v5.21.2/go.mod h1:UgHNntEQnMJSygw2O2RQ3LAB0tprx81K90c/pOKh7cU=
 golang.org/x/sys v0.11.0 h1:eG7RXZHdqOJ1i+0lgLgCpSXAp6M3LYlAo6osgSi0xOM=
