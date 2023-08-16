@@ -1,12 +1,8 @@
 package log
 
 import (
-	"bufio"
 	"context"
-	"io"
-	stdlog "log"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -48,63 +44,13 @@ var (
 	}{
 		name: "log",
 	}
-	rw               sync.RWMutex
-	stdLogWriter     *io.PipeWriter
-	redirectComplete chan struct{}
+	rw = new(sync.RWMutex)
 )
 
 // Field is a single Field key and value
 type Field struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
-}
-
-// RedirectGoStdLog is used to redirect Go's internal std log output to this logger.
-func RedirectGoStdLog(redirect bool) {
-	if (redirect && stdLogWriter != nil) || (!redirect && stdLogWriter == nil) {
-		// already redirected or already not redirected
-		return
-	}
-	if !redirect {
-		stdlog.SetOutput(os.Stderr)
-		// will stop scanner reading PipeReader
-		_ = stdLogWriter.Close()
-		stdLogWriter = nil
-		<-redirectComplete
-		return
-	}
-
-	ready := make(chan struct{})
-	redirectComplete = make(chan struct{})
-
-	// last option is to redirect
-	go func() {
-		var r *io.PipeReader
-		r, stdLogWriter = io.Pipe()
-		defer func() {
-			_ = r.Close()
-		}()
-
-		stdlog.SetOutput(stdLogWriter)
-		defer func() {
-			close(redirectComplete)
-			redirectComplete = nil
-		}()
-
-		scanner := bufio.NewScanner(r)
-		close(ready)
-		for scanner.Scan() {
-			txt := scanner.Text()
-			if strings.Contains(txt, "error") {
-				WithField("stdlog", true).Error(txt)
-			} else if strings.Contains(txt, "warning") {
-				WithField("stdlog", true).Warn(txt)
-			} else {
-				WithField("stdlog", true).Notice(txt)
-			}
-		}
-	}()
-	<-ready
 }
 
 // SetExitFunc sets the provided function as the exit function used in Fatal(),
@@ -148,7 +94,9 @@ func HandleEntry(e Entry) {
 	if !e.start.IsZero() {
 		e = e.WithField("duration", time.Since(e.start))
 	}
-	e.Timestamp = time.Now()
+	if e.Timestamp.IsZero() {
+		e.Timestamp = time.Now()
+	}
 
 	rw.RLock()
 	for _, h := range logHandlers[e.Level] {
@@ -161,6 +109,11 @@ func HandleEntry(e Entry) {
 // it is shorthand for defining field manually
 func F(key string, value interface{}) Field {
 	return Field{Key: key, Value: value}
+}
+
+// G creates a new group of fields using the supplied key as the groups name.
+func G(key string, fields ...Field) Field {
+	return F(key, fields)
 }
 
 // AddHandler adds a new log handlers and accepts which log levels that

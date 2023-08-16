@@ -1,5 +1,5 @@
 ## log
-<img align="center" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-8.0.1-green.svg)
+<img align="center" src="https://raw.githubusercontent.com/go-playground/log/master/logo.png">![Project status](https://img.shields.io/badge/version-8.1.0-green.svg)
 [![Test](https://github.com/go-playground/log/actions/workflows/go.yml/badge.svg)](https://github.com/go-playground/log/actions/workflows/go.yml)
 [![Coverage Status](https://coveralls.io/repos/github/go-playground/log/badge.svg?branch=master)](https://coveralls.io/github/go-playground/log?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-playground/log)](https://goreportcard.com/report/github.com/go-playground/log)
@@ -152,8 +152,18 @@ func main() {
 	// logging with fields can be used with any of the above
 	log.WithField("key", "value").Info("test info")
 }
-
 ```
+
+#### Go 1.21+ slog compatibility
+
+There is a compatibility layer for slog, which allows redirecting slog to this logger and ability to output to an slog.Handler+.
+
+| type                                        | Definition                                                                                                                                                                          |
+|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Handler](_examples/slog/hanlder/main.go)   | This example demonstrates how to redirect the std log and slog to this logger by using it as an slog.Handler.                                                                       |
+| [Redirect](_examples/slog/redirect/main.go) | This example demonstrates how to redirect the std log and slog to this logger and output back out to any slog.Handler, as well as any other handler(s) registered with this logger. |
+
+```go
 
 Log Level Definitions
 ---------------------
