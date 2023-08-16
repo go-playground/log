@@ -6,10 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [8.1.0] - 2022-06-23
+## [8.1.0] - 2023-08-16
 ### Added
 - log.G as shorthand for adding a set of Grouped fields. This ability has always been present but is now fully supported in the default logger and with helper function for ease of use.
-- slog support added in Go 1.21+ both to use as an slog.Handler or redirect. 
+- slog support added in Go 1.21+ both to use as an slog.Handler or redirect.
+
+### Fixed
+- errors.Chain handling from default withErrorFn handler after dep upgrade.
 
 ## [8.0.2] - 2023-06-22
 ### Fixed
