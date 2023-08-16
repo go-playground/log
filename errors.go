@@ -2,10 +2,10 @@ package log
 
 import (
 	"fmt"
+	"github.com/go-playground/errors/v5"
 	"strconv"
 	"strings"
 
-	"github.com/go-playground/errors/v5"
 	runtimeext "github.com/go-playground/pkg/v5/runtime"
 )
 
@@ -102,11 +102,12 @@ func formatLink(l *errors.Link, b []byte) []byte {
 	b = extractSource(b, l.Source)
 	if l.Prefix != "" {
 		b = append(b, l.Prefix...)
-
-		if l.Err != nil {
+	}
+	if l.Err != nil {
+		if l.Prefix != "" {
 			b = append(b, ": "...)
-			b = append(b, l.Err.Error()...)
 		}
+		b = append(b, l.Err.Error()...)
 	}
 	return b
 }

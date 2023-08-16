@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [8.1.0] - 2023-08-16
+## [8.1.1] - 2023-08-16
+### Fixed
+- errors.Link output in error function after updating dependency.
+
+## [8.1.0] - 2023-08-15
 ### Added
 - log.G as shorthand for adding a set of Grouped fields. This ability has always been present but is now fully supported in the default logger and with helper function for ease of use.
 - slog support added in Go 1.21+ both to use as an slog.Handler or redirect.
@@ -42,7 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed ability to remove individual log levels externally; RemoveHandler+AddHandler can do the same.
 
 
-[Unreleased]: https://github.com/go-playground/log/compare/v8.1.0...HEAD
+[Unreleased]: https://github.com/go-playground/log/compare/v8.1.1...HEAD
+[8.1.1]: https://github.com/go-playground/log/compare/v8.1.1...v8.1.1
 [8.1.0]: https://github.com/go-playground/log/compare/v8.0.2...v8.1.0
 [8.0.2]: https://github.com/go-playground/log/compare/v8.0.1...v8.0.2
 [8.0.1]: https://github.com/go-playground/log/compare/v8.0.0...v8.0.1
